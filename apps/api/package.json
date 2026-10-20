@@ -14,7 +14,9 @@
     "seed": "tsx src/db/seeders/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "create-superadmin": "node dist/scripts/create-superadmin.js",
+    "create-superadmin:dev": "tsx src/scripts/create-superadmin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1153.0",

@@ -1,0 +1,92 @@
+# Laptop variant of deploy/Caddyfile used by docker-compose.local.yml: same routes, self-signed certificates
+# from Caddy's internal CA (no ACME, no Cloudflare). Regenerate after editing Caddyfile: see deploy/README.md.
+{
+	local_certs
+	admin off
+}
+(security) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+}
+
+# /api and locally stored uploads go to the API container (CORS is decided by the API's allowlist).
+(api_proxy) {
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle /uploads/* {
+		reverse_proxy api:3000
+	}
+}
+
+# Vite single-page apps: hashed files under /assets are immutable, everything else revalidates so deploys show up.
+# Wrapped in a fallback `handle` so the more specific `handle /api/*` blocks win: a bare try_files would rewrite
+# /api/… to /index.html before the proxy matcher is evaluated.
+(spa) {
+	handle {
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@entry not path /assets/*
+		header @entry Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Apex: the marketing site (apps/web, Astro static output). Pretty URLs end with a slash.
+{$DOMAIN} {
+	import security
+	header X-Frame-Options DENY
+	encode zstd gzip
+	root * /srv/web
+	@hashed path /_astro/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@fonts path /fonts/*
+	header @fonts Cache-Control "public, max-age=2592000"
+	@pages not path /_astro/* /fonts/* /icons/* /favicon.* /og-*.png /robots.txt /sitemap*.xml
+	header @pages Cache-Control "public, max-age=300"
+	try_files {path} {path}/index.html
+	file_server
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server
+	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# Admin CMS: same-origin /api so the refresh cookie stays first-party.
+app.{$DOMAIN} {
+	import security
+	header X-Frame-Options DENY
+	encode zstd gzip
+	import api_proxy
+	root * /srv/cms
+	@pwa path /sw.js /manifest.webmanifest
+	header @pwa Cache-Control "no-cache"
+	import spa
+}
+
+# API for direct access (curl, webhooks, the uploads fallback). TLS ends here; the API sees X-Forwarded-* (TRUST_PROXY=1).
+api.{$DOMAIN} {
+	import security
+	encode zstd gzip
+	reverse_proxy api:3000
+}
+
+# Public menus: {slug}.DOMAIN (wildcard certificate). The menu app preloads /api/public/menu on its own origin.
+*.{$DOMAIN} {
+	import security
+	header X-Frame-Options SAMEORIGIN
+	encode zstd gzip
+	import api_proxy
+	root * /srv/menu
+	import spa
+}

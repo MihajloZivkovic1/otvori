@@ -1,0 +1,114 @@
+name: Deploy
+
+# Runs after the CI workflow succeeds on main: builds both images in GitHub Actions (never on the 1 GB droplet),
+# pushes them to GHCR tagged with the git short SHA and `latest`, then runs deploy/deploy.sh on the droplet over SSH.
+# Rollback: Actions → Deploy → "Run workflow" with an earlier tag, or on the droplet `./deploy/deploy.sh <tag>`.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing image tag to deploy (git short SHA). Leave empty to build the current main.
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  DOMAIN: ${{ vars.DOMAIN || 'salveta.menu' }}
+
+jobs:
+  build:
+    name: Build & push images
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      owner: ${{ steps.meta.outputs.owner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Image names and tag
+        id: meta
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          if [ -n "${{ inputs.tag }}" ]; then tag='${{ inputs.tag }}'; else tag="$(git rev-parse --short=7 HEAD)"; fi
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "build=$([ -n '${{ inputs.tag }}' ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+        if: steps.meta.outputs.build == 'true'
+      - uses: docker/login-action@v3
+        if: steps.meta.outputs.build == 'true'
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push salveta-api
+        if: steps.meta.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-api:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-api:latest
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.tag }}
+            SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+      - name: Build and push salveta-caddy
+        if: steps.meta.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.caddy
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-caddy:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-caddy:latest
+          build-args: |
+            DOMAIN=${{ env.DOMAIN }}
+            PUBLIC_ANALYTICS_SRC=${{ vars.PUBLIC_ANALYTICS_SRC }}
+            PUBLIC_ANALYTICS_DOMAIN=${{ vars.PUBLIC_ANALYTICS_DOMAIN }}
+            SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=caddy
+          cache-to: type=gha,scope=caddy,mode=max
+
+  deploy:
+    name: Deploy to the droplet
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Pull and restart on the droplet
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ needs.build.outputs.tag }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: GHCR_USER,GHCR_TOKEN,IMAGE_TAG
+          script: |
+            set -eu
+            cd /opt/salveta
+            # The droplet only needs deploy/ (compose file + scripts) from the repo; keep it on main.
+            git pull --ff-only --quiet origin main
+            ./deploy/deploy.sh "$IMAGE_TAG"

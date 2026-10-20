@@ -1,12 +1,43 @@
+# salveta production stack for one small host (1 GB droplet). Images are built in GitHub Actions and pulled here;
+# nothing is built on the host. Run through deploy/deploy.sh (it passes --env-file .env.prod and the image tag).
 name: salveta
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Tuned for ~256 MB of RAM: a small shared buffer cache, modest per-query memory, few connections (the API pool is 10).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=40
+      - -c
+      - wal_buffers=4MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - log_min_duration_statement=500
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-salveta}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.prod}
       POSTGRES_DB: ${POSTGRES_DB:-salveta}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -15,11 +46,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    logging: *logging
 
   api:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
+    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/salveta-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -29,45 +63,62 @@ services:
       PORT: 3000
       TRUST_PROXY: 1
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Pending migrations run before the server listens (idempotent on every start).
+      MIGRATE_ON_START: 1
       DATABASE_URL: postgres://${POSTGRES_USER:-salveta}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-salveta}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in deploy/.env}
-      APP_URL: https://app.${DOMAIN:-salveta.menu}
-      API_URL: https://api.${DOMAIN:-salveta.menu}
-      PUBLIC_MENU_BASE_URL: https://{slug}.${DOMAIN:-salveta.menu}
-      CORS_ORIGINS: https://${DOMAIN:-salveta.menu}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in deploy/.env.prod}
+      APP_URL: https://app.${DOMAIN:?set DOMAIN in deploy/.env.prod}
+      API_URL: https://api.${DOMAIN}
+      PUBLIC_MENU_BASE_URL: https://{slug}.${DOMAIN}
+      # app.DOMAIN (APP_URL) and every {slug}.DOMAIN (PUBLIC_MENU_BASE_URL) are allowed implicitly; add the apex + www here.
+      CORS_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
       MAIL_FROM: ${MAIL_FROM:-salveta <no-reply@salveta.menu>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-}
       S3_BUCKET: ${S3_BUCKET:-}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      # Only used when S3_BUCKET is empty (uploads then live in the `uploads` volume and are served by api.DOMAIN/uploads).
       UPLOADS_DIR: /app/apps/api/uploads
     volumes:
       - uploads:/app/apps/api/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    logging: *logging
 
   caddy:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.caddy
-      args:
-        DOMAIN: ${DOMAIN:-salveta.menu}
-        PUBLIC_ANALYTICS_SRC: ${PUBLIC_ANALYTICS_SRC:-}
-        PUBLIC_ANALYTICS_DOMAIN: ${PUBLIC_ANALYTICS_DOMAIN:-}
+    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/salveta-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMAIN: ${DOMAIN:-salveta.menu}
-      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in deploy/.env}
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env.prod}
+      CF_API_TOKEN: ${CF_API_TOKEN:?set CF_API_TOKEN in deploy/.env.prod}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    logging: *logging
 
 volumes:
   pgdata:

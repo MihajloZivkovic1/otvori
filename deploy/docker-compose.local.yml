@@ -1,0 +1,22 @@
+# Local full-stack check on a laptop: builds both images here instead of pulling them, and serves everything on
+# https://localhost (self-signed, Caddy's internal CA) with DOMAIN=localhost.
+#   cp deploy/.env.local.example deploy/.env.local
+#   docker compose --env-file deploy/.env.local -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml up -d --build
+#   curl -k https://api.localhost/api/health   (Caddy answers for *.localhost; add the hosts to /etc/hosts for a browser)
+services:
+  api:
+    image: salveta-api:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+      args:
+        APP_VERSION: local
+  caddy:
+    image: salveta-caddy:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.caddy
+      args:
+        DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro

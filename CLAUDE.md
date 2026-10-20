@@ -16,10 +16,11 @@ glyph path with `apps/api/assets/fonts/LibreBaskerville-Bold.ttf`.
 | `apps/menu` | Public guest menu (React 19 + Vite 8 + Tailwind v4) | Phase 2 (done) |
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 | `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
-| `deploy/` | Docker Compose production stack: Postgres, API image, Caddy image that builds and serves the static apps | Phase 5 |
+| `deploy/` | Production stack for one 1 GB droplet: compose file, two Dockerfiles, Caddyfile, deploy/backup/restore scripts, README | Phase 4 (done) |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
-`modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `app.ts`, `index.ts`.
+`modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
+(`create-superadmin.ts`), `app.ts`, `index.ts` (connects, runs migrations when `MIGRATE_ON_START`, listens, graceful SIGTERM).
 Tests live in `apps/api/test`.
 
 `apps/cms/src`: `main.tsx` (QueryClient → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx` (route
@@ -42,6 +43,7 @@ cp apps/api/.env.example apps/api/.env   # then edit DATABASE_URL etc.
 npm run build -w @qr-menu/shared         # api imports shared from packages/shared/dist (turbo does this automatically)
 npm run migrate               # umzug up      (apps/api: npm run migrate / migrate:undo / migrate:status)
 npm run seed                  # demo data; re-runnable, wipes + recreates only the seeded rows
+npm run create-superadmin:dev -w @qr-menu/api -- admin@x.y 'password'   # dev; prod image: npm run create-superadmin (dist)
 npm run dev                   # turbo: shared tsc --watch + api tsx watch (+ vite apps)
 npm run typecheck             # all workspaces (apps/web runs `astro check`)
 npm run lint                  # eslint in shared, api, cms, menu; prettier --check in web
@@ -65,7 +67,8 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
 - `GET /api/health` → `{ ok, db, version }`; `ok:false` + 503 when the 2 s Postgres ping fails. `version` = `APP_VERSION` env
   (the git short SHA baked into the Docker image; `dev` when unset).
 - Migrations only (umzug + Sequelize QueryInterface, `src/db/migrations/*.ts`); **never** `sequelize.sync()`.
-  Migration names are stored without extension so `.ts` (dev) and `.js` (dist) agree.
+  Migration names are stored without extension so `.ts` (dev) and `.js` (dist) agree. `MIGRATE_ON_START` (default on in
+  production, off elsewhere) makes `index.ts` run pending migrations before listening, so the container needs no init step.
 
 ## Tenant isolation (non-negotiable)
 
@@ -105,8 +108,9 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
 - Refresh token: opaque random token, stored as SHA-256 hash in `auth_tokens` (type `refresh`), sent as httpOnly cookie
   (`tabla_refresh`, path `/api/auth`, SameSite=Lax, Secure in production). `POST /api/auth/refresh` rotates it;
   reuse of a consumed token revokes all of the user's sessions.
-- Magic links and password resets are one-time `auth_tokens` rows (15 min / 1 h). The mailer is a stub that logs
-  (`utils/mailer.ts`; in tests messages are collected in `outbox`). Links point at `APP_URL/auth/magic?token=` and `APP_URL/auth/reset?token=`.
+- Magic links and password resets are one-time `auth_tokens` rows (15 min / 1 h). `utils/mailer.ts` picks the provider from
+  `MAIL_PROVIDER`: `log` (dev/test; messages are also collected in `outbox`) or `resend` (Resend REST API with `RESEND_API_KEY`,
+  no SDK). Links point at `APP_URL/auth/magic?token=` and `APP_URL/auth/reset?token=`.
 - `POST /register` creates user + restaurant (slug from the name, made unique with `-2`, `-3`, …) + owner membership; 14-day trial.
 
 ## Public menu
@@ -312,6 +316,27 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
 - Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav.
   `typecheck` = `astro check`; `lint` = prettier check.
 - Deploy: `deploy/Dockerfile.caddy` builds it with `SITE_URL=https://$DOMAIN` into `/srv/web`, served at the apex; `www.` redirects to the apex.
+
+## Deployment (`deploy/`)
+
+Target: one 1 GB DigitalOcean droplet (Ubuntu 24.04, fra1) running `deploy/docker-compose.yml`: `postgres:16-alpine`
+(tuned: `shared_buffers=128MB`, `max_connections=40`, limit 256m), `salveta-api` (limit 256m) and `salveta-caddy` (limit 128m,
+the three static builds inside). **Images are built by `.github/workflows/deploy.yml`** (after CI succeeds on `main`) and pushed to
+`ghcr.io/<owner>/salveta-api|salveta-caddy:<git short sha>` + `latest`; the droplet only runs `deploy/deploy.sh <tag>`
+(`compose pull && up -d`, waits for the API health check, `image prune`). Rollback = `deploy.sh <older tag>`.
+
+- Runtime config is `deploy/.env.prod` (gitignored; `.env.prod.example` documents every variable; secrets from
+  `openssl rand -base64 48`, the Postgres password `openssl rand -hex 32` because it is embedded in `DATABASE_URL`).
+- Caddy (`deploy/Caddyfile`): apex = marketing site, `www` → apex, `app.` = CMS SPA + `/api` proxy, `api.` = API, `*.` = menu SPA +
+  `/api` proxy; every certificate (incl. the wildcard) via Cloudflare DNS-01 (`CF_API_TOKEN`); zstd/gzip, HSTS and friends,
+  `/assets` + `/_astro` immutable, `index.html`/`sw.js` `no-cache`. `Caddyfile.local` = same routes with `local_certs` for the laptop
+  stack (`docker-compose.local.yml`, `DOMAIN=localhost`).
+- API in production: `TRUST_PROXY=1`, CORS allowlist = `APP_URL` + `CORS_ORIGINS` (apex, www) + every `{slug}.DOMAIN`, secure
+  httpOnly cookies, auth/public-event rate limits, JSON logs, graceful SIGTERM (10 s), migrations on start, `APP_VERSION` = image tag.
+- Storage: Spaces bucket `salveta` (fra1, CDN): `restaurants/<id>/…` public-read via `S3_PUBLIC_URL` (CDN), `backups/` private.
+  `deploy/backup.sh` (cron, `pg_dump | gzip`, keeps 14 days) and `deploy/restore.sh` use the aws CLI with the Spaces endpoint.
+- `deploy/README.md` is the full checklist (DNS records, Spaces, droplet, swap, Docker, secrets, first deploy, superadmin, backups,
+  rollback, logs); `deploy/TODO-manual.md` the one-time manual steps.
 
 ## Testing
 

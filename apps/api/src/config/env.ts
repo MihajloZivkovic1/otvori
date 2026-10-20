@@ -35,9 +35,18 @@ const envSchema = z.object({
   UPLOADS_DIR: z.string().default('./uploads'),
 
   MAIL_FROM: z.string().default('salveta <no-reply@salveta.menu>'),
+  /** `log` writes mails to the log (dev/test), `resend` sends them through https://resend.com. */
+  MAIL_PROVIDER: z.enum(['log', 'resend']).default('log'),
+  RESEND_API_KEY: z.string().optional(),
 
   /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
   APP_VERSION: z.string().optional(),
+  /** Run pending migrations before listening. Unset → on in production (container start), off elsewhere. */
+  MIGRATE_ON_START: z.enum(['0', '1', 'true', 'false']).optional(),
+}).superRefine((value, ctx) => {
+  if (value.MAIL_PROVIDER === 'resend' && !value.RESEND_API_KEY) {
+    ctx.addIssue({ code: 'custom', path: ['RESEND_API_KEY'], message: 'RESEND_API_KEY is required when MAIL_PROVIDER=resend' });
+  }
 });
 
 /** Empty strings in .env files mean "unset". */
@@ -106,6 +115,8 @@ export const env = {
   DATABASE_URL: databaseUrl,
   API_URL: apiUrl,
   APP_VERSION: raw.APP_VERSION ?? 'dev',
+  migrateOnStart:
+    raw.MIGRATE_ON_START === undefined ? raw.NODE_ENV === 'production' : raw.MIGRATE_ON_START === '1' || raw.MIGRATE_ON_START === 'true',
   isProduction: raw.NODE_ENV === 'production',
   isDevelopment: raw.NODE_ENV === 'development',
   isTest,
