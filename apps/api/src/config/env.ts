@@ -34,7 +34,7 @@ const envSchema = z.object({
   S3_PUBLIC_URL: z.string().optional(),
   UPLOADS_DIR: z.string().default('./uploads'),
 
-  MAIL_FROM: z.string().default('Tabla <no-reply@tabla.rs>'),
+  MAIL_FROM: z.string().default('salveta <no-reply@salveta.menu>'),
 });
 
 /** Empty strings in .env files mean "unset". */

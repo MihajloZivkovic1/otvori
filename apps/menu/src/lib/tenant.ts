@@ -3,7 +3,7 @@ import { RESTAURANT_DEFAULTS } from '@qr-menu/shared';
 /**
  * Which restaurant is this page for?
  *   1. /r/:slug path (dev / fallback)            → slug
- *   2. host subdomain (kafeterija.tabla.rs, kafeterija.localhost) → slug
+ *   2. host subdomain (kafeterija.salveta.menu, kafeterija.localhost) → slug
  *   3. VITE_DEFAULT_SLUG (dev convenience on plain localhost)       → slug
  *   4. nothing → null: the API resolves the restaurant from the Host header (/api/public/menu).
  * When the slug came from the host and the API is same-origin, requests also use the host-based URL so they
@@ -13,7 +13,7 @@ export function slugFromHost(hostname: string): string | null {
   const host = hostname.toLowerCase().replace(/\.$/, '');
   if (!host || host === 'localhost' || /^[\d.]+$/.test(host) || host.includes(':')) return null;
   const labels = host.split('.');
-  // "tabla.rs" is an apex domain, "kafeterija.localhost" is a tenant.
+  // "salveta.menu" is an apex domain, "kafeterija.localhost" is a tenant.
   if (labels.length < 2 || (labels.length === 2 && labels[1] !== 'localhost')) return null;
   const first = labels[0]!;
   if (first === 'www' || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(first)) return null;

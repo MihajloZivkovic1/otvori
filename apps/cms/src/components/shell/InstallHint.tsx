@@ -18,7 +18,7 @@ function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
 }
 
-/** "Install Tabla" banner above the tab bar: native prompt on Chromium, Share → Add to Home Screen hint on iOS. */
+/** "Install salveta" banner above the tab bar: native prompt on Chromium, Share → Add to Home Screen hint on iOS. */
 export function InstallHint() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
@@ -46,9 +46,9 @@ export function InstallHint() {
   };
 
   return (
-    <div role="region" aria-label="Install Tabla" className="pop-enter mx-3 mb-2 flex items-center gap-3 rounded-xl bg-ink px-3.5 py-3 text-surface">
+    <div role="region" aria-label="Install salveta" className="pop-enter mx-3 mb-2 flex items-center gap-3 rounded-xl bg-ink px-3.5 py-3 text-surface">
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold">Install Tabla</div>
+        <div className="text-[13px] font-semibold">Install salveta</div>
         <div className="text-xs opacity-80">
           {promptEvent ? 'Add it to your home screen for one-tap access.' : 'Tap Share, then “Add to Home Screen”.'}
         </div>

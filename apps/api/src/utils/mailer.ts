@@ -22,15 +22,15 @@ export async function sendMail(message: MailMessage): Promise<void> {
 export function sendMagicLink(email: string, url: string): Promise<void> {
   return sendMail({
     to: email,
-    subject: 'Your Tabla sign-in link',
-    text: `Sign in to Tabla by opening this link (valid for 15 minutes):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
+    subject: 'Your salveta sign-in link',
+    text: `Sign in to salveta by opening this link (valid for 15 minutes):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
   });
 }
 
 export function sendPasswordReset(email: string, url: string): Promise<void> {
   return sendMail({
     to: email,
-    subject: 'Reset your Tabla password',
+    subject: 'Reset your salveta password',
     text: `Reset your password by opening this link (valid for 1 hour):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
   });
 }

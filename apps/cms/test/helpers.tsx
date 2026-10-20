@@ -72,7 +72,7 @@ export const user: UserDto = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-export const superadmin: UserDto = { ...user, id: ids.admin, email: 'admin@tabla.rs', name: 'Tabla Admin', isSuperadmin: true };
+export const superadmin: UserDto = { ...user, id: ids.admin, email: 'admin@salveta.menu', name: 'salveta admin', isSuperadmin: true };
 
 export const restaurant: RestaurantDto = {
   id: ids.restaurant,

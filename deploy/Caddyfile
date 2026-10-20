@@ -1,0 +1,56 @@
+# salveta production routing. DOMAIN (e.g. salveta.menu) and CLOUDFLARE_API_TOKEN come from the environment.
+{
+	email {$ACME_EMAIL}
+}
+
+(api_proxy) {
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle /uploads/* {
+		reverse_proxy api:3000
+	}
+}
+
+(spa) {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	try_files {path} /index.html
+	file_server
+}
+
+# Apex: no marketing site yet, send visitors to the admin app.
+{$DOMAIN} {
+	redir https://app.{$DOMAIN}{uri} permanent
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# Admin CMS, same-origin /api.
+app.{$DOMAIN} {
+	import api_proxy
+	root * /srv/cms
+	import spa
+}
+
+# API for direct access (webhooks, curl, uploads served from UPLOADS_DIR).
+api.{$DOMAIN} {
+	reverse_proxy api:3000
+}
+
+# Public menus: {slug}.DOMAIN. Wildcard cert via the Cloudflare DNS challenge.
+*.{$DOMAIN} {
+	tls {
+		dns cloudflare {$CLOUDFLARE_API_TOKEN}
+	}
+	import api_proxy
+	root * /srv/menu
+	import spa
+}

@@ -1,1 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#7A3E48"/><text x="32" y="45" text-anchor="middle" font-family="Libre Baskerville, Georgia, serif" font-weight="700" font-size="36" fill="#fff">T</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#7A3E48"/><g transform="translate(11 11) scale(1.75)"><path d="M3 3h12.5L21 8.5V21H3z" fill="#fff"/><path d="M15.5 3v5.5H21z" fill="#F1DDE1"/></g></svg>

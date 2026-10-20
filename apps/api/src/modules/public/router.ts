@@ -6,7 +6,7 @@ import * as controller from './controller.js';
 export const publicRouter = Router();
 
 publicRouter.use(hostSlug);
-// Host-based (kafeterija.tabla.rs/api/public/menu) and explicit (/api/public/kafeterija/menu) forms.
+// Host-based (kafeterija.salveta.menu/api/public/menu) and explicit (/api/public/kafeterija/menu) forms.
 publicRouter.get('/menu', controller.getMenu);
 publicRouter.post('/events', publicEventsLimiter, controller.postEvent);
 publicRouter.get('/:slug/menu', controller.getMenu);

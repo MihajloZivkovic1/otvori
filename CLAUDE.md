@@ -1,7 +1,11 @@
-# Tabla (qr-menu) — project conventions
+# salveta (qr-menu) — project conventions
 
 Multi-tenant QR table-menu SaaS for restaurants. npm-workspaces monorepo driven by Turborepo.
-Product name: **Tabla**. Public menus live on `https://{slug}.tabla.rs`, the admin CMS on a separate host.
+Product name: **salveta** (lowercase wordmark, domain `salveta.menu`; the repo, package names, env vars and storage keys keep the
+historical `qr-menu` / `tabla` identifiers). Public menus live on `https://{slug}.salveta.menu`, the admin CMS on `app.salveta.menu`,
+the API on `api.salveta.menu`, the marketing site on the apex. Brand assets (napkin glyph + "salveta" wordmark in Libre Baskerville 700,
+plum `#7A3E48`) come from `design/salveta.menu website.html`; the CMS uses `components/Wordmark.tsx`, the PDF QR sheet draws the same
+glyph path with `apps/api/assets/fonts/LibreBaskerville-Bold.ttf`.
 
 ## Layout
 
@@ -11,6 +15,7 @@ Product name: **Tabla**. Public menus live on `https://{slug}.tabla.rs`, the adm
 | `apps/api` | Express 5 API (Sequelize 6 + sequelize-typescript, Postgres 16) | Phase 1 (done) |
 | `apps/menu` | Public guest menu (React 19 + Vite 8 + Tailwind v4) | Phase 2 (done) |
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
+| `deploy/` | Docker Compose production stack: Postgres, API image, Caddy image that builds and serves the static apps | Phase 5 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `app.ts`, `index.ts`.
@@ -97,7 +102,7 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
 ## Public menu
 
 - `GET /api/public/:slug/menu?locale=sr` or, host-based, `GET /api/public/menu` with `Host: {slug}.<suffix>` where the suffix
-  comes from `PUBLIC_MENU_BASE_URL` (`http://{slug}.localhost:5174` in dev, `https://{slug}.tabla.rs` in prod).
+  comes from `PUBLIC_MENU_BASE_URL` (`http://{slug}.localhost:5174` in dev, `https://{slug}.salveta.menu` in prod).
 - Only when `published_at` is set and status ≠ `suspended`; hidden categories and categories without items are omitted;
   unavailable items are included with `isAvailable:false`. Response has `Cache-Control: public, max-age=30`.
 - `POST /api/public/:slug/events` with `{type:'scan', sessionId, tableNumber?}` or `{type:'item_view', sessionId, itemId}`
@@ -125,7 +130,7 @@ npm run dev -w @qr-menu/menu           # http://localhost:5174/?t=7  ·  http://
 ```
 `apps/menu/.env` (gitignored, copy from `.env.example`): `VITE_API_URL=http://localhost:3100`, `VITE_DEFAULT_SLUG=kafeterija`.
 The dev and preview servers listen on 5174 and proxy `/api` to `API_PROXY_TARGET || VITE_API_URL` with the Host header preserved
-(`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.tabla.rs`.
+(`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.salveta.menu`.
 Useful URL params: `?t=7` table, `?lang=en`, `?item=<itemId>` opens the sheet.
 
 To reproduce the production same-origin setup (and the Lighthouse run): `VITE_API_URL= npx vite build` then
@@ -133,7 +138,7 @@ To reproduce the production same-origin setup (and the Lighthouse run): `VITE_AP
 and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
 
 ### Conventions
-- **Restaurant resolution** (`lib/tenant.ts` → `resolveTenant`): `/r/:slug` path → host subdomain (`kafeterija.tabla.rs`,
+- **Restaurant resolution** (`lib/tenant.ts` → `resolveTenant`): `/r/:slug` path → host subdomain (`kafeterija.salveta.menu`,
   `kafeterija.localhost`; apex/`www`/IPs/`localhost` give nothing) → `VITE_DEFAULT_SLUG` → none. With a slug the app calls
   `/api/public/:slug/menu`; with none, or when the slug came from the host *and* the API is same-origin, it calls the host-based
   `/api/public/menu` — the URL the production build preloads (`<link rel="preload" as="fetch">`, emitted only when `VITE_API_URL` is empty).
@@ -151,7 +156,7 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   reproduces the design's light/dark accent pairs. The accent is only used for chips, the logo tile, the retry button and focus rings,
   never for body text. Light/dark palettes, type sizes and spacing come from `design/Tabla Guest Menu.html`.
 - **Fonts**: Google Fonts (Figtree 400/500/600, Libre Baskerville 400/700, `display=swap`) via preconnect + a non-blocking stylesheet
-  in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "Tabla" wordmark.
+  in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "salveta" wordmark.
 - **index.html** carries a static copy of `MenuSkeleton` inside `#root` (first paint without JS; React replaces it) and the build
   inlines the stylesheet (`inlineCss` plugin in `vite.config.ts`). Keep the static skeleton in sync when `MenuSkeleton` changes.
 - **i18n** (`lib/i18n.ts`): UI strings for `sr`/`en` only; menu content arrives resolved from the API. UI locale =
@@ -184,7 +189,7 @@ npm run dev -w @qr-menu/api            # PORT=3100 (apps/api/.env); APP_URL=http
 npm run dev -w @qr-menu/cms            # http://localhost:5173 — Vite proxies /api to VITE_API_URL (apps/cms/.env, gitignored)
 ```
 `apps/cms/.env.example`: `VITE_API_URL=http://localhost:3100` (dev proxy target; production builds call it directly, empty =
-same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@tabla.rs` /
+same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@salveta.menu` /
 `admin1234` (superadmin, no memberships → lands on `/superadmin`).
 
 ### Auth flow (`lib/api.ts`, `lib/auth.tsx`)
@@ -213,7 +218,7 @@ same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija
   (`useIsCompact()`); `>1024px` = 240px sidebar. Custom Tailwind breakpoints `tab` (641px) and `wide` (1025px); `max-tab:`/`max-wide:` for the inverse.
 - Tokens on `:root` (`--bg --surface --ink --ink-2 --ink-3 --muted --faint --line --line2 --line-strong --accent --on-accent
   --accent-soft`) mapped by `@theme inline` to `bg-canvas text-ink text-ink-2 text-muted text-faint border-line bg-line-2
-  bg-accent text-on-accent …`. The accent is always the Tabla plum `#7A3E48`; the tenant's `primaryColor` is only used by
+  bg-accent text-on-accent …`. The accent is always the salveta plum `#7A3E48`; the tenant's `primaryColor` is only used by
   `LogoTile` and the Branding `PhonePreview`. The dark variant (`#141416 / #1C1C20 / accent #B86F7C`) applies via
   `prefers-color-scheme: dark` **on phone widths only** (design frame M4). `a` color is in `@layer base` so utilities override it.
 - `--sidebar-w` on `<html>` lets the `Drawer` scrim stop at the sidebar edge (drawers/modals/sheets portal to `<body>`).
@@ -260,7 +265,7 @@ sets the session flag and lets the app restore through the mocked `POST /api/aut
 - `apps/menu`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/menu`). `test/setup.ts` stubs `IntersectionObserver`
   (drive it with `MockIntersectionObserver.instances[i].trigger(...)`), `scrollIntoView`/`scrollTo`, and clears storage;
   `mockFetch(handler)` replaces `fetch` per test and `renderMenu(route)` mounts the app in a `MemoryRouter` with a fresh QueryClient.
-- Seed credentials: superadmin `admin@tabla.rs` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
+- Seed credentials: superadmin `admin@salveta.menu` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
   (restaurant "Kafeterija Dorćol", slug `kafeterija`); other demo owners use `tabla1234`.
 
 ## When adding an endpoint

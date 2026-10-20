@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Design tokens from design/Tabla Admin Panel (1).html. The CMS chrome always uses the Tabla plum accent;
+ * Design tokens from design/Tabla Admin Panel (1).html. The CMS chrome always uses the salveta plum accent;
  * the tenant's own primaryColor is only painted inside the Branding live preview and the venue logo tiles.
  */
 @theme {

@@ -1,7 +1,7 @@
 {
-  "name": "Tabla",
-  "short_name": "Tabla",
-  "description": "Tabla admin — manage your menu, tables and branding",
+  "name": "salveta",
+  "short_name": "salveta",
+  "description": "salveta admin — manage your menu, tables and branding",
   "id": "/",
   "start_url": "/",
   "scope": "/",

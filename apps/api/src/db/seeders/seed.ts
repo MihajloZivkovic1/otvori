@@ -86,7 +86,7 @@ interface SeedRestaurant {
   dailyScans: [number, number];
 }
 
-const SUPERADMIN = { email: 'admin@tabla.rs', password: 'admin1234', name: 'Tabla Admin' };
+const SUPERADMIN = { email: 'admin@salveta.menu', password: 'admin1234', name: 'salveta admin' };
 
 const kafeterija: SeedRestaurant = {
   slug: 'kafeterija',

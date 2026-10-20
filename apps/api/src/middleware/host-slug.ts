@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 
 /**
  * Resolves the restaurant slug from the Host header subdomain
- * (e.g. kafeterija.tabla.rs → "kafeterija") and stores it on req.restaurantSlug.
+ * (e.g. kafeterija.salveta.menu → "kafeterija") and stores it on req.restaurantSlug.
  * Public routes may then be called without the /:slug segment.
  */
 export function hostSlug(req: Request, _res: Response, next: NextFunction): void {

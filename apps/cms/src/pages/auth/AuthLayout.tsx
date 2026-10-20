@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { Wordmark } from '../../components/Wordmark';
 
 interface AuthLayoutProps {
   title: string;
@@ -8,17 +9,14 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
-/** Centred 360px column (desktop) / full-width phone layout (M1) with the Tabla wordmark. */
+/** Centred 360px column (desktop) / full-width phone layout (M1) with the salveta wordmark. */
 export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <div className="flex flex-1 flex-col justify-center px-6 py-10 tab:items-center">
         <div className="flex w-full flex-col gap-6 tab:w-[360px] tab:gap-7">
-          <Link to="/login" className="flex items-center gap-2.5 text-ink no-underline">
-            <span className="grid size-9 place-items-center rounded-[10px] bg-accent font-serif text-base font-bold text-on-accent tab:size-8 tab:rounded-lg tab:text-[15px]">
-              T
-            </span>
-            <span className="font-serif text-xl font-bold tab:text-lg">Tabla</span>
+          <Link to="/login" className="flex items-center no-underline" aria-label="salveta">
+            <Wordmark size={26} />
           </Link>
           <div className="flex flex-col gap-1.5">
             <h1 className="text-2xl font-semibold leading-tight tracking-[-.01em] tab:text-[22px]">{title}</h1>

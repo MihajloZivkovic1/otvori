@@ -6,7 +6,7 @@ export function App() {
     <Routes>
       {/* Dev / fallback form: the slug in the path. */}
       <Route path="/r/:slug/*" element={<MenuPage />} />
-      {/* Production form: the restaurant comes from the host ({slug}.tabla.rs). */}
+      {/* Production form: the restaurant comes from the host ({slug}.salveta.menu). */}
       <Route path="*" element={<MenuPage />} />
     </Routes>
   );

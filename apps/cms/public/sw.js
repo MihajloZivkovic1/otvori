@@ -1,4 +1,4 @@
-/* Tabla admin — app-shell service worker. Caches the shell (HTML, hashed assets, manifest, icons) only.
+/* salveta admin — app-shell service worker. Caches the shell (HTML, hashed assets, manifest, icons) only.
  * API responses (/api/*) and uploads are never cached: the CMS must always show live data. */
 const VERSION = 'tabla-cms-shell-v1';
 const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];

@@ -67,7 +67,7 @@ export function MorePage() {
         </div>
 
         <p className="text-center text-xs text-muted">
-          Tabla {__APP_VERSION__} · Signed in as {me.user.email}
+          salveta {__APP_VERSION__} · Signed in as {me.user.email}
         </p>
       </div>
       <VenueSheet open={switching} onClose={() => setSwitching(false)} currentId={restaurant.id} />

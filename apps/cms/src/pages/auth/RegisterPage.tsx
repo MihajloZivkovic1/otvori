@@ -65,7 +65,7 @@ export function RegisterPage() {
         <Field label="Password" htmlFor="reg-password" hint="At least 8 characters" error={errors.password?.message}>
           <Input id="reg-password" type="password" autoComplete="new-password" controlSize={controlSize} invalid={Boolean(errors.password)} {...form.register('password')} />
         </Field>
-        <Field label="Restaurant name" htmlFor="reg-restaurant" hint="Becomes your menu address, e.g. kafeterija.tabla.rs" error={errors.restaurantName?.message}>
+        <Field label="Restaurant name" htmlFor="reg-restaurant" hint="Becomes your menu address, e.g. kafeterija.salveta.menu" error={errors.restaurantName?.message}>
           <Input id="reg-restaurant" autoComplete="organization" controlSize={controlSize} invalid={Boolean(errors.restaurantName)} {...form.register('restaurantName')} />
         </Field>
         <Button type="submit" variant="primary" size={isMobile ? 'mobile' : 'lg'} loading={form.formState.isSubmitting} block className="mt-1">

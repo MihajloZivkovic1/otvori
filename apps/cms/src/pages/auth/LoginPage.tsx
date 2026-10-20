@@ -84,7 +84,7 @@ export function LoginPage() {
       subtitle={isMobile ? undefined : 'Manage your menu, tables and branding.'}
       footer={
         <>
-          New to Tabla?{' '}
+          New to salveta?{' '}
           <Link to="/register" className="font-medium no-underline">
             Create a restaurant
           </Link>
