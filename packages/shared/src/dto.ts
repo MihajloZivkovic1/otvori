@@ -43,6 +43,7 @@ export const restaurantSummaryDtoSchema = z.object({
   id: uuidSchema,
   slug: z.string(),
   name: z.string(),
+  city: z.string().nullable(),
   logoUrl: z.string().nullable(),
   primaryColor: z.string(),
   status: restaurantStatusSchema,
@@ -241,6 +242,8 @@ export const superadminRestaurantDtoSchema = z.object({
   slug: z.string(),
   name: z.string(),
   city: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  primaryColor: z.string(),
   status: restaurantStatusSchema,
   plan: planSchema,
   trialEndsAt: isoString.nullable(),
@@ -262,10 +265,10 @@ export const paginatedDtoSchema = <T extends z.ZodType>(item: T) =>
   });
 export type PaginatedDto<T> = { items: T[]; total: number; page: number; pageSize: number };
 
+/** GET /api/health — `ok` is false (HTTP 503) when the database ping fails; `version` is the build's git short SHA. */
 export const healthDtoSchema = z.object({
-  status: z.enum(['ok', 'degraded']),
+  ok: z.boolean(),
   db: z.enum(['ok', 'error']),
-  uptime: z.number(),
   version: z.string(),
 });
 export type HealthDto = z.infer<typeof healthDtoSchema>;

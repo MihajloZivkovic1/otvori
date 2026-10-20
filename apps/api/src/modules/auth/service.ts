@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Op, type Transaction } from 'sequelize';
+import { Op } from 'sequelize';
 import {
-  RESTAURANT_DEFAULTS,
   type LoginInput,
   type MembershipDto,
   type RegisterInput,
@@ -16,8 +15,8 @@ import { signAccessToken } from '../../utils/jwt.js';
 import { sendMagicLink, sendPasswordReset } from '../../utils/mailer.js';
 import { toIso } from '../../utils/objects.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
-import { slugify } from '../../utils/slug.js';
 import { generateOpaqueToken, hashToken } from '../../utils/tokens.js';
+import { createRestaurantWithOwner } from '../restaurants/service.js';
 
 const MAGIC_LINK_TTL_MS = 15 * 60_000;
 const PASSWORD_RESET_TTL_MS = 60 * 60_000;
@@ -48,6 +47,7 @@ export function toRestaurantSummaryDto(restaurant: Restaurant): RestaurantSummar
     id: restaurant.id,
     slug: restaurant.slug,
     name: restaurant.name,
+    city: restaurant.city,
     logoUrl: restaurant.logoUrl,
     primaryColor: restaurant.primaryColor,
     status: restaurant.status,
@@ -88,15 +88,6 @@ export async function createSession(user: User): Promise<Session> {
   };
 }
 
-async function uniqueSlug(base: string, transaction: Transaction): Promise<string> {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const candidate = attempt === 0 ? base : `${base.slice(0, 55)}-${attempt + 1}`;
-    const taken = await Restaurant.count({ where: { slug: candidate }, transaction });
-    if (!taken) return candidate;
-  }
-  return `${base.slice(0, 50)}-${generateOpaqueToken(4).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-}
-
 export async function register(input: RegisterInput): Promise<Session> {
   const existing = await User.findOne({ where: { email: input.email }, attributes: ['id'] });
   if (existing) throw conflict('EMAIL_TAKEN', 'An account with this email already exists');
@@ -104,18 +95,7 @@ export async function register(input: RegisterInput): Promise<Session> {
   const passwordHash = await hashPassword(input.password);
   const user = await sequelize.transaction(async (transaction) => {
     const created = await User.create({ email: input.email, name: input.name, passwordHash }, { transaction });
-    const slug = await uniqueSlug(slugify(input.restaurantName), transaction);
-    const restaurant = await Restaurant.create(
-      {
-        slug,
-        name: input.restaurantName,
-        status: 'trial',
-        plan: 'trial',
-        trialEndsAt: new Date(Date.now() + RESTAURANT_DEFAULTS.trialDays * DAY_MS),
-      },
-      { transaction },
-    );
-    await Membership.create({ userId: created.id, restaurantId: restaurant.id, role: 'owner' }, { transaction });
+    await createRestaurantWithOwner(created.id, input.restaurantName, transaction);
     return created;
   });
   return createSession(user);

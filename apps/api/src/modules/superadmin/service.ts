@@ -26,6 +26,8 @@ function toDto(restaurant: Restaurant, owner: Owner): SuperadminRestaurantDto {
     slug: restaurant.slug,
     name: restaurant.name,
     city: restaurant.city,
+    logoUrl: restaurant.logoUrl,
+    primaryColor: restaurant.primaryColor,
     status: restaurant.status,
     plan: restaurant.plan,
     trialEndsAt: toIso(restaurant.trialEndsAt),

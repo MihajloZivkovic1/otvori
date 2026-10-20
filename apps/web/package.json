@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro sync && tsc --noEmit -p tsconfig.json",
+    "typecheck": "astro check",
     "lint": "prettier --check \"src/**/*.{astro,ts,css}\" \"test/**/*.ts\"",
     "format": "prettier --write \"src/**/*.{astro,ts,css}\" \"test/**/*.ts\"",
     "test": "vitest run",
@@ -30,6 +30,7 @@
     "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
+    "typescript": "5.9.3",
     "vitest": "^5.0.5"
   }
 }

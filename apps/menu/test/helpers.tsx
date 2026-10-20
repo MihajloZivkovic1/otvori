@@ -188,7 +188,7 @@ export const serveFixtures: FetchHandler = (url) => {
   return { body: url.searchParams.get('locale') === 'en' ? menuEn : menuSr };
 };
 
-export function renderMenu(route = '/r/kafeterija?t=7') {
+export function renderMenu(route = '/r/kafeterija/t/7') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>

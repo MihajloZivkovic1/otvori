@@ -7,7 +7,7 @@ describe('locale switching', () => {
   it('changes UI strings immediately and refetches the menu in the chosen locale', async () => {
     const fetchSpy = mockFetch(serveFixtures);
     const user = userEvent.setup();
-    renderMenu('/r/kafeterija?t=7');
+    renderMenu('/r/kafeterija/t/7');
 
     expect(await screen.findByText('Sto 7')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Kafa' })).toBeInTheDocument();

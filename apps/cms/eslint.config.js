@@ -18,5 +18,11 @@ export default defineConfig([
     languageOptions: {
       globals: { ...globals.browser, __APP_VERSION__: 'readonly' },
     },
+    rules: {
+      // Context providers export their hook (useAuth, useToast, useRestaurantContext, …) from the same file by design.
+      'react-refresh/only-export-components': 'off',
+      // react-hook-form's watch() trips the React Compiler preset; the CMS is not compiled with it.
+      'react-hooks/incompatible-library': 'off',
+    },
   },
 ])

@@ -2,8 +2,15 @@ import type { Request, Response } from 'express';
 import { restaurantIdOf } from '../../middleware/membership.js';
 import { uploadedFile } from '../../middleware/upload.js';
 import { noStore } from '../../utils/http.js';
-import { updateRestaurantSchema } from './schemas.js';
+import { createRestaurantSchema, updateRestaurantSchema } from './schemas.js';
 import * as service from './service.js';
+
+/** POST /api/admin/restaurants — not tenant-scoped: the caller becomes the owner of the new venue. */
+export async function createRestaurant(req: Request, res: Response): Promise<void> {
+  const input = createRestaurantSchema.parse(req.body);
+  noStore(res);
+  res.status(201).json(await service.createRestaurant(req.user!, input));
+}
 
 export async function getRestaurant(req: Request, res: Response): Promise<void> {
   noStore(res);

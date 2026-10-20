@@ -11,19 +11,16 @@ export function MagicLinkPage() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const { status, signIn } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const started = useRef(false);
+  const error = token ? requestError : 'This link is missing its token.';
 
   useEffect(() => {
-    if (started.current) return;
+    if (!token || started.current) return;
     started.current = true;
-    if (!token) {
-      setError('This link is missing its token.');
-      return;
-    }
     api<AuthResponseDto>(`/api/auth/magic-link/${encodeURIComponent(token)}`, { auth: false })
       .then((session) => signIn(session, true))
-      .catch((err: unknown) => setError(errorMessage(err, 'This link is invalid or has expired.')));
+      .catch((err: unknown) => setRequestError(errorMessage(err, 'This link is invalid or has expired.')));
   }, [token, signIn]);
 
   if (status === 'authenticated') return <Navigate to="/" replace />;

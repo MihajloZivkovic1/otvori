@@ -6,6 +6,7 @@ import type {
   CategoryDto,
   CreateCategoryInput,
   CreateItemInput,
+  CreateRestaurantInput,
   CreateTableInput,
   MenuItemDto,
   PaginatedDto,
@@ -41,6 +42,16 @@ export function useRestaurant(rid: string, enabled = true) {
 
 function setRestaurant(client: QueryClient, restaurant: RestaurantDto) {
   client.setQueryData(keys.restaurant(restaurant.id), restaurant);
+}
+
+/** POST /api/admin/restaurants — a new venue owned by the signed-in user (Pro owners and superadmins only). */
+export function useCreateRestaurant() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateRestaurantInput) =>
+      api<RestaurantDto>('/api/admin/restaurants', { method: 'POST', body: input }),
+    onSuccess: (restaurant) => setRestaurant(client, restaurant),
+  });
 }
 
 export function useUpdateRestaurant(rid: string) {

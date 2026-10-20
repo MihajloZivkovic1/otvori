@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   createItemSchema,
@@ -76,11 +76,9 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
   const [photo, setPhoto] = useState<File | null>(null);
   const [zoom, setZoom] = useState(1);
   const [saving, setSaving] = useState(false);
-  const availabilityTouched = useRef(false);
+  const [availabilityTouched, setAvailabilityTouched] = useState(false);
 
-  const markAvailabilityTouched = useCallback(() => {
-    availabilityTouched.current = true;
-  }, []);
+  const markAvailabilityTouched = useCallback(() => setAvailabilityTouched(true), []);
 
   const submit = form.handleSubmit(async (values) => {
     setSaving(true);
@@ -95,7 +93,7 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
         tags: values.tags ?? [],
         variants: (values.variants ?? []).map((v, index) => ({ name: v.name, priceCents: v.priceCents, sortOrder: index })),
       };
-      if (!item || availabilityTouched.current) {
+      if (!item || availabilityTouched) {
         payload.isAvailable = values.isAvailable ?? true;
         payload.unavailableUntil = null;
       }

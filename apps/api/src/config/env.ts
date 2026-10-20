@@ -35,6 +35,9 @@ const envSchema = z.object({
   UPLOADS_DIR: z.string().default('./uploads'),
 
   MAIL_FROM: z.string().default('salveta <no-reply@salveta.menu>'),
+
+  /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
+  APP_VERSION: z.string().optional(),
 });
 
 /** Empty strings in .env files mean "unset". */
@@ -45,7 +48,7 @@ const rawEnv = Object.fromEntries(
 const parsed = envSchema.safeParse(rawEnv);
 if (!parsed.success) {
   const lines = parsed.error.issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`);
-  // eslint-disable-next-line no-console
+   
   console.error(`Invalid environment configuration:\n${lines.join('\n')}`);
   process.exit(1);
 }
@@ -102,6 +105,7 @@ export const env = {
   ...raw,
   DATABASE_URL: databaseUrl,
   API_URL: apiUrl,
+  APP_VERSION: raw.APP_VERSION ?? 'dev',
   isProduction: raw.NODE_ENV === 'production',
   isDevelopment: raw.NODE_ENV === 'development',
   isTest,

@@ -35,9 +35,10 @@ function prefetchWhenIdle(load: () => Promise<unknown>): () => void {
   return () => window.clearTimeout(handle);
 }
 const NO_CATEGORIES: PublicMenuCategoryDto[] = [];
+const NO_LOCALES: string[] = [];
 
 export function MenuPage() {
-  const { slug: pathSlug } = useParams();
+  const { slug: pathSlug, table: pathTable } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,7 +48,8 @@ export function MenuPage() {
   // Host-derived slug + same-origin API → host-based URLs (/api/public/menu), the form the HTML preloads.
   const slug = tenant.source === 'host' && API_SAME_ORIGIN ? null : tenant.slug;
 
-  const tableParam = searchParams.get('t');
+  // Table QR codes encode /t/<number>; ?t=<number> is the older format and still accepted.
+  const tableParam = pathTable ?? searchParams.get('t');
   const tableNumber = useMemo(
     () => parseTableNumber(tableParam) ?? readStoredTableNumber(tenantKey),
     [tableParam, tenantKey],
@@ -120,7 +122,7 @@ export function MenuPage() {
     );
   }, [navigate, openedFromMenu, setSearchParams]);
 
-  const supportedLocales = restaurant?.supportedLocales ?? [];
+  const supportedLocales = restaurant?.supportedLocales ?? NO_LOCALES;
   const switchLocale = useCallback(() => {
     const next = nextLocale(locale, supportedLocales);
     if (!next) return;

@@ -28,7 +28,7 @@ tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/for
 `lib/` (api, auth, queries, storage, format, screens, crop, download, color), `hooks/`, `styles.css`. Tests in `apps/cms/test`.
 
 `apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
-(routes `/r/:slug/*` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
+(routes `/r/:slug/t/:table`, `/r/:slug/*`, `/t/:table` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
 `components/` (Header, CategoryBar, CategorySection, ItemRow, ItemSheet, OfflineScreen, MenuSkeleton, Footer, Chips, LogoTile, icons),
 `hooks/` (useMenu, useActiveCategory, useLockBodyScroll, useFocusTrap), `lib/` (api, tenant, session, locale, i18n, format, theme,
 events), `styles.css` (tokens + Tailwind). Tests live in `apps/menu/test` (vitest + Testing Library, jsdom; `helpers.tsx` has the
@@ -43,8 +43,9 @@ npm run build -w @qr-menu/shared         # api imports shared from packages/shar
 npm run migrate               # umzug up      (apps/api: npm run migrate / migrate:undo / migrate:status)
 npm run seed                  # demo data; re-runnable, wipes + recreates only the seeded rows
 npm run dev                   # turbo: shared tsc --watch + api tsx watch (+ vite apps)
-npm run typecheck             # all workspaces
-npm test                      # apps/api vitest + supertest (needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
+npm run typecheck             # all workspaces (apps/web runs `astro check`)
+npm run lint                  # eslint in shared, api, cms, menu; prettier --check in web
+npm test                      # every suite, turbo --concurrency=2 (api needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
 ```
 
 `@qr-menu/shared` is a compiled package: consumers import `dist/`. After editing shared, rebuild it (or keep `npm run dev` running).
@@ -52,7 +53,8 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
 ## Stack rules
 
 - Node 22, TypeScript strict, **ESM everywhere** (`"type": "module"`, `module: NodeNext`, relative imports end in `.js`).
-- TypeScript 7 (native tsc). Decorators are legacy `experimentalDecorators` with `useDefineForClassFields: false`.
+- TypeScript **5.9.3**, pinned exactly in every workspace (typescript-eslint, ts-api-utils and `astro check` do not support
+  TS 6/7; a nested `typescript@6` in the lockfile is a regression). Decorators are legacy `experimentalDecorators` with `useDefineForClassFields: false`.
   `emitDecoratorMetadata` is **off** (tsx/esbuild cannot emit it) → every `@Column` declares its `DataType` explicitly.
 - Express 5: async handlers may `throw`; rejections reach the error middleware. No try/catch boilerplate in controllers.
 - Validation: **every** request body/query is parsed with a Zod schema from `@qr-menu/shared` (`schema.parse(req.body)` in the controller).
@@ -60,6 +62,8 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
 - Error shape is always `{ error: { code, message, details? } }` (`utils/errors.ts`, `middleware/error.ts`).
   400 validation, 401 auth, 403 membership/role, 404 not found, 409 conflict (`EMAIL_TAKEN`, `SLUG_TAKEN`, `TABLE_NUMBER_TAKEN`), 413/415 uploads, 429 rate limit.
 - Logging: pino (`utils/logger.ts`), pino-http per request. Never `console.log` in app code.
+- `GET /api/health` → `{ ok, db, version }`; `ok:false` + 503 when the 2 s Postgres ping fails. `version` = `APP_VERSION` env
+  (the git short SHA baked into the Docker image; `dev` when unset).
 - Migrations only (umzug + Sequelize QueryInterface, `src/db/migrations/*.ts`); **never** `sequelize.sync()`.
   Migration names are stored without extension so `.ts` (dev) and `.js` (dist) agree.
 
@@ -67,6 +71,9 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
 
 - Admin routes are `/api/admin/restaurants/:restaurantId/...`. `requireMembership()` resolves the membership of the
   authenticated user for the `:restaurantId` route param and stores `req.membership`.
+- `POST /api/admin/restaurants` `{ name }` is the one admin route without a `:restaurantId`: it creates another venue (unique
+  slug, own 14-day trial) with the caller as owner. Gate: the caller owns a venue on plan `pro` or is a superadmin, otherwise
+  403 `PLAN_REQUIRED`. `createRestaurantWithOwner()` in `modules/restaurants/service.ts` is shared with `POST /api/auth/register`.
 - Services take `restaurantId` as an explicit argument (from `restaurantIdOf(req)`), and **every query filters by it**.
   The restaurant id is never read from the request body.
 - Owner-only (`requireOwner`): PATCH restaurant settings, logo upload, publish, DELETE restaurant/category/item/table.
@@ -81,6 +88,8 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
 - Translatable text is JSONB keyed by locale: `{ "sr": "...", "en": "..." }` (`TranslatedText`). Public endpoints resolve it
   with `resolveText(text, locale, restaurant.defaultLocale)`; admin endpoints return the raw object.
 - Allowed allergens `ALLERGENS` = G, M, E, N, S, F, C, Se; tags `TAGS` = vegan, spicy, new; locales `LOCALES` = sr, en (all in shared).
+- `RestaurantSummaryDto` (memberships in `/me` and auth responses) carries `city`, `logoUrl`, `primaryColor`; `SuperadminRestaurantDto`
+  carries `city`, `logoUrl`, `primaryColor` too, so switchers and the superadmin index can render branded tiles without extra requests.
 - Effective availability = `isAvailable && (unavailableUntil == null || unavailableUntil < now)`; DTOs expose `isEffectivelyAvailable`.
   `PATCH /items/:id/availability`: `{available:true}` clears, `{available:false}` is indefinite,
   `{available:false, until}` sets `isAvailable=true` + `unavailableUntil` (`'tomorrow-06:00'` = next 06:00 in the restaurant time zone).
@@ -108,7 +117,8 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
   unavailable items are included with `isAvailable:false`. Response has `Cache-Control: public, max-age=30`.
 - `POST /api/public/:slug/events` with `{type:'scan', sessionId, tableNumber?}` or `{type:'item_view', sessionId, itemId}`
   (rate-limited per IP). A repeated scan from the same session within 30 min is ignored; item views attach to the session's
-  latest scan (one is created if missing). Table QR codes encode `PUBLIC_MENU_BASE_URL/?t=<tableNumber>`.
+  latest scan (one is created if missing). Table QR codes encode `PUBLIC_MENU_BASE_URL/t/<tableNumber>` (`utils/public-url.ts`;
+  the menu app still accepts the older `?t=<tableNumber>`).
 
 ## Uploads / storage
 
@@ -127,15 +137,15 @@ Lighthouse mobile on the seeded menu: 100/100/100/100.
 ### Running it on this machine
 ```bash
 npm run dev -w @qr-menu/api            # apps/api/.env → PORT=3100, Postgres on 5433 (see .env; seed with `npm run seed`)
-npm run dev -w @qr-menu/menu           # http://localhost:5174/?t=7  ·  http://kafeterija.localhost:5174/?t=7  ·  /r/bistro-zemun
+npm run dev -w @qr-menu/menu           # http://localhost:5174/t/7  ·  http://kafeterija.localhost:5174/t/7  ·  /r/bistro-zemun
 ```
 `apps/menu/.env` (gitignored, copy from `.env.example`): `VITE_API_URL=http://localhost:3100`, `VITE_DEFAULT_SLUG=kafeterija`.
 The dev and preview servers listen on 5174 and proxy `/api` to `API_PROXY_TARGET || VITE_API_URL` with the Host header preserved
 (`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.salveta.menu`.
-Useful URL params: `?t=7` table, `?lang=en`, `?item=<itemId>` opens the sheet.
+Useful URL bits: `/t/7` table (legacy `?t=7` still works), `?lang=en`, `?item=<itemId>` opens the sheet.
 
 To reproduce the production same-origin setup (and the Lighthouse run): `VITE_API_URL= npx vite build` then
-`API_PROXY_TARGET=http://localhost:3100 npx vite preview --port 4174` in `apps/menu`, open `http://kafeterija.localhost:4174/?t=7`,
+`API_PROXY_TARGET=http://localhost:3100 npx vite preview --port 4174` in `apps/menu`, open `http://kafeterija.localhost:4174/t/7`,
 and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
 
 ### Conventions
@@ -167,7 +177,7 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   variants show `od/from <lowest variant>`. Serbian plurals via `Intl.PluralRules` ("1 stavka / 2 stavke / 5 stavki").
 - **Events** (`lib/events.ts`): `scan` once per tab session and table (`sessionStorage['tabla.scan.<tenant>.<table>']`; the API also
   de-duplicates for 30 min), `item_view` when the sheet opens; `fetch(..., { keepalive: true })`, errors swallowed. Session id = uuid in
-  `sessionStorage['tabla.session']`; table = `?t=` persisted in `sessionStorage['tabla.table.<tenant>']`.
+  `sessionStorage['tabla.session']`; table = the `/t/:table` route param (fallback `?t=`) persisted in `sessionStorage['tabla.table.<tenant>']`.
 - **Sheet**: opened by pushing `?item=<id>` with `state.sheet`, so Back closes it (direct links close with `replace`). Modal dialog:
   body scroll locked (`position: fixed`), focus trapped, Escape closes, focus returns to the row. Unavailable rows render as a
   non-interactive `div` at 45 % opacity with "Danas nije dostupno / Not available today".
@@ -212,6 +222,10 @@ same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija
 - Screens: `menu` (`?c=<categoryId>` selected category, `?item=<id>|new` opens the editor), `menu/unavailable`, `tables`,
   `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile), index = Home on phones / redirect to `menu` otherwise.
   `/superadmin` lists every venue (`SuperadminLayout` keeps the last venue in the switcher); clicking a row opens `/r/:id/menu`.
+- Venue switcher (`Sidebar` dropdown, `VenueSheet` on phones): tile in the venue's `primaryColor`/logo, city as secondary text,
+  and “+ Add a venue” at the end → `AddVenueModal` (name → `POST /api/admin/restaurants` → `refreshMe()` → `/r/:id/menu`).
+  `canAddVenue(me)` = owner of a venue on plan `pro` or superadmin; everyone else sees the row disabled with “Available on Pro”.
+  Superadmin rows use the same tile (`primaryColor`, `logoUrl`) and show the city.
 - Owner-only UI (settings/branding edits, Publish, Delete) is gated with `isOwner`; the API enforces it anyway.
 
 ### Layout & tokens
@@ -296,13 +310,13 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
   `qr` (URL to encode, rendered client-side with `qrcode-generator` as SVG) or `qrImage` (ready image URL), `url` (short link text),
   `lang`. Headless Chrome `--print-to-pdf` yields a single 255.12 × 255.12 pt page.
 - Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav.
-  `typecheck` = `astro sync && tsc --noEmit` (`astro check` crashes with the repo's TypeScript 7); `lint` = prettier check
-  (eslint's TS parser is also broken by TypeScript 7 in this repo).
+  `typecheck` = `astro check`; `lint` = prettier check.
 - Deploy: `deploy/Dockerfile.caddy` builds it with `SITE_URL=https://$DOMAIN` into `/srv/web`, served at the apex; `www.` redirects to the apex.
 
 ## Testing
 
-- vitest + supertest against a real Postgres: `test/global-setup.ts` creates the test DB and runs migrations once;
+- Root `npm test` = `turbo run test --concurrency=2`: with all five suites in parallel the CMS Testing Library queries time out.
+- `apps/api`: vitest + supertest against a real Postgres: `test/global-setup.ts` creates the test DB and runs migrations once;
   `test/setup.ts` truncates all tables before each test. Files run sequentially (`fileParallelism: false`).
 - `apps/cms`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/cms`); see "Admin CMS app → Tests".
 - `apps/menu`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/menu`). `test/setup.ts` stubs `IntersectionObserver`

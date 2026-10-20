@@ -45,7 +45,7 @@ describe('category bar', () => {
 
   it('shows the item count per category and posts one scan with the table number', async () => {
     const fetchSpy = mockFetch(serveFixtures);
-    renderMenu('/r/kafeterija?t=7');
+    renderMenu('/r/kafeterija/t/7');
 
     expect(await screen.findByText('2 stavke')).toBeInTheDocument();
     expect(screen.getByText('1 stavka')).toBeInTheDocument();

@@ -19,8 +19,10 @@ export function useActiveCategory(ids: readonly string[], topOffset: number) {
   const intersecting = useRef(new Map<string, boolean>());
   const pickRef = useRef<() => void>(() => undefined);
 
+  // A stale id (the category list changed underneath) falls back to the first category without a state write.
+  const current = active && ids.includes(active) ? active : (ids[0] ?? null);
+
   useEffect(() => {
-    setActive((previous) => (previous && ids.includes(previous) ? previous : (ids[0] ?? null)));
     intersecting.current = new Map();
     if (typeof IntersectionObserver === 'undefined' || ids.length === 0) return;
 
@@ -71,5 +73,5 @@ export function useActiveCategory(ids: readonly string[], topOffset: number) {
     );
   }, []);
 
-  return { active, scrollTo };
+  return { active: current, scrollTo };
 }

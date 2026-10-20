@@ -31,3 +31,9 @@ export const updateRestaurantSchema = z
     { message: 'supportedLocales must include defaultLocale', path: ['supportedLocales'] },
   );
 export type UpdateRestaurantInput = z.infer<typeof updateRestaurantSchema>;
+
+/** POST /admin/restaurants — another venue for the signed-in user (owner membership, slug derived from the name). */
+export const createRestaurantSchema = z.object({
+  name: z.string().trim().min(2, 'Restaurant name is required').max(100),
+});
+export type CreateRestaurantInput = z.infer<typeof createRestaurantSchema>;

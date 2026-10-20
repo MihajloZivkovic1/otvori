@@ -1,4 +1,4 @@
-/** Per-tab session id (uuid) for analytics events, plus the table number from the QR code (?t=7). */
+/** Per-tab session id (uuid) for analytics events, plus the table number from the QR code (/t/7, or the older ?t=7). */
 
 const SESSION_KEY = 'tabla.session';
 const TABLE_PREFIX = 'tabla.table.';

@@ -21,7 +21,7 @@ function isZodError(error: unknown): error is ZodError {
   return error instanceof ZodError || (error as { name?: string } | null)?.name === 'ZodError';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function errorHandler(error: unknown, req: Request, res: Response, next: NextFunction): void {
   if (res.headersSent) {
     next(error);

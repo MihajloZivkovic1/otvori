@@ -1,1 +1,1 @@
-export { updateRestaurantSchema } from '@qr-menu/shared';
+export { createRestaurantSchema, updateRestaurantSchema } from '@qr-menu/shared';

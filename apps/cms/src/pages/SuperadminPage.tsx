@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { RESTAURANT_DEFAULTS, type SuperadminRestaurantDto } from '@qr-menu/shared';
+import type { SuperadminRestaurantDto } from '@qr-menu/shared';
 import { Icon } from '../components/icons';
 import { LogoTile } from '../components/LogoTile';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
@@ -98,7 +98,7 @@ export function SuperadminPage() {
           <ul aria-label="Restaurants" className={cn(query.isPlaceholderData && 'opacity-60')}>
             {rows.map((row) => {
               const open = () => navigate(`/r/${row.id}/menu`);
-              const tile = <LogoTile name={row.name} color={RESTAURANT_DEFAULTS.primaryColor} size={28} radius={7} />;
+              const tile = <LogoTile name={row.name} color={row.primaryColor} logoUrl={row.logoUrl} size={28} radius={7} />;
               const manage = (
                 <IconButton
                   label={`Manage ${row.name}`}

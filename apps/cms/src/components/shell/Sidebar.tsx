@@ -10,6 +10,7 @@ import { LogoTile } from '../LogoTile';
 import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Chip';
 import { Tooltip } from '../ui/Tooltip';
+import { AddVenueModal, canAddVenue } from './AddVenueModal';
 
 interface SidebarProps {
   restaurant: RestaurantDto | null;
@@ -106,7 +107,9 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
   const navigate = useNavigate();
   const screen = useScreen();
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const allowed = canAddVenue(me);
 
   useEffect(() => {
     if (!open) return;
@@ -172,12 +175,16 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
                 role="menuitem"
                 onClick={() => pick(venue.id)}
                 className={cn(
-                  'flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-ink hover:bg-line-2',
+                  'flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-ink hover:bg-line-2',
+                  venue.city ? 'h-11' : 'h-9',
                   active && 'bg-line-2',
                 )}
               >
                 <LogoTile name={venue.name} color={venue.primaryColor} logoUrl={venue.logoUrl} size={20} radius={5} />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{venue.name}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[13px] font-medium leading-tight">{venue.name}</span>
+                  {venue.city ? <span className="truncate text-[11px] leading-tight text-muted">{venue.city}</span> : null}
+                </span>
                 <span className="text-xs text-muted">{membership.role === 'owner' ? 'Owner' : 'Staff'}</span>
               </button>
             );
@@ -201,18 +208,32 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
               <Badge className="ml-auto text-ink-2">SUPERADMIN</Badge>
             </button>
           ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            disabled
-            title="Coming soon"
-            className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-accent disabled:cursor-default disabled:opacity-70"
-          >
-            + Add a venue
-            <span className="ml-auto text-[10px] font-semibold uppercase tracking-[.04em] text-faint">Soon</span>
-          </button>
+          {allowed ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                setAdding(true);
+              }}
+              className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-accent hover:bg-line-2"
+            >
+              + Add a venue
+            </button>
+          ) : (
+            <div
+              role="menuitem"
+              aria-disabled="true"
+              title="Adding venues is available on the Pro plan"
+              className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-accent opacity-70"
+            >
+              + Add a venue
+              <span className="ml-auto text-[10px] font-semibold uppercase tracking-[.04em] text-faint">Available on Pro</span>
+            </div>
+          )}
         </div>
       ) : null}
+      {adding ? <AddVenueModal onClose={() => setAdding(false)} /> : null}
     </div>
   );
 }
