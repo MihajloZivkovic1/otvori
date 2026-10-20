@@ -1,0 +1,27 @@
+---
+import type { Dictionary } from '../i18n';
+interface Props {
+  t: Dictionary;
+}
+const { t } = Astro.props;
+const venues = [
+  'Kafana Stari Hrast',
+  'Bistro Liman',
+  'Caffe Vračar 9',
+  'Pivnica Čair',
+  'Poslastičarnica Mira',
+  'Pekara Zlatni Klas',
+];
+---
+
+<section
+  aria-label={t.proof}
+  class="flex flex-col items-center gap-3.5 px-5 pt-7 pb-9 text-center lg:gap-[18px] lg:px-[120px] lg:pt-2 lg:pb-14"
+>
+  <p class="text-[13px] text-muted-paper lg:text-sm">{t.proof}</p>
+  <ul class="flex flex-wrap justify-center gap-x-6 gap-y-3.5 lg:items-center lg:gap-10">
+    {venues.map((v) => (
+      <li class="font-serif text-sm font-bold text-ink opacity-70 lg:text-[17px] lg:tracking-[-.01em]">{v}</li>
+    ))}
+  </ul>
+</section>

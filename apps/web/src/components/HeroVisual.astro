@@ -1,0 +1,173 @@
+---
+import { type Dictionary, type Locale, formatRsd } from '../i18n';
+import Glyph from './Glyph.astro';
+import QrMock from './QrMock.astro';
+
+interface Props {
+  locale: Locale;
+  t: Dictionary;
+}
+const { locale, t } = Astro.props;
+const sr = locale === 'sr';
+const coffee = [
+  {
+    name: 'Flat white',
+    en: 'Double ristretto, velvety steamed milk.',
+    sr: 'Dupli ristreto, baršunasto mleko.',
+    price: 290,
+    photo: '#C9A58A',
+  },
+  {
+    name: 'Cortado',
+    en: 'Equal parts espresso and warm milk.',
+    sr: 'Espreso i toplo mleko, pola-pola.',
+    price: 240,
+    photo: null,
+  },
+  {
+    name: 'Filter, Ethiopia Guji',
+    en: 'Hand-brewed V60. Peach, bergamot.',
+    sr: 'Ručno kuvan V60. Breskva, bergamot.',
+    price: 320,
+    photo: '#B38B6D',
+  },
+  {
+    name: 'Domaća kafa',
+    en: 'Traditional Serbian coffee, with lokum.',
+    sr: 'Kuvana kafa u džezvi, uz ratluk.',
+    price: 200,
+    photo: '#8C6A54',
+  },
+];
+---
+
+<!-- Decorative table scene: plate, cup, napkin with the QR card, cutlery and a phone showing the guest menu. -->
+<div
+  aria-hidden="true"
+  class="tex-dark relative mx-3 mt-7 h-[340px] overflow-hidden rounded-[18px] bg-paper-3 lg:mx-0 lg:mt-0 lg:h-[600px] lg:w-[640px] lg:rounded-3xl"
+>
+  <!-- plate -->
+  <div class="absolute top-[-120px] left-[230px] size-[220px] rounded-full bg-[radial-gradient(circle,#FCFAF6_0_59%,#ECE6DB_59.5%_61.5%,#FAF7F1_62%)] shadow-[0_12px_30px_rgba(60,40,20,.18)] lg:top-[-130px] lg:left-[330px] lg:size-[360px] lg:shadow-[0_16px_40px_rgba(60,40,20,.18)]"></div>
+  <!-- cup, desktop only -->
+  <div class="absolute top-5 left-[470px] hidden size-[84px] rounded-full bg-[#FDFCFA] shadow-[0_6px_16px_rgba(60,40,20,.2)] lg:block">
+    <span class="absolute inset-3 rounded-full bg-[radial-gradient(circle_at_40%_35%,#6B4A3A,#3E2A22_70%)]"></span>
+    <span class="absolute top-7 right-[-16px] box-border size-[26px] rounded-full border-[7px] border-[#FDFCFA]"></span>
+  </div>
+  <!-- napkin -->
+  <div class="napkin absolute top-10 left-2 size-[190px] rotate-[-4deg] shadow-[0_10px_26px_rgba(60,40,20,.16)] [--napkin-bg:#E6DBCA] [--napkin-cut:32px] [--napkin-shade:#E2D8C7] lg:top-[60px] lg:left-10 lg:size-[280px] lg:shadow-[0_12px_32px_rgba(60,40,20,.16)] lg:[--napkin-cut:44px]">
+    <div class="absolute top-2.5 left-3.5 flex rotate-[-4deg] items-center gap-1.5 font-hand text-lg font-semibold text-plum lg:top-3.5 lg:left-[18px] lg:text-2xl">
+      {t.hero.napkinCaption}
+      <span class="lg:hidden">↓</span>
+      <svg
+        class="hidden lg:block"
+        width="26"
+        height="22"
+        viewBox="0 0 26 22"
+        fill="none"
+        stroke="#7A3E48"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M3 3c8 0 14 6 16 15M15 15l4 3 3-5"></path>
+      </svg>
+    </div>
+    <!-- QR table card -->
+    <div class="absolute top-[52px] left-[30px] flex w-[104px] rotate-2 flex-col items-center gap-1.5 rounded-[8px_0_8px_8px] bg-white px-2.5 pt-2.5 pb-2 shadow-[0_6px_16px_rgba(60,40,20,.14)] lg:top-[70px] lg:left-[46px] lg:w-[136px] lg:gap-2 lg:rounded-[10px_0_10px_10px] lg:px-3 lg:pt-3 lg:pb-2.5 lg:shadow-[0_6px_18px_rgba(60,40,20,.14)]">
+      <span class="absolute top-0 right-0 size-3 bg-[linear-gradient(225deg,#F8F3EC_0_50%,#EFE9DF_50%_100%)] lg:size-4"></span>
+      <span class="inline-flex items-center gap-1 self-start text-plum">
+        <Glyph size={9} class="lg:hidden" />
+        <Glyph size={11} class="max-lg:hidden" />
+        <span class="font-serif text-[9px] leading-none font-bold tracking-[-.02em] lg:text-[11px]">salveta</span>
+      </span>
+      <QrMock size="3.6px" class="lg:hidden" />
+      <QrMock size="4.6px" class="max-lg:hidden" />
+      <span class="font-serif text-[10px] font-bold lg:text-[13px]">{t.guest.table} 7</span>
+    </div>
+    <!-- fork & knife -->
+    <svg
+      width="20"
+      height="180"
+      viewBox="0 0 26 250"
+      class="absolute top-4 left-[126px] rotate-[-5deg] drop-shadow-[0_4px_5px_rgba(60,40,20,.28)] lg:top-[22px] lg:left-[176px] lg:h-[250px] lg:w-[26px] lg:drop-shadow-[0_5px_6px_rgba(60,40,20,.28)]"
+    >
+      <path d="M3 0h20v32c0 9-5 15-10 17-5-2-10-8-10-17z" fill="#DAD5CD" stroke="#B5AEA5" stroke-width=".8"></path>
+      <path d="M8 2v30M13 2v33M18 2v30" stroke="#B5AEA5" stroke-width="1.4"></path>
+      <path d="M9 48h8l2 196c0 4-12 4-12 0z" fill="#D2CCC3" stroke="#B5AEA5" stroke-width=".8"></path>
+    </svg>
+    <svg
+      width="20"
+      height="180"
+      viewBox="0 0 26 250"
+      class="absolute top-[22px] left-[154px] rotate-[-5deg] drop-shadow-[0_4px_5px_rgba(60,40,20,.28)] lg:top-[30px] lg:left-[214px] lg:h-[250px] lg:w-[26px] lg:drop-shadow-[0_5px_6px_rgba(60,40,20,.28)]"
+    >
+      <path d="M5 0c15 0 20 22 19 54v8H5z" fill="#E0DCD5" stroke="#B5AEA5" stroke-width=".8"></path>
+      <path d="M7 62h14l1 182c0 5-16 5-16 0z" fill="#CFC9C0" stroke="#B5AEA5" stroke-width=".8"></path>
+    </svg>
+  </div>
+  <!-- phone -->
+  <div class="absolute top-[120px] left-[178px] h-[300px] w-[200px] overflow-hidden rounded-[28px] bg-paper text-[#1F1A17] shadow-[0_0_0_7px_#18181B,0_0_0_8px_rgba(0,0,0,.2),0_24px_50px_rgba(40,30,20,.3)] lg:top-[256px] lg:left-[356px] lg:h-[480px] lg:w-[260px] lg:rounded-[34px] lg:shadow-[0_0_0_8px_#18181B,0_0_0_9px_rgba(0,0,0,.2),0_30px_70px_rgba(40,30,20,.3)]">
+    <div class="flex flex-col gap-2.5 px-3 pt-[22px] pb-2 lg:gap-3 lg:px-3.5 lg:pt-[30px] lg:pb-2.5">
+      <div class="flex items-center justify-between">
+        <span class="inline-flex items-center gap-1 text-plum">
+          <Glyph size={9} class="lg:hidden" />
+          <Glyph size={11} class="max-lg:hidden" />
+          <span class="font-serif text-[9px] leading-none font-bold tracking-[-.02em] lg:text-[11px]">salveta</span>
+        </span>
+        <span class="hidden h-[26px] items-center gap-[3px] rounded-lg border border-[#1F1A17]/10 px-[7px] text-[9.5px] font-semibold lg:inline-flex">
+          <span style={sr ? '' : 'opacity:.4'}>SR</span>
+          <span class="font-normal text-[#6E645C]">/</span>
+          <span style={sr ? 'opacity:.4' : ''}>EN</span>
+        </span>
+      </div>
+      <div class="flex items-center gap-[7px] lg:gap-[9px]">
+        <span class="grid size-[26px] place-items-center rounded-[7px] bg-[#3E2A22] font-serif text-[11px] font-bold text-white lg:size-[34px] lg:rounded-[9px] lg:text-sm">
+          K
+        </span>
+        <div>
+          <div class="font-serif text-xs leading-[1.15] font-bold lg:text-[15px]">Kafeterija Dorćol</div>
+          <div class="mt-0.5 hidden text-[10px] text-[#6E645C] lg:block">{t.guest.tagline}</div>
+        </div>
+      </div>
+      <div class="hidden items-center gap-1.5 lg:flex">
+        <span class="inline-flex h-5 items-center gap-[5px] rounded-full bg-[#EEE6DB] px-2 text-[9.5px] font-semibold">
+          <span class="size-[5px] rounded-full bg-plum"></span>
+          {t.guest.table} 7
+        </span>
+        <span class="text-[9.5px] text-[#6E645C]">{t.guest.hours}</span>
+      </div>
+    </div>
+    <div class="flex gap-1 border-b border-[#1F1A17]/10 px-3 py-1 lg:gap-[5px] lg:px-3.5 lg:py-1.5">
+      <span class="inline-flex h-[22px] items-center rounded-full bg-plum px-2 text-[9px] font-medium text-white lg:h-[26px] lg:px-2.5 lg:text-[10px]">
+        {t.guest.cat1}
+      </span>
+      <span class="inline-flex h-[22px] items-center rounded-full border border-[#1F1A17]/14 px-2 text-[9px] font-medium lg:h-[26px] lg:px-2.5 lg:text-[10px]">
+        {t.guest.cat2}
+      </span>
+      <span class="hidden h-[26px] items-center rounded-full border border-[#1F1A17]/14 px-2.5 text-[10px] font-medium lg:inline-flex">
+        {t.guest.cat3}
+      </span>
+    </div>
+    <div class="px-3 pt-2 lg:px-3.5 lg:pt-3.5">
+      <div class="mb-0.5 hidden items-baseline justify-between lg:flex">
+        <span class="font-serif text-sm font-bold">{t.guest.cat1}</span>
+        <span class="text-[9.5px] text-[#6E645C]">4 {t.guest.items}</span>
+      </div>
+      {coffee.map((it) => (
+        <div class="flex gap-1.5 border-b border-[#1F1A17]/10 py-[7px] lg:gap-2.5 lg:py-2.5">
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5 lg:gap-[3px]">
+            <div class="flex justify-between gap-1.5 lg:gap-2">
+              <span class="font-serif text-[10px] leading-[1.3] lg:text-xs">{it.name}</span>
+              <span class="text-[9px] font-semibold whitespace-nowrap lg:text-[11px]">{formatRsd(it.price)} RSD</span>
+            </div>
+            <div class="hidden text-[9.5px] leading-[1.4] text-[#6E645C] lg:block">{sr ? it.sr : it.en}</div>
+          </div>
+          <div
+            class="size-[30px] flex-none rounded-md lg:size-[46px] lg:rounded-[9px]"
+            style={`background:${it.photo ?? 'transparent'}`}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+</div>

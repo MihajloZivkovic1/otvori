@@ -1,0 +1,116 @@
+---
+/**
+ * Napkin-shaped 90×90 mm table card, print-ready (@page 90mm 90mm, no margins).
+ * Query params: venue (name), logo (image URL), table (number/label), qr (URL to encode) or qrImage (ready image URL),
+ * lang (sr|en), url (short link printed under the code; defaults to `qr` without the scheme).
+ * Example: /print/qr-card/?venue=Kafeterija%20Dor%C4%87ol&table=7&qr=https://kafeterija.salveta.menu/t/7
+ */
+import Glyph from '../../components/Glyph.astro';
+import Base from '../../layouts/Base.astro';
+---
+
+<Base locale="sr" seo={false} noindex title="salveta — QR kartica za sto" description="Print-ready 90×90 mm table card">
+  <style is:global slot="head">
+    @page {
+      size: 90mm 90mm;
+      margin: 0;
+    }
+    html,
+    body {
+      background: #fff;
+      margin: 0;
+    }
+    @media print {
+      body {
+        width: 90mm;
+        height: 90mm;
+        overflow: hidden;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .screen-only {
+        display: none !important;
+      }
+    }
+  </style>
+  <div class="screen-only flex flex-col items-center gap-4 p-6 text-center text-sm text-muted print:hidden">
+    <p id="card-note"></p>
+    <button type="button" class="btn btn-plum h-10 px-4" onclick="window.print()">
+      Print
+    </button>
+  </div>
+  <div class="flex justify-center print:block">
+    <div
+      id="card"
+      class="napkin relative flex h-[90mm] w-[90mm] flex-col items-center justify-between overflow-hidden p-[7mm] text-ink shadow-[0_1px_2px_rgba(0,0,0,.08)] [--napkin-cut:12mm] print:shadow-none"
+    >
+      <div class="flex w-full items-center justify-between">
+        <span class="inline-flex items-center gap-[5px] text-plum">
+          <Glyph size={16} />
+          <span class="font-serif text-base leading-none font-bold tracking-[-.02em]">salveta</span>
+        </span>
+        <span
+          id="logo-slot"
+          class="grid size-[12mm] place-items-center overflow-hidden rounded-full border-[1.5px] border-dashed border-faint text-center text-[7px] font-semibold tracking-[.06em] text-muted"
+        >
+          <span id="logo-placeholder">TVOJ LOGO</span>
+          <img id="logo" alt="" class="hidden size-full object-cover" width="45" height="45" />
+        </span>
+      </div>
+      <div id="qr" class="size-[42mm]" aria-label="QR"></div>
+      <div class="flex flex-col items-center gap-[1.5mm]">
+        <span id="table" class="font-serif text-[22px] leading-none font-bold"></span>
+        <span id="tagline" class="font-serif text-[11px] text-muted italic"></span>
+        <span id="url" class="text-[8px] font-medium tracking-[.04em] text-faint"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import qrcode from 'qrcode-generator';
+    import { t } from '../../i18n';
+
+    const params = new URLSearchParams(location.search);
+    const lang = params.get('lang') === 'en' ? 'en' : 'sr';
+    const dict = t(lang);
+    const venue = params.get('venue') ?? '';
+    const table = params.get('table') ?? '';
+    const qrUrl = params.get('qr') ?? '';
+    const qrImage = params.get('qrImage');
+    const logo = params.get('logo');
+    const shortUrl = params.get('url') ?? qrUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    document.title = `${venue ? venue + ' — ' : ''}${dict.guest.table} ${table}`.trim();
+    document.documentElement.lang = dict.htmlLang;
+    document.getElementById('table')!.textContent = table ? `${dict.guest.table} ${table}` : venue;
+    document.getElementById('tagline')!.textContent = venue && table ? venue : dict.card.tagline;
+    document.getElementById('url')!.textContent = shortUrl;
+    document.getElementById('card-note')!.textContent = dict.card.note;
+    document.getElementById('logo-placeholder')!.textContent = dict.card.logo;
+
+    if (logo) {
+      const img = document.getElementById('logo') as HTMLImageElement;
+      img.src = logo;
+      img.classList.remove('hidden');
+      document.getElementById('logo-placeholder')!.classList.add('hidden');
+      document.getElementById('logo-slot')!.classList.remove('border-dashed', 'border-[1.5px]');
+    }
+
+    const holder = document.getElementById('qr')!;
+    if (qrImage) {
+      const img = new Image();
+      img.src = qrImage;
+      img.alt = 'QR';
+      img.className = 'size-full';
+      holder.replaceChildren(img);
+    } else if (qrUrl) {
+      const qr = qrcode(0, 'M');
+      qr.addData(qrUrl);
+      qr.make();
+      const n = qr.getModuleCount();
+      let path = '';
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) path += `M${c} ${r}h1v1h-1z`;
+      holder.innerHTML = `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges" role="img" aria-label="QR: ${qrUrl}"><path d="${path}" fill="#18181B"/></svg>`;
+    }
+  </script>
+</Base>

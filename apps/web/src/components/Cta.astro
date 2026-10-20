@@ -1,0 +1,24 @@
+---
+import { links } from '../config';
+import type { Dictionary } from '../i18n';
+interface Props {
+  t: Dictionary;
+}
+const { t } = Astro.props;
+---
+
+<section class="px-3 pb-10 lg:px-16 lg:pb-16">
+  <div class="tex-light flex flex-col items-center gap-[18px] overflow-hidden rounded-[20px_0_20px_20px] bg-plum px-6 py-[52px] text-center text-white lg:gap-6 lg:rounded-[24px_0_24px_24px] lg:px-20 lg:py-24">
+    <span
+      aria-hidden="true"
+      class="absolute top-0 right-0 size-11 bg-[linear-gradient(225deg,#F7F2EB_0_50%,#5E2E37_50%_100%)] lg:size-[72px]"
+    ></span>
+    <h2 class="text-[32px] leading-[1.12] tracking-[-.015em] lg:max-w-[760px] lg:text-[52px] lg:leading-[1.1]">
+      {t.cta.h}
+    </h2>
+    <p class="text-[15px] text-plum-pale lg:text-lg">{t.hero.note}</p>
+    <a href={links.register} class="btn btn-white mt-1 h-[50px] w-full text-base lg:mt-2 lg:h-[52px] lg:w-auto lg:px-7">
+      {t.nav.tryFree}
+    </a>
+  </div>
+</section>

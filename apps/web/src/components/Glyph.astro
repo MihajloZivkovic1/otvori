@@ -1,0 +1,17 @@
+---
+/** The napkin glyph from the design: a square with its top-right corner folded over. */
+interface Props {
+  size?: number;
+  /** Body colour; defaults to currentColor. */
+  fill?: string;
+  /** Fold colour. */
+  fold?: string;
+  class?: string;
+}
+const { size = 24, fill = 'currentColor', fold = '#C98391', class: className } = Astro.props;
+---
+
+<svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" class={className}>
+  <path d="M3 3h12.5L21 8.5V21H3z" fill={fill}></path>
+  <path d="M15.5 3v5.5H21z" fill={fold}></path>
+</svg>

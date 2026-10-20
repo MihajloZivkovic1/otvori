@@ -1,0 +1,23 @@
+---
+/** Decorative stand-in for a QR code (finder squares + timing patterns + a data block), scaled by font-size. */
+interface Props {
+  /** One module = 1em; the mock is 20em square. */
+  size: string;
+  class?: string;
+}
+const { size, class: className } = Astro.props;
+---
+
+<span
+  aria-hidden="true"
+  class:list={['relative block h-[20em] w-[20em] text-ink', className]}
+  style={`font-size:${size}`}
+>
+  <span class="absolute top-0 left-0 h-[4.4em] w-[4.4em] border-[1em] border-current bg-[linear-gradient(currentColor,currentColor)] bg-[length:50%_50%] bg-center bg-no-repeat"></span>
+  <span class="absolute top-0 right-0 h-[4.4em] w-[4.4em] border-[1em] border-current bg-[linear-gradient(currentColor,currentColor)] bg-[length:50%_50%] bg-center bg-no-repeat"></span>
+  <span class="absolute bottom-0 left-0 h-[4.4em] w-[4.4em] border-[1em] border-current bg-[linear-gradient(currentColor,currentColor)] bg-[length:50%_50%] bg-center bg-no-repeat"></span>
+  <span class="absolute top-[2.7em] left-[6.4em] h-[1em] w-[7.2em] bg-[repeating-linear-gradient(90deg,currentColor_0_1em,transparent_1em_2em)]"></span>
+  <span class="absolute top-[6.4em] left-[2.7em] h-[7.2em] w-[1em] bg-[repeating-linear-gradient(0deg,currentColor_0_1em,transparent_1em_2em)]"></span>
+  <span class="absolute top-[7.4em] left-[7.4em] h-[12.6em] w-[12.6em] bg-[repeating-linear-gradient(90deg,currentColor_0_.9em,transparent_.9em_2.1em),repeating-linear-gradient(0deg,currentColor_0_1.2em,transparent_1.2em_2.6em)] [clip-path:polygon(0_0,100%_0,100%_50%,58%_50%,58%_100%,0_100%)]"></span>
+  <span class="absolute top-[14em] left-[14em] h-[2.6em] w-[2.6em] border-[.9em] border-current"></span>
+</span>

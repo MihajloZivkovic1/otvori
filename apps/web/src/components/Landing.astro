@@ -1,0 +1,44 @@
+---
+import { t as dict, type Locale } from '../i18n';
+import Cta from './Cta.astro';
+import Faq from './Faq.astro';
+import Features from './Features.astro';
+import Footer from './Footer.astro';
+import Header from './Header.astro';
+import Hero from './Hero.astro';
+import How from './How.astro';
+import Pricing from './Pricing.astro';
+import Proof from './Proof.astro';
+import Setup from './Setup.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = dict(locale);
+---
+
+<Header locale={locale} t={t} />
+<main>
+  <Hero locale={locale} t={t} />
+  <Proof t={t} />
+  <How t={t} />
+  <Features locale={locale} t={t} />
+  <Setup t={t} />
+  <Pricing t={t} />
+  <Faq t={t} />
+  <Cta t={t} />
+</main>
+<Footer t={t} />
+
+<script>
+  import { initFaq } from '../scripts/faq';
+  import { initLangSwitch } from '../scripts/locale';
+  import { initNav } from '../scripts/nav';
+  import { initPricing } from '../scripts/pricing';
+
+  initPricing(document);
+  initFaq(document);
+  initNav(document);
+  initLangSwitch(document);
+</script>

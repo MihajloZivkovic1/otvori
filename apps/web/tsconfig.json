@@ -1,0 +1,11 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "types": ["vite/client"]
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "test/**/*", "scripts/**/*"],
+  "exclude": ["dist"]
+}

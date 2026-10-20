@@ -15,6 +15,7 @@ glyph path with `apps/api/assets/fonts/LibreBaskerville-Bold.ttf`.
 | `apps/api` | Express 5 API (Sequelize 6 + sequelize-typescript, Postgres 16) | Phase 1 (done) |
 | `apps/menu` | Public guest menu (React 19 + Vite 8 + Tailwind v4) | Phase 2 (done) |
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
+| `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
 | `deploy/` | Docker Compose production stack: Postgres, API image, Caddy image that builds and serves the static apps | Phase 5 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
@@ -256,6 +257,48 @@ vitest + Testing Library in jsdom. `helpers.tsx` has DTO fixtures, `mockApi(stat
 endpoint the shell needs, `statefulItems()` persists availability changes across refetches), `setViewport('desktop'|'tablet'|'mobile')`
 (matchMedia stub) and `renderApp(route, { viewport, authenticated })` which mounts the real route tree; an authenticated render
 sets the session flag and lets the app restore through the mocked `POST /api/auth/refresh`.
+
+## Marketing site (`apps/web`)
+
+Stack: Astro 7 (`output: 'static'`, `trailingSlash: 'always'`, `compressHTML`, stylesheet inlined), TypeScript strict, Tailwind v4
+via `@tailwindcss/vite`, `@astrojs/sitemap`. **No React**: the only interactivity (SR/EN switch, monthly/yearly pricing, FAQ accordion,
+phone nav) is plain TypeScript in `src/scripts/*.ts` (`init*(root)` functions, < 1 KB gzipped, inlined by Astro). Design source:
+`design/salveta.menu website.html` (Claude Design export: markup in the `__bundler/template` script tag, fonts base64 in
+`__bundler/manifest`). Lighthouse mobile on the seeded preview: 100/100/100/100 (sr), 99/100/100/100 (en).
+
+```bash
+npm run dev -w @qr-menu/web          # http://localhost:4321  ·  /en/  ·  /print/qr-card/?venue=…&table=7&qr=https://…
+npm run build|preview|typecheck|lint|test -w @qr-menu/web
+npm run icons -w @qr-menu/web        # regenerates public/favicon.* + icons/ from the glyph (sharp)
+npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with headless Chrome (CHROME_PATH)
+```
+
+- `src/config.ts` holds **every outbound link** (sign in, register, demo menu, quote mailto, terms/privacy), contact, brand constants and
+  the RSD prices (`pricing.starter|pro.monthly|yearly`). Change links there only.
+- Routes: `/` (Serbian, default, `sr-Latn`) and `/en/` (`src/pages/en/index.astro`), both render `components/Landing.astro`; `/404.html`;
+  `/print/qr-card/` (noindex, excluded from the sitemap). Astro `i18n` config: `defaultLocale: 'sr'`, `prefixDefaultLocale: false`.
+- Copy lives in `src/i18n/sr.ts` (verbatim from the design, source of truth) and `src/i18n/en.ts`, typed by `Dictionary` in
+  `i18n/types.ts`; `t(locale)`, `localePath()`, `otherLocale()`, `formatRsd()` (sr-RS grouping in both locales, "1.490").
+- `layouts/Base.astro`: title/description per locale, canonical, `hreflang` sr/en/x-default, Open Graph + Twitter (`/og-{locale}.png`,
+  1200×630), JSON-LD `Organization` + `SoftwareApplication` with the two RSD offers, font preloads (latin + latin-ext on sr), optional
+  analytics tag (`PUBLIC_ANALYTICS_SRC` + `PUBLIC_ANALYTICS_DOMAIN`, cookieless → no cookie banner). `SITE_URL` (build env) sets `site`.
+- Language switch: `<a data-lang-switch href="/en/">`; on click `scripts/locale.ts` appends the hash of the section currently in view
+  (`#kako #dobijas #cene #pitanja`) so the other locale opens at the same section. Works without JS as a plain link.
+- Styling (`src/styles/global.css`): self-hosted variable woff2 fonts from the design in `public/fonts` (Figtree, Libre Baskerville
+  regular/italic, Caveat subset to the napkin caption) with `font-display: swap` and metric-matched fallbacks (`size-adjust` etc. → CLS 0).
+  `@theme` tokens: `paper #F7F2EB`, `ink`, `muted #71717A` (white cards) / `muted-paper #66666F` (≥ 4.5:1 on paper), `plum #7A3E48`,
+  `plum-light/pale/soft`, `dark`. Utilities: `tex-dark` / `tex-light` (the design's feTurbulence grain as a tiled data-URI SVG, opacity
+  .16/.14), `fold-card` (top-right folded corner; `--fold-bg` = surface behind the card), `napkin` (paper gradient with the bottom-right
+  cut; `--napkin-bg`), `btn btn-plum|outline|paper|white`. Mobile = design frame 390 (default classes), desktop = frame 1440 (`lg:`).
+- Decorative scenes (hero table, editor mocks, napkin stack) are HTML/CSS/SVG exactly like the design; `QrMock.astro` is the fake QR
+  pattern. There are no raster images apart from the OG PNGs, so `astro:assets` is not used.
+- `/print/qr-card/`: 90×90 mm napkin card (`@page { size: 90mm 90mm; margin: 0 }`), params `venue`, `logo` (image URL), `table`,
+  `qr` (URL to encode, rendered client-side with `qrcode-generator` as SVG) or `qrImage` (ready image URL), `url` (short link text),
+  `lang`. Headless Chrome `--print-to-pdf` yields a single 255.12 × 255.12 pt page.
+- Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav.
+  `typecheck` = `astro sync && tsc --noEmit` (`astro check` crashes with the repo's TypeScript 7); `lint` = prettier check
+  (eslint's TS parser is also broken by TypeScript 7 in this repo).
+- Deploy: `deploy/Dockerfile.caddy` builds it with `SITE_URL=https://$DOMAIN` into `/srv/web`, served at the apex; `www.` redirects to the apex.
 
 ## Testing
 

@@ -1,0 +1,314 @@
+@import 'tailwindcss';
+
+/* ── Self-hosted fonts (variable woff2 from the design export, Google Fonts subsets, OFL) ── */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/figtree-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/figtree-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Libre Baskerville';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/libre-baskerville-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Libre Baskerville';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/libre-baskerville-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Libre Baskerville';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/libre-baskerville-italic-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Libre Baskerville';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/libre-baskerville-italic-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Caveat, subset to the napkin caption glyphs only. */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/caveat-subset.woff2') format('woff2');
+}
+/* Metric-matched fallbacks so the swap from the system font does not shift the layout. */
+@font-face {
+  font-family: 'Figtree Fallback';
+  src: local('Arial'), local('Helvetica');
+  size-adjust: 101.53%;
+  ascent-override: 93.57%;
+  descent-override: 24.62%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Libre Baskerville Fallback';
+  src: local('Georgia');
+  size-adjust: 119.6%;
+  ascent-override: 81.1%;
+  descent-override: 22.58%;
+  line-gap-override: 0%;
+}
+
+@theme {
+  --font-sans: 'Figtree', 'Figtree Fallback', system-ui, sans-serif;
+  --font-serif: 'Libre Baskerville', 'Libre Baskerville Fallback', Georgia, serif;
+  --font-hand: 'Caveat', 'Segoe Script', cursive;
+
+  --color-paper: #f7f2eb;
+  --color-paper-2: #ede6da;
+  --color-paper-3: #e6dbca;
+  --color-ink: #18181b;
+  --color-ink-2: #52525b;
+  /* #71717A reads 4.34:1 on paper, so paper surfaces use the darker #66666F (5.1:1); white cards keep #71717A (4.83:1). */
+  --color-muted: #71717a;
+  --color-muted-paper: #66666f;
+  --color-faint: #a1a1aa;
+  --color-line: #e4e4e7;
+  --color-line-strong: #d4d4d8;
+  --color-line-soft: #f4f4f5;
+  --color-plum: #7a3e48;
+  --color-plum-dark: #5e2e37;
+  --color-plum-light: #c98391;
+  --color-plum-pale: #f1dde1;
+  --color-plum-soft: #ede3e5;
+  --color-dark: #18181b;
+  --color-dark-text: #d4d4d8;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(30, 20, 10, 0.14);
+  --shadow-napkin: 0 10px 30px rgba(60, 40, 20, 0.12);
+  --shadow-napkin-sm: 0 8px 24px rgba(60, 40, 20, 0.12);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+  @media (min-width: 64rem) {
+    body {
+      font-size: 16px;
+    }
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-plum);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@utility balance {
+  text-wrap: balance;
+}
+@utility pretty {
+  text-wrap: pretty;
+}
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Paper / napkin texture: the design's feTurbulence filter, rasterised once as a seamless tile ── */
+@utility tex-dark {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+@utility tex-light {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.14;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ── Folded-corner card (top-right corner turned over). --fold-bg = the surface behind the card. ── */
+@utility fold-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 12px 0 12px 12px;
+  --fold-bg: var(--color-paper);
+  --fold-shade: var(--color-paper-2);
+  --fold-size: 22px;
+  &::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: var(--fold-size);
+    height: var(--fold-size);
+    background: linear-gradient(225deg, var(--fold-bg) 0 50%, var(--fold-shade) 50% 100%);
+  }
+}
+
+/* ── Napkin: paper gradient with the bottom-right corner cut. --napkin-bg = the surface behind it. ── */
+@utility napkin {
+  position: relative;
+  background: linear-gradient(135deg, #fcf9f3 0 50%, #f1eadf 50% 100%);
+  --napkin-bg: #fff;
+  --napkin-shade: #e4dacb;
+  --napkin-cut: 28px;
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: var(--napkin-cut);
+    height: var(--napkin-cut);
+    background: linear-gradient(315deg, var(--napkin-bg) 0 50%, var(--napkin-shade) 50% 100%);
+  }
+}
+
+/* ── Buttons ── */
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+@utility btn-plum {
+  background: var(--color-plum);
+  color: #fff;
+  &:hover {
+    background: var(--color-plum-dark);
+  }
+}
+@utility btn-outline {
+  background: #fff;
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+  &:hover {
+    border-color: var(--color-faint);
+  }
+}
+@utility btn-paper {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  &:hover {
+    background: #fff;
+  }
+}
+@utility btn-white {
+  background: #fff;
+  color: var(--color-plum);
+  &:hover {
+    background: var(--color-plum-pale);
+  }
+}
+
+/* A 2px-bordered fold card (featured pricing plan) needs its fold moved out by the extra pixel. */
+.fold-card.border-2::after {
+  top: -2px;
+  right: -2px;
+}
+
+/* ── FAQ ── */
+.faq-icon {
+  transition: transform 0.18s;
+}
+button[aria-expanded='true'] .faq-icon {
+  transform: rotate(45deg);
+}
+
+/* ── Pricing toggle ── */
+.billing-btn[aria-pressed='true'] {
+  background: #fff;
+  color: var(--color-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.billing-btn[aria-pressed='false'] {
+  background: transparent;
+  color: var(--color-muted-paper);
+}
+
+/* ── Language switch opacity ── */
+.lang-switch [data-active='true'] {
+  opacity: 1;
+}
+.lang-switch [data-active='false'] {
+  /* design: .4; .6 keeps the inactive code at ≥ 4.5:1 */
+  opacity: 0.6;
+}

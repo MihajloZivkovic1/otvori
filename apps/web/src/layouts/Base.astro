@@ -1,0 +1,120 @@
+---
+import '../styles/global.css';
+import { brand, contact, pricing } from '../config';
+import { localePath, locales, t, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  /** Path of this page in the other locales is derived from `localePath`; set `path` for non-landing pages. */
+  path?: string;
+  title?: string;
+  description?: string;
+  /** Emit canonical/hreflang/OG/JSON-LD (landing pages only). */
+  seo?: boolean;
+  noindex?: boolean;
+}
+const { locale, title, description, seo = true, noindex = false } = Astro.props;
+const dict = t(locale);
+const site = Astro.site ?? new URL('https://salveta.menu');
+const path = Astro.props.path ?? localePath(locale);
+const canonical = new URL(path, site).href;
+const pageTitle = title ?? dict.meta.title;
+const pageDescription = description ?? dict.meta.description;
+const ogImage = new URL(`/og-${locale}.png`, site).href;
+const analyticsSrc = import.meta.env.PUBLIC_ANALYTICS_SRC;
+const analyticsDomain = import.meta.env.PUBLIC_ANALYTICS_DOMAIN;
+
+// Serbian pages use latin-ext glyphs above the fold (š, č, ć), English pages do not.
+const preloadFonts = [
+  'figtree-latin',
+  'libre-baskerville-latin',
+  ...(locale === 'sr' ? ['figtree-latin-ext', 'libre-baskerville-latin-ext'] : []),
+];
+
+const organization = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: brand.name,
+  url: site.href,
+  logo: new URL('/icons/icon-512.png', site).href,
+  email: contact.email,
+  address: { '@type': 'PostalAddress', addressLocality: contact.city, addressCountry: 'RS' },
+};
+const software = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: brand.name,
+  url: site.href,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: pageDescription,
+  inLanguage: locales,
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Starter',
+      price: pricing.starter.monthly,
+      priceCurrency: pricing.currency,
+      url: canonical + '#cene',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Pro',
+      price: pricing.pro.monthly,
+      priceCurrency: pricing.currency,
+      url: canonical + '#cene',
+    },
+  ],
+};
+---
+
+<!doctype html>
+<html lang={dict.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="theme-color" content={brand.paper} />
+    {noindex ? <meta name="robots" content="noindex, nofollow" /> : null}
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    {preloadFonts.map((f) => (
+      <link rel="preload" href={`/fonts/${f}.woff2`} as="font" type="font/woff2" crossorigin />
+    ))}
+    {seo ? (
+      <>
+        <link rel="canonical" href={canonical} />
+        {locales.map((l) => (
+          <link rel="alternate" hreflang={l} href={new URL(localePath(l), site).href} />
+        ))}
+        <link rel="alternate" hreflang="x-default" href={new URL(localePath('sr'), site).href} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content={brand.name} />
+        <meta property="og:locale" content={dict.ogLocale} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={`${brand.name} — ${dict.hero.h}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+        <script type="application/ld+json" set:html={JSON.stringify(organization)} />
+        <script type="application/ld+json" set:html={JSON.stringify(software)} />
+      </>
+    ) : null}
+    {analyticsSrc && analyticsDomain ? (
+      <script is:inline defer data-domain={analyticsDomain} src={analyticsSrc} />
+    ) : null}
+    <slot name="head" />
+  </head>
+  <body class="min-h-dvh antialiased">
+    <slot />
+  </body>
+</html>

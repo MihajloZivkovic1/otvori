@@ -52,6 +52,8 @@ services:
       dockerfile: deploy/Dockerfile.caddy
       args:
         DOMAIN: ${DOMAIN:-salveta.menu}
+        PUBLIC_ANALYTICS_SRC: ${PUBLIC_ANALYTICS_SRC:-}
+        PUBLIC_ANALYTICS_DOMAIN: ${PUBLIC_ANALYTICS_DOMAIN:-}
     restart: unless-stopped
     depends_on:
       - api

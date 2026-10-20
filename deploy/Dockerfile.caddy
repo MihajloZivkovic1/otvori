@@ -1,4 +1,4 @@
-# Build context: repository root. Builds the static apps (menu, cms) and serves them with Caddy.
+# Build context: repository root. Builds the static apps (menu, cms, web) and serves them with Caddy.
 FROM node:22-alpine AS build
 ARG DOMAIN=salveta.menu
 WORKDIR /app
@@ -7,14 +7,20 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
 COPY apps/menu/package.json apps/menu/
 COPY apps/cms/package.json apps/cms/
+COPY apps/web/package.json apps/web/
 RUN npm ci
 COPY packages/shared packages/shared
 COPY apps/menu apps/menu
 COPY apps/cms apps/cms
+COPY apps/web apps/web
 RUN npm run build -w @qr-menu/shared
 # Both apps call /api on their own origin; Caddy proxies it to the API container.
 RUN VITE_API_URL= VITE_DEFAULT_SLUG= npm run build -w @qr-menu/menu
 RUN VITE_API_URL= VITE_PUBLIC_MENU_BASE_URL="https://{slug}.${DOMAIN}" npm run build -w @qr-menu/cms
+# Marketing site; SITE_URL feeds canonical/hreflang/sitemap, PUBLIC_ANALYTICS_* the optional analytics tag.
+ARG PUBLIC_ANALYTICS_SRC=
+ARG PUBLIC_ANALYTICS_DOMAIN=
+RUN SITE_URL="https://${DOMAIN}" npm run build -w @qr-menu/web
 
 # Caddy with the Cloudflare DNS module for the wildcard certificate (*.DOMAIN).
 FROM caddy:2-builder AS caddy-build
@@ -24,4 +30,5 @@ FROM caddy:2
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /app/apps/menu/dist /srv/menu
 COPY --from=build /app/apps/cms/dist /srv/cms
+COPY --from=build /app/apps/web/dist /srv/web
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

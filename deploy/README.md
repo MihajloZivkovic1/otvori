@@ -1,11 +1,11 @@
 # Deploying salveta
 
 One Docker Compose stack on a single host: Postgres 16, the API image, and a Caddy image that builds the static apps
-at image build time and terminates TLS.
+(`apps/menu`, `apps/cms`, `apps/web`) at image build time and terminates TLS.
 
 | Host | Serves |
 | --- | --- |
-| `{$DOMAIN}` | redirect → `app.{$DOMAIN}` (until the marketing site ships) |
+| `{$DOMAIN}` | marketing site (`apps/web`, static Astro build) |
 | `www.{$DOMAIN}` | redirect → apex |
 | `app.{$DOMAIN}` | admin CMS (`apps/cms`), `/api/*` proxied to the API |
 | `api.{$DOMAIN}` | API directly (uploads served from `UPLOADS_DIR` when no S3) |
@@ -26,7 +26,8 @@ docker compose -f deploy/docker-compose.yml exec api node dist/db/seeders/seed.j
 ```
 
 The API container runs `migrate up` on every start, then the server. The static apps are built with
-`VITE_API_URL=` (same-origin `/api`), the CMS additionally with `VITE_PUBLIC_MENU_BASE_URL=https://{slug}.$DOMAIN`.
+`VITE_API_URL=` (same-origin `/api`), the CMS additionally with `VITE_PUBLIC_MENU_BASE_URL=https://{slug}.$DOMAIN`, the
+marketing site with `SITE_URL=https://$DOMAIN` and the optional `PUBLIC_ANALYTICS_SRC` / `PUBLIC_ANALYTICS_DOMAIN`.
 
 ## Updating
 
@@ -34,4 +35,5 @@ The API container runs `migrate up` on every start, then the server. The static 
 git pull && docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
-Changing `DOMAIN` requires rebuilding the Caddy image (the CMS bakes the public menu URL template in at build time).
+Changing `DOMAIN` requires rebuilding the Caddy image (the CMS bakes the public menu URL template in, the marketing site its
+canonical URLs, at build time).

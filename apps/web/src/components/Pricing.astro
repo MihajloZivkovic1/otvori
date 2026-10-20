@@ -1,0 +1,151 @@
+---
+import { links, pricing } from '../config';
+import { formatRsd, type Dictionary } from '../i18n';
+interface Props {
+  t: Dictionary;
+}
+const { t } = Astro.props;
+const plans = [
+  {
+    key: 'starter',
+    name: 'Starter',
+    tagline: t.pricing.starterFor,
+    list: t.pricing.starterList,
+    prices: pricing.starter,
+    featured: false,
+  },
+  { key: 'pro', name: 'Pro', tagline: t.pricing.proFor, list: t.pricing.proList, prices: pricing.pro, featured: true },
+];
+---
+
+<section
+  id="cene"
+  class="scroll-mt-16 border-y border-line bg-white px-5 py-14 lg:scroll-mt-[72px] lg:px-20 lg:py-[88px] xl:px-[120px]"
+>
+  <div class="mb-6 flex flex-col items-center gap-3.5 text-center lg:mb-12 lg:gap-5">
+    <p class="text-[11px] font-semibold tracking-[.08em] text-plum uppercase lg:text-xs">{t.nav.pricing}</p>
+    <h2 class="text-[28px] leading-[1.15] tracking-[-.01em] lg:text-[38px]">{t.pricing.h}</h2>
+    <div
+      class="inline-flex gap-0.5 rounded-xl bg-line-soft p-1 lg:mt-2"
+      role="group"
+      aria-label={t.pricing.toggleLabel}
+      data-billing-toggle
+    >
+      <button
+        type="button"
+        class="billing-btn h-10 rounded-[9px] px-3.5 text-sm font-semibold lg:h-9 lg:px-4"
+        aria-pressed="true"
+        data-billing="monthly"
+      >
+        {t.pricing.monthly}
+      </button>
+      <button
+        type="button"
+        class="billing-btn inline-flex h-10 items-center gap-1.5 rounded-[9px] px-3.5 text-sm font-semibold lg:h-9 lg:gap-2 lg:px-4"
+        aria-pressed="false"
+        data-billing="yearly"
+      >
+        {t.pricing.yearly}
+        <span class="rounded-full bg-plum-soft px-1.5 py-0.5 text-[10px] font-semibold text-plum lg:px-[7px] lg:text-[11px]">
+          {t.pricing.twoFree}
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <ul class="flex flex-col gap-6 lg:mx-auto lg:grid lg:max-w-[880px] lg:grid-cols-2 lg:gap-5">
+    {plans.map((plan) => (
+      <li
+        class:list={[
+          'fold-card flex flex-col gap-[18px] p-6 [--fold-bg:#fff] lg:gap-6 lg:rounded-[16px_0_16px_16px] lg:p-8',
+          plan.featured
+            ? 'order-first border-2 border-plum [--fold-shade:#EDE3E5] [--fold-size:26px] lg:order-none lg:[--fold-size:30px]'
+            : '[--fold-shade:#EFE9DF] [--fold-size:24px] lg:[--fold-size:28px]',
+        ]}
+      >
+        {plan.featured ? (
+          <span class="absolute top-[-13px] left-6 inline-flex h-[26px] items-center rounded-full bg-plum px-2.5 text-[11px] font-semibold text-white lg:top-[-14px] lg:left-8 lg:h-7 lg:px-3 lg:text-xs lg:tracking-[.02em]">
+            {t.pricing.popular}
+          </span>
+        ) : null}
+        <div class="flex items-end justify-between gap-3 lg:flex-col lg:items-stretch lg:gap-6">
+          <div class="flex flex-col lg:gap-1.5">
+            <h3 class="text-[19px] font-semibold lg:text-xl">{plan.name}</h3>
+            <p class="text-[13px] text-muted lg:text-sm">{plan.tagline}</p>
+          </div>
+          <p class="text-right lg:flex lg:items-baseline lg:gap-2 lg:text-left">
+            <span
+              class="tabular block font-serif text-[30px] leading-none font-bold tracking-[-.02em] lg:text-[44px]"
+              data-price={plan.key}
+              data-monthly={formatRsd(plan.prices.monthly)}
+              data-yearly={formatRsd(plan.prices.yearly)}
+            >
+              {formatRsd(plan.prices.monthly)}
+            </span>
+            <span
+              class="mt-1 block text-xs text-muted lg:mt-0 lg:text-sm"
+              data-per
+              data-per-month={t.pricing.perMonth}
+              data-per-year={t.pricing.perYear}
+            >
+              {t.pricing.perMonth}
+            </span>
+          </p>
+        </div>
+        <a
+          href={links.register}
+          class:list={['btn h-12 text-[15px] max-lg:order-last', plan.featured ? 'btn-plum' : 'btn-outline']}
+        >
+          {t.hero.cta}
+        </a>
+        <ul class="flex flex-col gap-[9px] border-t border-line pt-1 lg:gap-3 lg:pt-2">
+          {plan.list.map((item) => (
+            <li class="flex items-start gap-2 text-sm lg:gap-2.5 lg:text-[15px]">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#7A3E48"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="mt-0.5 flex-none lg:size-[18px]"
+                aria-hidden="true"
+              >
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+        <p class="text-center text-xs text-muted max-lg:order-last lg:text-left lg:text-[13px]">
+          {t.pricing.trialNote}
+        </p>
+      </li>
+    ))}
+  </ul>
+
+  <div class="mt-6 flex flex-col gap-2 rounded-xl bg-paper px-[18px] py-4 text-sm lg:mx-auto lg:mt-7 lg:max-w-[880px] lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-6 lg:rounded-[14px] lg:px-6 lg:py-5 lg:text-[15px]">
+    <p class="text-ink">{t.pricing.setupLine}</p>
+    <a
+      href={links.quote}
+      class="inline-flex items-center gap-1.5 font-semibold text-plum no-underline whitespace-nowrap lg:text-[15px]"
+    >
+      {t.setup.cta}
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 8h10M9 4l4 4-4 4"></path>
+      </svg>
+    </a>
+  </div>
+</section>

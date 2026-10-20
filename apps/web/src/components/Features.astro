@@ -1,0 +1,172 @@
+---
+import type { Dictionary, Locale } from '../i18n';
+interface Props {
+  locale: Locale;
+  t: Dictionary;
+}
+const { locale, t } = Astro.props;
+const sr = locale === 'sr';
+const icons = [
+  'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z',
+  'M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8ZM7.5 7.5h.01',
+  'M12 3a9 9 0 1 0 0 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8h2.2A4.2 4.2 0 0 0 21 10.8C21 6.5 17 3 12 3ZM7.5 11.5h.01M10 7.5h.01M14.5 7.5h.01',
+  'M4 20V10M10 20V4M16 20v-7M22 20H2',
+];
+const rows = [
+  {
+    name: 'Flat white',
+    desc: sr ? 'Dupli ristreto, baršunasto mleko.' : 'Double ristretto, velvety steamed milk.',
+    price: '310',
+    photo: '#C9A58A',
+    focus: true,
+  },
+  {
+    name: 'Cortado',
+    desc: sr ? 'Espreso i toplo mleko.' : 'Equal parts espresso and warm milk.',
+    price: '240',
+    photo: '#A98469',
+    focus: false,
+  },
+  {
+    name: 'Filter, Ethiopia Guji',
+    desc: sr ? 'Ručno kuvan V60.' : 'Hand-brewed V60.',
+    price: '320',
+    photo: '#B38B6D',
+    focus: false,
+  },
+];
+const unRows = [
+  { name: 'Avocado on rye', off: true },
+  { name: 'Shakshuka', off: false },
+  { name: 'Banana bread', off: true },
+];
+---
+
+<section id="dobijas" class="scroll-mt-16 px-5 py-14 lg:scroll-mt-[72px] lg:px-20 lg:py-[88px] xl:px-[120px]">
+  <div class="mb-7 flex flex-col gap-2.5 lg:mb-12 lg:gap-3">
+    <p class="text-[11px] font-semibold tracking-[.08em] text-plum uppercase lg:text-xs">{t.nav.features}</p>
+    <h2 class="text-[28px] leading-[1.15] tracking-[-.01em] lg:max-w-[640px] lg:text-[38px]">{t.features.h}</h2>
+  </div>
+  <ul class="flex flex-col gap-3.5 lg:grid lg:grid-cols-3 lg:gap-5">
+    <!-- 1 · price editor -->
+    <li class="fold-card flex flex-col gap-4 p-5 lg:col-span-2 lg:gap-[18px] lg:p-6 lg:[--fold-size:26px]">
+      <div
+        aria-hidden="true"
+        class="relative h-[150px] overflow-hidden rounded-[10px] border border-line bg-[#FAFAFA] lg:h-[200px]"
+      >
+        <div class="absolute top-3.5 right-[-60px] left-4 overflow-hidden rounded-[10px] border border-line bg-white lg:top-5 lg:right-[-40px] lg:left-6">
+          <div class="hidden h-[34px] grid-cols-[24px_40px_1fr_96px_72px] items-center gap-3 border-b border-line-soft px-3 text-[11px] font-semibold tracking-[.06em] text-muted uppercase lg:grid">
+            <span></span>
+            <span></span>
+            <span>{t.features.editor.item}</span>
+            <span class="text-right">{t.features.editor.price}</span>
+            <span>{t.features.editor.available}</span>
+          </div>
+          {rows.map((r) => (
+            <div class="grid h-[50px] grid-cols-[34px_1fr_84px_60px] items-center gap-2.5 border-b border-line-soft px-2.5 lg:h-14 lg:grid-cols-[24px_40px_1fr_96px_72px] lg:gap-3 lg:px-3">
+              <span class="hidden place-items-center text-faint lg:grid">
+                <svg width="10" height="14" viewBox="0 0 10 16" fill="currentColor">
+                  <circle cx="2.5" cy="3" r="1.4" />
+                  <circle cx="7.5" cy="3" r="1.4" />
+                  <circle cx="2.5" cy="8" r="1.4" />
+                  <circle cx="7.5" cy="8" r="1.4" />
+                  <circle cx="2.5" cy="13" r="1.4" />
+                  <circle cx="7.5" cy="13" r="1.4" />
+                </svg>
+              </span>
+              <span class="size-[34px] rounded-[7px] lg:size-10 lg:rounded-lg" style={`background:${r.photo}`} />
+              <span class="flex min-w-0 flex-col gap-0.5">
+                <span class="truncate text-[13px] font-medium lg:text-sm">{r.name}</span>
+                <span class="hidden truncate text-xs text-muted lg:block">{r.desc}</span>
+              </span>
+              <span
+                class:list={[
+                  'tabular flex h-[30px] items-center justify-end rounded-[7px] border bg-white px-2 text-xs font-medium lg:h-8 lg:rounded-lg lg:px-2.5 lg:text-[13px]',
+                  r.focus ? 'border-plum shadow-[0_0_0_3px_#EDE3E5]' : 'border-line',
+                ]}
+              >
+                {r.price}
+                <span class="ml-1 hidden font-normal text-faint lg:inline">RSD</span>
+              </span>
+              <span class="relative h-[18px] w-8 rounded-full bg-plum lg:h-5 lg:w-9">
+                <span class="absolute top-0.5 left-4 size-3.5 rounded-full bg-white lg:left-[18px] lg:size-4" />
+              </span>
+            </div>
+          ))}
+        </div>
+        <div class="absolute right-3.5 bottom-3 inline-flex h-[30px] items-center rounded-[7px] bg-plum px-2.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(122,62,72,.35)] lg:top-3.5 lg:right-5 lg:bottom-auto lg:h-8 lg:rounded-lg lg:px-3">
+          {t.features.editor.publish}
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 lg:gap-1.5">
+        <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">{t.features.f1.title}</h3>
+        <p class="text-sm text-muted lg:text-base">{t.features.f1.text}</p>
+      </div>
+    </li>
+    <!-- 2 · "not today" -->
+    <li class="fold-card flex flex-col gap-4 p-5 lg:gap-[18px] lg:p-6 lg:[--fold-size:26px]">
+      <div
+        aria-hidden="true"
+        class="relative h-[150px] overflow-hidden rounded-[10px] border border-line bg-[#FAFAFA] lg:h-[200px]"
+      >
+        <div class="absolute top-3.5 right-4 left-4 flex flex-col gap-2 lg:top-[18px] lg:right-5 lg:left-5 lg:gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[13px] font-semibold">{t.features.unavailable.title}</span>
+            <span class="text-xs font-semibold text-plum">{t.features.unavailable.done}</span>
+          </div>
+          <div class="hidden rounded-lg border border-line bg-white px-2.5 py-2 text-[11px] text-muted lg:block">
+            {t.features.unavailable.back}
+          </div>
+          <div class="overflow-hidden rounded-lg border border-line bg-white">
+            {unRows.map((u) => (
+              <div class="flex h-[38px] items-center gap-2 border-b border-line-soft px-2.5">
+                <span class:list={['flex-1 text-xs font-medium', u.off && 'text-muted']}>{u.name}</span>
+                <span class="text-[10px] text-muted">{u.off ? t.features.unavailable.until : ''}</span>
+                <span
+                  class:list={['relative h-[18px] w-8 flex-none rounded-full', u.off ? 'bg-line-strong' : 'bg-plum']}
+                >
+                  <span
+                    class:list={[
+                      'absolute top-0.5 size-3.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,.2)]',
+                      u.off ? 'left-0.5' : 'left-4',
+                    ]}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 lg:gap-1.5">
+        <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">{t.features.f2.title}</h3>
+        <p class="text-sm text-muted lg:text-base">{t.features.f2.text}</p>
+      </div>
+    </li>
+    {t.features.rest.map((f, i) => (
+      <li class="fold-card flex items-start gap-4 p-5 lg:flex-col lg:gap-[18px] lg:p-6 lg:[--fold-size:26px]">
+        <span
+          class="grid size-10 flex-none place-items-center rounded-[10px] bg-plum-soft text-plum lg:size-11 lg:rounded-xl"
+          aria-hidden="true"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lg:size-[22px]"
+          >
+            <path d={icons[i]} />
+          </svg>
+        </span>
+        <div class="flex flex-col gap-1 lg:gap-1.5">
+          <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">{f.title}</h3>
+          <p class="text-sm text-muted lg:text-base">{f.text}</p>
+        </div>
+      </li>
+    ))}
+  </ul>
+</section>

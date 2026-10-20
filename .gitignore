@@ -9,3 +9,4 @@ apps/api/uploads/
 coverage/
 .DS_Store
 npm-debug.log*
+.astro/

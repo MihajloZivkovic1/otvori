@@ -1,0 +1,17 @@
+---
+import Wordmark from '../components/Wordmark.astro';
+import Base from '../layouts/Base.astro';
+---
+
+<Base locale="sr" seo={false} noindex title="salveta — stranica nije pronađena" description="Stranica nije pronađena.">
+  <main class="flex min-h-dvh flex-col items-center justify-center gap-6 px-5 text-center">
+    <a href="/" class="no-underline" aria-label="salveta">
+      <Wordmark size={28} />
+    </a>
+    <h1 class="text-[28px] leading-[1.15] lg:text-[38px]">Ova strana ne postoji.</h1>
+    <p class="text-muted-paper">The page you are looking for does not exist.</p>
+    <a href="/" class="btn btn-plum h-12 px-6 text-[15px]">
+      Nazad na početnu · Back home
+    </a>
+  </main>
+</Base>

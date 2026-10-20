@@ -1,0 +1,20 @@
+---
+import Glyph from './Glyph.astro';
+
+/** Glyph + "salveta" in Libre Baskerville 700. `size` is the wordmark font size; the glyph matches it. */
+interface Props {
+  size?: number;
+  gap?: number;
+  color?: string;
+  fold?: string;
+  class?: string;
+}
+const { size = 24, gap = 8, color = '#7A3E48', fold = '#C98391', class: className } = Astro.props;
+---
+
+<span class:list={['inline-flex items-center', className]} style={`gap:${gap}px;color:${color}`}>
+  <Glyph size={size} fold={fold} />
+  <span class="font-serif font-bold leading-none tracking-[-.025em]" style={`font-size:${size}px`}>
+    salveta
+  </span>
+</span>

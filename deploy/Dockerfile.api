@@ -6,6 +6,7 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
 COPY apps/menu/package.json apps/menu/
 COPY apps/cms/package.json apps/cms/
+COPY apps/web/package.json apps/web/
 RUN npm ci
 COPY packages/shared packages/shared
 COPY apps/api apps/api

@@ -1,0 +1,42 @@
+---
+import { links } from '../config';
+import type { Dictionary, Locale } from '../i18n';
+import HeroVisual from './HeroVisual.astro';
+
+interface Props {
+  locale: Locale;
+  t: Dictionary;
+}
+const { locale, t } = Astro.props;
+---
+
+<section class="pt-10 lg:grid lg:grid-cols-[1fr_640px] lg:items-center lg:gap-14 lg:px-20 lg:pt-[72px] lg:pb-16 xl:px-[120px]">
+  <div class="flex flex-col gap-[18px] px-5 lg:gap-6 lg:px-0">
+    <h1 class="text-4xl leading-[1.12] tracking-[-.015em] lg:text-[58px] lg:leading-[1.08]">{t.hero.h}</h1>
+    <p class="text-[17px] leading-normal text-muted-paper lg:max-w-[460px] lg:text-xl">{t.hero.sub}</p>
+    <div class="mt-1 flex flex-col gap-2.5 lg:mt-2 lg:flex-row lg:flex-wrap lg:gap-3">
+      <a href={links.register} class="btn btn-plum h-[52px] px-6 text-base">
+        {t.hero.cta}
+      </a>
+      <a href={links.demoMenu} class="btn btn-outline h-[52px] px-6 text-base">
+        {t.hero.demo}
+        <svg
+          class="hidden lg:block"
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M6 3h7v7M13 3L5 11"></path>
+        </svg>
+      </a>
+    </div>
+    <p class="text-center text-[13px] text-muted-paper lg:text-left lg:text-sm">{t.hero.note}</p>
+  </div>
+  <HeroVisual locale={locale} t={t} />
+</section>
