@@ -10,11 +10,16 @@ Product name: **Tabla**. Public menus live on `https://{slug}.tabla.rs`, the adm
 | `packages/shared` | Constants, Zod request schemas, response DTO schemas + inferred types, `resolveText()` | Phase 1 (done) |
 | `apps/api` | Express 5 API (Sequelize 6 + sequelize-typescript, Postgres 16) | Phase 1 (done) |
 | `apps/menu` | Public guest menu (React 19 + Vite 8 + Tailwind v4) | Phase 2 (done) |
-| `apps/cms` | Admin CMS (React + Vite) | Phase 3, untouched |
+| `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `app.ts`, `index.ts`.
 Tests live in `apps/api/test`.
+
+`apps/cms/src`: `main.tsx` (QueryClient → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx` (route
+tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/forgot/magic/reset), `components/ui/` (primitives),
+`components/shell/` (sidebar, top bar, tab bar, layouts, guards), `components/{menu,tables,branding,settings,superadmin}/`,
+`lib/` (api, auth, queries, storage, format, screens, crop, download, color), `hooks/`, `styles.css`. Tests in `apps/cms/test`.
 
 `apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
 (routes `/r/:slug/*` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
@@ -164,12 +169,94 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   `scroll-mt-[61px]`); taps lock the observer for ~0.8 s so the chip does not flicker; reaching the page bottom selects the last category.
 - The last loaded header (name, logo, accent, theme) is cached per tenant in `localStorage['tabla.tenant.<tenant>']` so the skeleton
   and offline screens are branded and returning guests get no light→dark flash.
-- Scripts: `npm run dev|build|preview|typecheck|test -w @qr-menu/menu`. Root `npm run build` builds shared → api, menu, cms.
+- Scripts: `npm run dev|build|preview|typecheck|test -w @qr-menu/menu` (same for `@qr-menu/cms`). Root `npm run build` builds shared → api, menu, cms.
+
+## Admin CMS app (`apps/cms`)
+
+Stack: React 19, Vite 8, TypeScript strict, Tailwind v4 (`@tailwindcss/vite`), React Router 8 **data router** (`createBrowserRouter`
+in `router.tsx`, every page is a `lazy` chunk, tests mount the same `routes` with `createMemoryRouter`), TanStack Query 5,
+react-hook-form + `@hookform/resolvers/zod` with the schemas from `@qr-menu/shared`, `@dnd-kit/core` + `sortable` for reordering.
+No UI kit; icons are inline SVGs traced from the design (`components/icons.tsx`). Design source: `design/Tabla Admin Panel (1).html`.
+
+### Running it on this machine
+```bash
+npm run dev -w @qr-menu/api            # PORT=3100 (apps/api/.env); APP_URL=http://localhost:5173 so magic links land in the CMS
+npm run dev -w @qr-menu/cms            # http://localhost:5173 — Vite proxies /api to VITE_API_URL (apps/cms/.env, gitignored)
+```
+`apps/cms/.env.example`: `VITE_API_URL=http://localhost:3100` (dev proxy target; production builds call it directly, empty =
+same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@tabla.rs` /
+`admin1234` (superadmin, no memberships → lands on `/superadmin`).
+
+### Auth flow (`lib/api.ts`, `lib/auth.tsx`)
+- Access token lives only in memory (`tokenStore`); the refresh token is the httpOnly cookie the API sets (`credentials: 'include'`).
+- `api()` adds `Authorization: Bearer`, and on a 401 calls `POST /api/auth/refresh` **once** (single-flight) and retries; if that
+  fails too it clears the token and calls the unauthorized handler → `AuthProvider` goes `anonymous` → `RequireAuth` renders
+  `<Navigate to="/login" state={{ from }}>` (no `from` after an explicit sign-out). Public auth endpoints pass `auth: false`.
+- `AuthProvider` status: `restoring | anonymous | authenticated`. On load it restores silently via the cookie only when
+  `localStorage['tabla.cms.remember']` ("Remember me", default on) or `sessionStorage['tabla.cms.session']` (same tab) is set —
+  that is how "Remember me" works, since the API cookie always lives 30 days. `signIn(session, remember)` after
+  login/register/magic link/reset; `signOut()` posts `/logout` and clears the QueryClient; `refreshMe()` re-reads `/api/auth/me`.
+- Auth screens: `/login` (password, "Email me a magic link"), `/register` (creates user + venue and opens its empty menu),
+  `/forgot`, `/auth/magic?token=`, `/auth/reset?token=` (the paths the API mailer links to).
+
+### Routing & active restaurant
+- `/` → `HomeRedirect`: last used venue (`localStorage['tabla.cms.lastRestaurant.<userId>']`) → first membership → `/superadmin`
+  (superadmins) → `/no-venue`. `/r/:restaurantId/*` → `RestaurantLayout` checks the membership (superadmins pass as owners), loads
+  `GET /admin/restaurants/:id`, stores it as last used and provides `useRestaurantContext()` = `{ restaurant, role, isOwner, isMobile }`.
+- Screens: `menu` (`?c=<categoryId>` selected category, `?item=<id>|new` opens the editor), `menu/unavailable`, `tables`,
+  `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile), index = Home on phones / redirect to `menu` otherwise.
+  `/superadmin` lists every venue (`SuperadminLayout` keeps the last venue in the switcher); clicking a row opens `/r/:id/menu`.
+- Owner-only UI (settings/branding edits, Publish, Delete) is gated with `isOwner`; the API enforces it anyway.
+
+### Layout & tokens
+- `≤640px` = phone (bottom tab bar, full-screen `Sheet`s, swipe rows, `useIsMobile()`); `641–1024px` = 64px icon rail with tooltips
+  (`useIsCompact()`); `>1024px` = 240px sidebar. Custom Tailwind breakpoints `tab` (641px) and `wide` (1025px); `max-tab:`/`max-wide:` for the inverse.
+- Tokens on `:root` (`--bg --surface --ink --ink-2 --ink-3 --muted --faint --line --line2 --line-strong --accent --on-accent
+  --accent-soft`) mapped by `@theme inline` to `bg-canvas text-ink text-ink-2 text-muted text-faint border-line bg-line-2
+  bg-accent text-on-accent …`. The accent is always the Tabla plum `#7A3E48`; the tenant's `primaryColor` is only used by
+  `LogoTile` and the Branding `PhonePreview`. The dark variant (`#141416 / #1C1C20 / accent #B86F7C`) applies via
+  `prefers-color-scheme: dark` **on phone widths only** (design frame M4). `a` color is in `@layer base` so utilities override it.
+- `--sidebar-w` on `<html>` lets the `Drawer` scrim stop at the sidebar edge (drawers/modals/sheets portal to `<body>`).
+
+### UI primitives (`components/ui`)
+`Button` (primary/secondary/ghost/danger/danger-ghost/accent-text; sm 32 · md 36 · lg 40 · xl 44 · mobile 48), `IconButton`,
+`Field` + `Input`/`Textarea`/`Select`/`AffixInput` (price with currency suffix), `Switch` (+ presentational `SwitchTrack` for
+tappable rows; sizes sm 36×20 / md 40×24 / lg 48×28), `Chip` (allergen glyph pills, ink-filled tag pills), `MiniTag`, `Badge`,
+`StatusPill`, `Segmented`, `Drawer` (480px, 420px ≤1024), `Sheet` (`full` M7-style or `bottom`), `Modal` + `ConfirmModal`,
+`ToastProvider`/`useToast`, `Skeleton`, `EmptyState` (`page`/`inline`), `Tooltip`, `Menu`. All overlays use `useFocusTrap`
+(Tab loop, Escape, focus restore, `[data-autofocus]`) and `useLockBodyScroll`.
+
+### Data layer (`lib/queries.ts`)
+Query keys: `['restaurant'|'categories'|'items'|'tables', rid]`, `['analytics', rid, range]`, `['qr', rid, tableId, fmt]`,
+`['superadmin','restaurants', query]`. Items are fetched for the whole restaurant once and filtered per category. Optimistic
+updates (with rollback + `onSettled` invalidate): availability switch, category hide/show, category/item reorder. Everything else
+sets the returned DTO into the cache and invalidates. QR images and the PDF come through `apiBlob()` (bearer token) and object URLs.
+
+### Item editor
+`useItemForm` (RHF + `zodResolver(createItemSchema)`, also used for updates) feeds `ItemFields`, rendered by `ItemDrawer`
+(desktop) and `ItemSheet` (phone). The default-locale tab edits everything; the other locale edits only name/description.
+Prices are typed in major units (`PriceInput` ↔ `priceCents`), variants via `useFieldArray`. A new photo is cropped client-side
+(`lib/crop.ts`, square, zoom 1–2) and uploaded to `POST /items/:id/image` after the item is saved. `isAvailable` is only sent when
+the switch was touched so a "back at 06:00" state survives an unrelated edit. Closing a dirty form asks to discard.
+
+### Mobile specifics
+`SwipeRow` (pointer events, −144px reveal for Edit/Delete), press-and-hold grip reorder (dnd-kit `PointerSensor` delay), FAB,
+`UnavailablePage` (one switch per item: off → `{available:false, until:'tomorrow-06:00'}`, on → `{available:true}`, "Turn all on"),
+Tables rows expand with Share (`navigator.share`, clipboard fallback) and Download, `VenueSheet` switcher, `InstallHint`
+(`beforeinstallprompt`, iOS Share hint; dismissal in localStorage). PWA: `public/manifest.webmanifest`, `public/icons/*`,
+`public/sw.js` (app shell only, never `/api`), registered in production builds only.
+
+### Tests (`apps/cms/test`)
+vitest + Testing Library in jsdom. `helpers.tsx` has DTO fixtures, `mockApi(state, override?)` (default answers for every
+endpoint the shell needs, `statefulItems()` persists availability changes across refetches), `setViewport('desktop'|'tablet'|'mobile')`
+(matchMedia stub) and `renderApp(route, { viewport, authenticated })` which mounts the real route tree; an authenticated render
+sets the session flag and lets the app restore through the mocked `POST /api/auth/refresh`.
 
 ## Testing
 
 - vitest + supertest against a real Postgres: `test/global-setup.ts` creates the test DB and runs migrations once;
   `test/setup.ts` truncates all tables before each test. Files run sequentially (`fileParallelism: false`).
+- `apps/cms`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/cms`); see "Admin CMS app → Tests".
 - `apps/menu`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/menu`). `test/setup.ts` stubs `IntersectionObserver`
   (drive it with `MockIntersectionObserver.instances[i].trigger(...)`), `scrollIntoView`/`scrollTo`, and clears storage;
   `mockFetch(handler)` replaces `fetch` per test and `renderMenu(route)` mounts the app in a `MemoryRouter` with a fresh QueryClient.
