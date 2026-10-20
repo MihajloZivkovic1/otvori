@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (from design/Tabla Guest Menu.html). Raw tokens live on :root as --bg, --surface, --ink, --muted,
+ * --line, --accent …; the @theme block maps them to Tailwind color utilities (bg-canvas, text-ink, border-line, …).
+ */
+@theme inline {
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Libre Baskerville", Georgia, "Times New Roman", serif;
+
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-chip: var(--chip);
+  --color-placeholder: var(--placeholder);
+  --color-scrim: var(--scrim);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f7f2eb;
+  --surface: #fffdf9;
+  --ink: #1f1a17;
+  --muted: #6e645c;
+  --line: rgba(31, 26, 23, 0.1);
+  --line-strong: rgba(31, 26, 23, 0.14);
+  --chip: #eee6db;
+  --placeholder: #e8dccb;
+  --scrim: rgba(31, 26, 23, 0.45);
+  --accent: var(--accent-light, #7a3e48);
+  --on-accent: var(--on-accent-light, #ffffff);
+  --tag-vegan-bg: #e3ebd9;
+  --tag-vegan-fg: #3e5a2c;
+  --tag-spicy-bg: #f5e0d6;
+  --tag-spicy-fg: #8e3a1f;
+  --tag-new-bg: #ede3e5;
+  --tag-new-fg: #7a3e48;
+}
+
+/* Dark tokens: forced by restaurant.theme = "dark" … */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1816;
+  --surface: #262220;
+  --ink: #f3ede6;
+  --muted: #aba198;
+  --line: rgba(243, 237, 230, 0.12);
+  --line-strong: rgba(243, 237, 230, 0.18);
+  --chip: #2e2927;
+  --placeholder: #3a322d;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --tag-vegan-bg: #2f3a27;
+  --tag-vegan-fg: #bbd39f;
+  --tag-spicy-bg: #422620;
+  --tag-spicy-fg: #f0a98c;
+  --tag-new-bg: #3b2c30;
+  --tag-new-fg: #e6b3bd;
+}
+
+/* … or chosen by the device when restaurant.theme = "auto" (no data-theme attribute). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1b1816;
+    --surface: #262220;
+    --ink: #f3ede6;
+    --muted: #aba198;
+    --line: rgba(243, 237, 230, 0.12);
+    --line-strong: rgba(243, 237, 230, 0.18);
+    --chip: #2e2927;
+    --placeholder: #3a322d;
+    --scrim: rgba(0, 0, 0, 0.55);
+    --tag-vegan-bg: #2f3a27;
+    --tag-vegan-fg: #bbd39f;
+    --tag-spicy-bg: #422620;
+    --tag-spicy-fg: #f0a98c;
+    --tag-new-bg: #3b2c30;
+    --tag-new-fg: #e6b3bd;
+  }
+}
+
+/*
+ * Dark-surface accent: the tenant color lifted halfway to white with 85% of its chroma (OKLCH), matching the
+ * design's light/dark accent pairs (#7A3E48 → ≈#C98391). Browsers without relative color syntax keep the raw
+ * accent, whose text color was computed from its own luminance.
+ */
+@supports (color: oklch(from red calc(l + 0.1) c h)) {
+  :root[data-theme="dark"] {
+    --accent: oklch(from var(--accent-light, #7a3e48) calc(l + (1 - l) * 0.5) calc(c * 0.85) h);
+    --on-accent: #1b1816;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --accent: oklch(from var(--accent-light, #7a3e48) calc(l + (1 - l) * 0.5) calc(c * 0.85) h);
+      --on-accent: #1b1816;
+    }
+  }
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Sticky category bar: translucent canvas with blur (design: color-mix(in oklab, var(--bg) 92%, transparent)). */
+.bar-glass {
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-top {
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+}
+.safe-bottom {
+  padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+}
+
+.tag-vegan {
+  background: var(--tag-vegan-bg);
+  color: var(--tag-vegan-fg);
+}
+.tag-spicy {
+  background: var(--tag-spicy-bg);
+  color: var(--tag-spicy-fg);
+}
+.tag-new {
+  background: var(--tag-new-bg);
+  color: var(--tag-new-fg);
+}
+.tag-default {
+  background: var(--chip);
+  color: var(--muted);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.sheet-enter {
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.scrim-enter {
+  animation: fade-in 0.2s ease-out;
+}
+.skeleton {
+  background: var(--chip);
+  border-radius: 8px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-enter,
+  .scrim-enter,
+  .skeleton {
+    animation: none;
+  }
+}

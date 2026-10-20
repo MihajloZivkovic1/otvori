@@ -9,12 +9,19 @@ Product name: **Tabla**. Public menus live on `https://{slug}.tabla.rs`, the adm
 | --- | --- | --- |
 | `packages/shared` | Constants, Zod request schemas, response DTO schemas + inferred types, `resolveText()` | Phase 1 (done) |
 | `apps/api` | Express 5 API (Sequelize 6 + sequelize-typescript, Postgres 16) | Phase 1 (done) |
-| `apps/menu` | Public menu (React + Vite) | Phase 2, untouched |
-| `apps/cms` | Admin CMS (React + Vite) | Phase 2, untouched |
+| `apps/menu` | Public guest menu (React 19 + Vite 8 + Tailwind v4) | Phase 2 (done) |
+| `apps/cms` | Admin CMS (React + Vite) | Phase 3, untouched |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `app.ts`, `index.ts`.
 Tests live in `apps/api/test`.
+
+`apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
+(routes `/r/:slug/*` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
+`components/` (Header, CategoryBar, CategorySection, ItemRow, ItemSheet, OfflineScreen, MenuSkeleton, Footer, Chips, LogoTile, icons),
+`hooks/` (useMenu, useActiveCategory, useLockBodyScroll, useFocusTrap), `lib/` (api, tenant, session, locale, i18n, format, theme,
+events), `styles.css` (tokens + Tailwind). Tests live in `apps/menu/test` (vitest + Testing Library, jsdom; `helpers.tsx` has the
+menu fixtures, a fetch mock and `renderMenu()`).
 
 ## Commands
 
@@ -99,10 +106,73 @@ npm test                      # apps/api vitest + supertest (needs Postgres; use
   `UPLOADS_DIR` served at `API_URL/uploads`. Keys: `restaurants/<id>/logo-<ts>.png`, `restaurants/<id>/items/<itemId>-<ts>.webp`.
 - QR: `qrcode` (PNG/SVG); A4 QR sheet via pdfkit with DejaVu Sans (needed for č/ć/đ/š/ž).
 
+## Public menu app (`apps/menu`)
+
+Stack: React 19, Vite 8, TypeScript strict, Tailwind v4 via `@tailwindcss/vite`, React Router 8 (declarative `BrowserRouter`,
+`useSearchParams`), TanStack Query 5. No UI kit, icon or animation library; the few SVGs are inlined in `components/icons.tsx`.
+Budget: initial JS ≈ 100 KB gzipped (react-dom alone is 64 KB); the item sheet is a lazy chunk prefetched when idle.
+Lighthouse mobile on the seeded menu: 100/100/100/100.
+
+### Running it on this machine
+```bash
+npm run dev -w @qr-menu/api            # apps/api/.env → PORT=3100, Postgres on 5433 (see .env; seed with `npm run seed`)
+npm run dev -w @qr-menu/menu           # http://localhost:5174/?t=7  ·  http://kafeterija.localhost:5174/?t=7  ·  /r/bistro-zemun
+```
+`apps/menu/.env` (gitignored, copy from `.env.example`): `VITE_API_URL=http://localhost:3100`, `VITE_DEFAULT_SLUG=kafeterija`.
+The dev and preview servers listen on 5174 and proxy `/api` to `API_PROXY_TARGET || VITE_API_URL` with the Host header preserved
+(`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.tabla.rs`.
+Useful URL params: `?t=7` table, `?lang=en`, `?item=<itemId>` opens the sheet.
+
+To reproduce the production same-origin setup (and the Lighthouse run): `VITE_API_URL= npx vite build` then
+`API_PROXY_TARGET=http://localhost:3100 npx vite preview --port 4174` in `apps/menu`, open `http://kafeterija.localhost:4174/?t=7`,
+and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
+
+### Conventions
+- **Restaurant resolution** (`lib/tenant.ts` → `resolveTenant`): `/r/:slug` path → host subdomain (`kafeterija.tabla.rs`,
+  `kafeterija.localhost`; apex/`www`/IPs/`localhost` give nothing) → `VITE_DEFAULT_SLUG` → none. With a slug the app calls
+  `/api/public/:slug/menu`; with none, or when the slug came from the host *and* the API is same-origin, it calls the host-based
+  `/api/public/menu` — the URL the production build preloads (`<link rel="preload" as="fetch">`, emitted only when `VITE_API_URL` is empty).
+- **API base** (`lib/api.ts`): dev → always same origin (Vite proxy); production build → `VITE_API_URL`, or same origin when empty.
+  Errors are `ApiError(status, code)` / `NetworkError`; `menuErrorKind()` maps them to the offline-screen copy
+  (`network`, `not-published` = 404 `MENU_NOT_PUBLISHED`, `not-found`, `error`).
+- **Shared package**: types (`PublicMenuDto`, …), `pickLocale`, constants come from `@qr-menu/shared`; nothing is redefined.
+  Zod never ships to the browser: `publicMenuDtoSchema` is only used behind `import.meta.env.DEV` (shared is `sideEffects: false`).
+- **Tokens & theming** (`styles.css`, `lib/theme.ts`): raw tokens on `:root` — `--bg --surface --ink --muted --line --line-strong
+  --chip --placeholder --scrim --accent --on-accent` — dark values under `:root[data-theme="dark"]` and, for `theme: auto`,
+  under `@media (prefers-color-scheme: dark) :root:not([data-theme="light"])`. `@theme inline` maps them to utilities
+  (`bg-canvas text-ink text-muted border-line border-line-strong bg-chip bg-surface bg-placeholder bg-scrim bg-accent text-on-accent`).
+  `applyTheme(theme, primaryColor)` sets `data-theme` (removed for auto) plus `--accent-light` = primaryColor and `--on-accent-light`
+  (white vs dark ink by luminance). On dark surfaces CSS lifts the accent with `oklch(from …)` (50 % toward white, 85 % chroma), which
+  reproduces the design's light/dark accent pairs. The accent is only used for chips, the logo tile, the retry button and focus rings,
+  never for body text. Light/dark palettes, type sizes and spacing come from `design/Tabla Guest Menu.html`.
+- **Fonts**: Google Fonts (Figtree 400/500/600, Libre Baskerville 400/700, `display=swap`) via preconnect + a non-blocking stylesheet
+  in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "Tabla" wordmark.
+- **index.html** carries a static copy of `MenuSkeleton` inside `#root` (first paint without JS; React replaces it) and the build
+  inlines the stylesheet (`inlineCss` plugin in `vite.config.ts`). Keep the static skeleton in sync when `MenuSkeleton` changes.
+- **i18n** (`lib/i18n.ts`): UI strings for `sr`/`en` only; menu content arrives resolved from the API. UI locale =
+  `pickLocale(?lang ?? localStorage['tabla.lang'], restaurant.supportedLocales, restaurant.defaultLocale)`; the switcher writes
+  `?lang` (replace) + localStorage, which changes the query key `['menu', tenantKey, locale]` and refetches (`keepPreviousData`).
+  Prices: `formatPrice(cents, currency, locale)` — amount first, currency last ("290 RSD", "1.290,50 RSD"), cents only when non-zero;
+  variants show `od/from <lowest variant>`. Serbian plurals via `Intl.PluralRules` ("1 stavka / 2 stavke / 5 stavki").
+- **Events** (`lib/events.ts`): `scan` once per tab session and table (`sessionStorage['tabla.scan.<tenant>.<table>']`; the API also
+  de-duplicates for 30 min), `item_view` when the sheet opens; `fetch(..., { keepalive: true })`, errors swallowed. Session id = uuid in
+  `sessionStorage['tabla.session']`; table = `?t=` persisted in `sessionStorage['tabla.table.<tenant>']`.
+- **Sheet**: opened by pushing `?item=<id>` with `state.sheet`, so Back closes it (direct links close with `replace`). Modal dialog:
+  body scroll locked (`position: fixed`), focus trapped, Escape closes, focus returns to the row. Unavailable rows render as a
+  non-interactive `div` at 45 % opacity with "Danas nije dostupno / Not available today".
+- **Category bar**: `useActiveCategory` observes sections with `rootMargin: -61px 0px -55% 0px` (61 = sticky bar height, sections have
+  `scroll-mt-[61px]`); taps lock the observer for ~0.8 s so the chip does not flicker; reaching the page bottom selects the last category.
+- The last loaded header (name, logo, accent, theme) is cached per tenant in `localStorage['tabla.tenant.<tenant>']` so the skeleton
+  and offline screens are branded and returning guests get no light→dark flash.
+- Scripts: `npm run dev|build|preview|typecheck|test -w @qr-menu/menu`. Root `npm run build` builds shared → api, menu, cms.
+
 ## Testing
 
 - vitest + supertest against a real Postgres: `test/global-setup.ts` creates the test DB and runs migrations once;
   `test/setup.ts` truncates all tables before each test. Files run sequentially (`fileParallelism: false`).
+- `apps/menu`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/menu`). `test/setup.ts` stubs `IntersectionObserver`
+  (drive it with `MockIntersectionObserver.instances[i].trigger(...)`), `scrollIntoView`/`scrollTo`, and clears storage;
+  `mockFetch(handler)` replaces `fetch` per test and `renderMenu(route)` mounts the app in a `MemoryRouter` with a fresh QueryClient.
 - Seed credentials: superadmin `admin@tabla.rs` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
   (restaurant "Kafeterija Dorćol", slug `kafeterija`); other demo owners use `tabla1234`.
 

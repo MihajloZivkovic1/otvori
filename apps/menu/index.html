@@ -1,13 +1,78 @@
 <!doctype html>
-<html lang="en">
+<html lang="sr">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F7F2EB" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1B1816" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Digital table menu" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>menu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Loaded as a print stylesheet first so it never blocks first paint; swapped to `all` once it arrives. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Libre+Baskerville:wght@400;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Libre+Baskerville:wght@400;700&display=swap"
+      />
+    </noscript>
+    <title>Tabla</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Static copy of MenuSkeleton so the first paint does not wait for JavaScript; React replaces it on mount. -->
+    <div id="root">
+      <div role="status" aria-busy="true" aria-label="Loading menu" class="mx-auto min-h-dvh max-w-[640px]">
+        <div class="safe-top flex flex-col gap-[18px] px-5 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="skeleton size-11 rounded-xl"></div>
+            <div class="flex flex-col gap-2">
+              <div class="skeleton h-5 w-44"></div>
+              <div class="skeleton h-3 w-28"></div>
+            </div>
+          </div>
+          <div class="skeleton h-7 w-20 rounded-full"></div>
+        </div>
+        <div class="flex gap-1.5 border-b border-line px-5 py-2">
+          <div class="skeleton h-10 rounded-full" style="width: 88px"></div>
+          <div class="skeleton h-10 rounded-full" style="width: 104px"></div>
+          <div class="skeleton h-10 rounded-full" style="width: 80px"></div>
+          <div class="skeleton h-10 rounded-full" style="width: 112px"></div>
+        </div>
+        <div class="px-5 pt-7 pb-2">
+          <div class="skeleton mb-3 h-6 w-32"></div>
+          <div class="flex items-start gap-3.5 border-b border-line py-4">
+            <div class="flex flex-1 flex-col gap-2">
+              <div class="flex justify-between gap-2.5"><div class="skeleton h-5 w-[55%]"></div><div class="skeleton h-4 w-14"></div></div>
+              <div class="skeleton h-3.5 w-[80%]"></div>
+              <div class="skeleton h-5 w-12 rounded-full"></div>
+            </div>
+            <div class="skeleton size-[76px] rounded-xl"></div>
+          </div>
+          <div class="flex items-start gap-3.5 border-b border-line py-4">
+            <div class="flex flex-1 flex-col gap-2">
+              <div class="flex justify-between gap-2.5"><div class="skeleton h-5 w-[55%]"></div><div class="skeleton h-4 w-14"></div></div>
+              <div class="skeleton h-3.5 w-[80%]"></div>
+              <div class="skeleton h-5 w-12 rounded-full"></div>
+            </div>
+            <div class="skeleton size-[76px] rounded-xl"></div>
+          </div>
+          <div class="flex items-start gap-3.5 border-b border-line py-4">
+            <div class="flex flex-1 flex-col gap-2">
+              <div class="flex justify-between gap-2.5"><div class="skeleton h-5 w-[55%]"></div><div class="skeleton h-4 w-14"></div></div>
+              <div class="skeleton h-3.5 w-[80%]"></div>
+              <div class="skeleton h-5 w-12 rounded-full"></div>
+            </div>
+            <div class="skeleton size-[76px] rounded-xl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
