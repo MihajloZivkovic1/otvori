@@ -1,0 +1,22 @@
+# Local development database only. Start with:  docker compose -f docker-compose.dev.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tabla-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tabla
+      POSTGRES_PASSWORD: tabla
+      POSTGRES_DB: tabla
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - tabla_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tabla -d tabla"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  tabla_pgdata:

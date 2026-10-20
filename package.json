@@ -1,0 +1,29 @@
+{
+  "name": "qr-menu",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "migrate": "turbo run migrate --filter=@qr-menu/api",
+    "migrate:undo": "turbo run migrate:undo --filter=@qr-menu/api",
+    "seed": "turbo run seed --filter=@qr-menu/api",
+    "db:up": "docker compose -f docker-compose.dev.yml up -d",
+    "db:down": "docker compose -f docker-compose.dev.yml down"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "turbo": "^2.11.9",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@10.9.8"
+}
