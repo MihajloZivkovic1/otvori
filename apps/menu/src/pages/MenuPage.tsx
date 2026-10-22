@@ -1,29 +1,43 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
-import type { PublicMenuCategoryDto } from '@qr-menu/shared';
+import type { PublicMenuCategoryDto, PublicMenuItemDto, ServiceRequestType } from '@qr-menu/shared';
+import { CartBar } from '../components/CartBar';
+import type { CartSubmission, SubmitResult } from '../components/CartSheet';
 import { CategoryBar } from '../components/CategoryBar';
 import { CategorySection } from '../components/CategorySection';
 import { Footer } from '../components/Footer';
 import { Header } from '../components/Header';
+import type { AddSelection } from '../components/ItemSheet';
 import { MenuSkeleton } from '../components/MenuSkeleton';
 import { OfflineScreen } from '../components/OfflineScreen';
+import { OrderingBar } from '../components/OrderingBar';
+import { TablePrompt } from '../components/TablePrompt';
+import { Toast } from '../components/Toast';
 import { useActiveCategory } from '../hooks/useActiveCategory';
+import { useCart } from '../hooks/useCart';
 import { useMenu } from '../hooks/useMenu';
-import { API_SAME_ORIGIN, menuErrorKind } from '../lib/api';
+import { useServiceCalls } from '../hooks/useServiceCalls';
+import { useSessionOrders } from '../hooks/useSessionOrders';
+import { useDocumentLang, useTenant, useTenantTheme } from '../hooks/useTenant';
+import { useToast } from '../hooks/useToast';
+import { ApiError, createOrder, menuErrorKind, orderingErrorMessage, type OrderPayload } from '../lib/api';
+import { cartCount, cartTotal, priceCart } from '../lib/cart';
 import { trackItemView, trackScan } from '../lib/events';
 import { filterCategories, findItem } from '../lib/format';
 import { dict } from '../lib/i18n';
 import { nextLocale, rememberLocale, requestedLocale, resolveUiLocale, switchableLocales } from '../lib/locale';
+import { openOrderCount, rememberOrder } from '../lib/orders';
+import { orderPath } from '../lib/routes';
 import { parseTableNumber, readStoredTableNumber, storeTableNumber } from '../lib/session';
-import { readCachedTenant, resolveTenant, tenantKeyFor, writeCachedTenant } from '../lib/tenant';
-import { applyTheme } from '../lib/theme';
 
 /** Height of the sticky chip bar (8 + 44 + 8 + 1px border); sections scroll to just below it. */
 const BAR_HEIGHT = 61;
 
-// The detail sheet is interaction-only: it ships as its own chunk, prefetched once the menu is idle.
+// The sheets are interaction-only: they ship as their own chunks, prefetched once the menu is idle.
 const loadItemSheet = () => import('../components/ItemSheet');
 const ItemSheet = lazy(() => loadItemSheet().then((module) => ({ default: module.ItemSheet })));
+const loadCartSheet = () => import('../components/CartSheet');
+const CartSheet = lazy(() => loadCartSheet().then((module) => ({ default: module.CartSheet })));
 
 function prefetchWhenIdle(load: () => Promise<unknown>): () => void {
   const run = () => void load().catch(() => undefined);
@@ -42,38 +56,25 @@ export function MenuPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { tenantKey, slug, cachedTenant } = useTenant(pathSlug);
 
-  const tenant = useMemo(() => resolveTenant(pathSlug), [pathSlug]);
-  const tenantKey = useMemo(() => tenantKeyFor(tenant.slug), [tenant]);
-  // Host-derived slug + same-origin API → host-based URLs (/api/public/menu), the form the HTML preloads.
-  const slug = tenant.source === 'host' && API_SAME_ORIGIN ? null : tenant.slug;
-
-  // Table QR codes encode /t/<number>; ?t=<number> is the older format and still accepted.
+  // Table QR codes encode /t/<number>; ?t=<number> is the older format and still accepted. A guest who arrived
+  // without one may type it when calling the waiter or sending the cart.
   const tableParam = pathTable ?? searchParams.get('t');
-  const tableNumber = useMemo(
-    () => parseTableNumber(tableParam) ?? readStoredTableNumber(tenantKey),
-    [tableParam, tenantKey],
-  );
+  const [enteredTable, setEnteredTable] = useState<number | null>(null);
+  const knownTable = useMemo(() => parseTableNumber(tableParam) ?? readStoredTableNumber(tenantKey), [tableParam, tenantKey]);
+  const tableNumber = knownTable ?? enteredTable;
   useEffect(() => {
     if (tableNumber !== null) storeTableNumber(tenantKey, tableNumber);
   }, [tenantKey, tableNumber]);
 
   const requested = requestedLocale(searchParams);
   const menu = useMenu(slug, tenantKey, requested);
-  const cachedTenant = useMemo(() => readCachedTenant(tenantKey), [tenantKey]);
   const restaurant = menu.data?.restaurant ?? null;
   const locale = resolveUiLocale(requested, restaurant);
   const t = dict[locale];
-
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
-
-  useEffect(() => {
-    if (!restaurant) return;
-    applyTheme(restaurant.theme, restaurant.primaryColor);
-    writeCachedTenant(tenantKey, restaurant);
-  }, [restaurant, tenantKey]);
+  useDocumentLang(locale);
+  useTenantTheme(restaurant, tenantKey);
 
   const loadedSlug = menu.data?.restaurant.slug;
   useEffect(() => {
@@ -88,26 +89,51 @@ export function MenuPage() {
   const categoryIds = useMemo(() => visibleCategories.map((category) => category.id), [visibleCategories]);
   const { active, scrollTo } = useActiveCategory(categoryIds, BAR_HEIGHT);
 
+  /* ------------------------------------------------------------------ ordering */
+
+  const orderingMode = restaurant?.orderingMode ?? 'off';
+  const paused = Boolean(restaurant?.orderingPaused);
+  const canOrder = orderingMode === 'order' && !paused;
+  const callsEnabled = orderingMode !== 'off';
+  const cart = useCart(tenantKey);
+  const pricedLines = useMemo(() => priceCart(cart.lines, categories), [cart.lines, categories]);
+  const cartItems = cartCount(pricedLines.filter((line) => line.available));
+  const sessionOrders = useSessionOrders(tenantKey);
+  const calls = useServiceCalls(slug, tenantKey, t);
+  const [toast, showToast] = useToast();
+  const [tablePrompt, setTablePrompt] = useState<ServiceRequestType | null>(null);
+  useEffect(() => (canOrder ? prefetchWhenIdle(loadCartSheet) : undefined), [canOrder]);
+
   const itemParam = searchParams.get('item');
   const openItem = useMemo(() => (itemParam ? findItem(categories, itemParam) : null), [categories, itemParam]);
+  const cartOpen = canOrder && searchParams.get('cart') === '1';
 
-  const openSheet = useCallback(
-    (itemId: string) => {
+  const pushParam = useCallback(
+    (key: string, value: string) => {
       setSearchParams(
         (previous) => {
           const next = new URLSearchParams(previous);
-          next.set('item', itemId);
+          next.set(key, value);
           return next;
         },
         { state: { sheet: true } },
       );
-      trackItemView(slug, itemId);
     },
-    [setSearchParams, slug],
+    [setSearchParams],
   );
 
+  const openSheet = useCallback(
+    (itemId: string) => {
+      pushParam('item', itemId);
+      trackItemView(slug, itemId);
+    },
+    [pushParam, slug],
+  );
+  const openCart = useCallback(() => pushParam('cart', '1'), [pushParam]);
+
+  // Sheets are history entries (Back closes them); direct links to ?item= / ?cart= are closed with `replace`.
   const openedFromMenu = Boolean((location.state as { sheet?: boolean } | null)?.sheet);
-  const closeSheet = useCallback(() => {
+  const closeOverlay = useCallback(() => {
     if (openedFromMenu) {
       void navigate(-1);
       return;
@@ -116,11 +142,75 @@ export function MenuPage() {
       (previous) => {
         const next = new URLSearchParams(previous);
         next.delete('item');
+        next.delete('cart');
         return next;
       },
       { replace: true },
     );
   }, [navigate, openedFromMenu, setSearchParams]);
+
+  const addToCart = useCallback(
+    (item: PublicMenuItemDto, selection: AddSelection) => {
+      const added = cart.add({ itemId: item.id, ...selection });
+      showToast(added ? `${t.added} · ${item.name}` : t.errors.cartFull, added ? 'ok' : 'error');
+    },
+    [cart, showToast, t],
+  );
+
+  // "+" on a row: items without variants go straight in; with variants the sheet asks which one.
+  const onPlus = useCallback(
+    (item: PublicMenuItemDto) => {
+      if (item.variants.length > 0) openSheet(item.id);
+      else addToCart(item, { variantId: null, quantity: 1, note: '' });
+    },
+    [addToCart, openSheet],
+  );
+
+  const submitOrder = useCallback(
+    async (submission: CartSubmission): Promise<SubmitResult> => {
+      const lines = pricedLines.filter((line) => line.available);
+      const payload: OrderPayload = {
+        tableNumber: submission.tableNumber,
+        items: lines.map((line) => ({
+          itemId: line.itemId,
+          ...(line.variantId ? { variantId: line.variantId } : {}),
+          quantity: line.quantity,
+          ...(line.note ? { note: line.note } : {}),
+        })),
+        ...(submission.note ? { note: submission.note } : {}),
+        ...(submission.guestName ? { guestName: submission.guestName } : {}),
+        locale,
+      };
+      try {
+        const order = await createOrder(slug, payload);
+        storeTableNumber(tenantKey, submission.tableNumber);
+        setEnteredTable(submission.tableNumber);
+        rememberOrder(tenantKey, order);
+        cart.clear();
+        void navigate(orderPath(pathSlug, order.id), { replace: true });
+        return { ok: true };
+      } catch (error) {
+        if (error instanceof ApiError && (error.code === 'ITEM_UNAVAILABLE' || error.code === 'ORDERING_PAUSED')) {
+          void menu.refetch(); // the menu changed under the guest: re-price the cart and re-evaluate the gates
+        }
+        const field = error instanceof ApiError && error.code === 'TABLE_NOT_FOUND' ? ('table' as const) : undefined;
+        return { ok: false, message: orderingErrorMessage(error, t), ...(field ? { field } : {}) };
+      }
+    },
+    [cart, locale, menu, navigate, pathSlug, pricedLines, slug, t, tenantKey],
+  );
+
+  const onCall = useCallback(
+    async (type: ServiceRequestType, table: number | null = tableNumber) => {
+      if (table === null) {
+        setTablePrompt(type);
+        return;
+      }
+      const result = await calls.call(type, table);
+      if (!result.ok) showToast(result.message, 'error');
+    },
+    [calls, showToast, tableNumber],
+  );
 
   const supportedLocales = restaurant?.supportedLocales ?? NO_LOCALES;
   const switchLocale = useCallback(() => {
@@ -158,9 +248,11 @@ export function MenuPage() {
   }
 
   const { restaurant: current } = menu.data;
+  const latestOrder = sessionOrders[0];
+  const showCartBar = canOrder && cartItems > 0 && !cartOpen;
 
   return (
-    <div className="mx-auto min-h-dvh max-w-[640px] pb-10">
+    <div className={`mx-auto min-h-dvh max-w-[640px] ${showCartBar ? 'pb-28' : 'pb-10'}`}>
       <title>{`${current.name} · salveta`}</title>
       <Header
         restaurant={current}
@@ -173,7 +265,17 @@ export function MenuPage() {
         onToggleSearch={toggleSearch}
         query={query}
         onQueryChange={setQuery}
-      />
+        ordersLink={orderingMode === 'order' && latestOrder ? { to: orderPath(pathSlug, latestOrder.id), count: openOrderCount(sessionOrders) } : null}
+      >
+        {callsEnabled && (
+          <OrderingBar
+            t={t}
+            remaining={calls.remaining}
+            onCall={(type) => void onCall(type)}
+            paused={orderingMode === 'order' && paused ? { message: current.pausedMessage } : null}
+          />
+        )}
+      </Header>
       {visibleCategories.length > 0 && (
         <CategoryBar categories={visibleCategories} activeId={active} onSelect={scrollTo} t={t} />
       )}
@@ -189,15 +291,60 @@ export function MenuPage() {
               locale={locale}
               t={t}
               onOpenItem={openSheet}
+              onAddItem={canOrder ? onPlus : null}
             />
           ))
         )}
       </main>
       <Footer />
+      {showCartBar && (
+        <CartBar count={cartItems} totalCents={cartTotal(pricedLines)} currency={current.currency} locale={locale} t={t} onOpen={openCart} />
+      )}
+      <Toast toast={toast} raised={showCartBar} />
       {openItem && (
         <Suspense fallback={null}>
-          <ItemSheet item={openItem} currency={current.currency} locale={locale} t={t} onClose={closeSheet} />
+          <ItemSheet
+            item={openItem}
+            currency={current.currency}
+            locale={locale}
+            t={t}
+            onClose={closeOverlay}
+            onAdd={
+              canOrder
+                ? (selection) => {
+                    addToCart(openItem, selection);
+                    closeOverlay();
+                  }
+                : null
+            }
+          />
         </Suspense>
+      )}
+      {cartOpen && (
+        <Suspense fallback={null}>
+          <CartSheet
+            lines={pricedLines}
+            currency={current.currency}
+            locale={locale}
+            t={t}
+            tableNumber={tableNumber}
+            onChangeQuantity={cart.setQuantity}
+            onSubmit={submitOrder}
+            onClose={closeOverlay}
+          />
+        </Suspense>
+      )}
+      {tablePrompt && (
+        <TablePrompt
+          t={t}
+          onClose={() => setTablePrompt(null)}
+          onConfirm={(number) => {
+            setTablePrompt(null);
+            storeTableNumber(tenantKey, number);
+            setEnteredTable(number);
+            void onCall(tablePrompt, number);
+          }}
+        />
       )}
     </div>
   );

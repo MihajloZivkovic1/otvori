@@ -309,6 +309,9 @@ export type OrderDto = z.infer<typeof orderDtoSchema>;
 
 export const publicOrderItemDtoSchema = z.object({
   id: uuidSchema,
+  /** Null once the menu item / variant was deleted; otherwise lets the guest "order again". */
+  menuItemId: uuidSchema.nullable(),
+  variantId: uuidSchema.nullable(),
   name: z.string(),
   variantName: z.string().nullable(),
   unitPriceCents: z.number().int(),

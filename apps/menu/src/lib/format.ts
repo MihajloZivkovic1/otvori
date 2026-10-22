@@ -58,6 +58,15 @@ export function priceLabel(
   return item.variants.length > 0 ? `${fromWord} ${price}` : price;
 }
 
+/** "13:42" in the guest's locale. */
+export function formatTime(iso: string, locale: UiLocale): string {
+  try {
+    return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+}
+
 /** Case- and diacritic-insensitive key: "Ćevapi" → "cevapi", "Đuveč" → "duvec". */
 export function normalizeForSearch(text: string): string {
   return text

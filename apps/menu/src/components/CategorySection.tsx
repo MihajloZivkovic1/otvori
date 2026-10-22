@@ -1,4 +1,4 @@
-import type { PublicMenuCategoryDto } from '@qr-menu/shared';
+import type { PublicMenuCategoryDto, PublicMenuItemDto } from '@qr-menu/shared';
 import { sectionDomId } from '../hooks/useActiveCategory';
 import type { Dictionary, UiLocale } from '../lib/i18n';
 import { ItemRow } from './ItemRow';
@@ -9,9 +9,11 @@ interface Props {
   locale: UiLocale;
   t: Dictionary;
   onOpenItem: (itemId: string) => void;
+  /** Ordering enabled: rows get a "+" button. */
+  onAddItem?: ((item: PublicMenuItemDto) => void) | null;
 }
 
-export function CategorySection({ category, currency, locale, t, onOpenItem }: Props) {
+export function CategorySection({ category, currency, locale, t, onOpenItem, onAddItem = null }: Props) {
   const domId = sectionDomId(category.id);
   return (
     <section
@@ -28,7 +30,7 @@ export function CategorySection({ category, currency, locale, t, onOpenItem }: P
       </div>
       <ul>
         {category.items.map((item) => (
-          <ItemRow key={item.id} item={item} currency={currency} locale={locale} t={t} onOpen={onOpenItem} />
+          <ItemRow key={item.id} item={item} currency={currency} locale={locale} t={t} onOpen={onOpenItem} onAdd={onAddItem} />
         ))}
       </ul>
     </section>

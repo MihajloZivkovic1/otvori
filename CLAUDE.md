@@ -195,7 +195,8 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
 
 Stack: React 19, Vite 8, TypeScript strict, Tailwind v4 via `@tailwindcss/vite`, React Router 8 (declarative `BrowserRouter`,
 `useSearchParams`), TanStack Query 5. No UI kit, icon or animation library; the few SVGs are inlined in `components/icons.tsx`.
-Budget: initial JS ≈ 100 KB gzipped (react-dom alone is 64 KB); the item sheet is a lazy chunk prefetched when idle.
+Budget: initial JS ≈ 108 KB gzipped (react-dom alone is 64 KB); the item sheet, the cart sheet and the order status page
+are lazy chunks (the sheets are prefetched when idle).
 Lighthouse mobile on the seeded menu: 100/100/100/100.
 
 ### Running it on this machine
@@ -206,7 +207,8 @@ npm run dev -w @qr-menu/menu           # http://localhost:5174/t/7  ·  http://k
 `apps/menu/.env` (gitignored, copy from `.env.example`): `VITE_API_URL=http://localhost:3100`, `VITE_DEFAULT_SLUG=kafeterija`.
 The dev and preview servers listen on 5174 and proxy `/api` to `API_PROXY_TARGET || VITE_API_URL` with the Host header preserved
 (`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.salveta.menu`.
-Useful URL bits: `/t/7` table (legacy `?t=7` still works), `?lang=en`, `?item=<itemId>` opens the sheet.
+Useful URL bits: `/t/7` table (legacy `?t=7` still works), `?lang=en`, `?item=<itemId>` opens the sheet, `?cart=1` the cart,
+`/order/<orderId>` the status page (only readable with the session that placed it).
 
 To reproduce the production same-origin setup (and the Lighthouse run): `VITE_API_URL= npx vite build` then
 `API_PROXY_TARGET=http://localhost:3100 npx vite preview --port 4174` in `apps/menu`, open `http://kafeterija.localhost:4174/t/7`,
@@ -249,6 +251,24 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   `scroll-mt-[61px]`); taps lock the observer for ~0.8 s so the chip does not flicker; reaching the page bottom selects the last category.
 - The last loaded header (name, logo, accent, theme) is cached per tenant in `localStorage['tabla.tenant.<tenant>']` so the skeleton
   and offline screens are branded and returning guests get no light→dark flash.
+- **Ordering** (design/ordering-menu.html A1–A6; gated by `restaurant.orderingMode` / `orderingPaused` from the menu payload):
+  `order` mode = "+" on available rows (direct add + toast, or the item sheet with variant radio, quantity stepper 1–20 and line
+  note ≤ 80), the fixed accent cart bar and the cart sheet (`?cart=1` pushed with `state.sheet` like `?item=`): steppers, order
+  note ≤ 200, optional name ≤ 40, inline table field only when no table is known, "Pošalji konobaru". `call_waiter` and `order`
+  modes show the call bar (`OrderingBar`: "Pozovi konobara" / "Račun", 60 s cooldown per type persisted in
+  `sessionStorage['tabla.call.<tenant>.<type>']`, "Konobar je obavešten" chip); without a table the buttons first open
+  `TablePrompt`. Paused (`order` mode only) = banner with `pausedMessage` (or the default copy), no "+", no cart bar, calls still
+  work. The cart is `sessionStorage['tabla.cart.<tenant>']` (`lib/cart.ts`: ids + quantity + note only; `priceCart()` re-prices
+  against the live menu and drops lines whose item vanished; unavailable lines are dimmed and left out of the payload).
+  `POST /orders` goes through `lib/api.ts` with `X-Session-Id`; on success the cart is cleared, the order is remembered in
+  `sessionStorage['tabla.orders.<tenant>']` (`lib/orders.ts`, newest first, feeds the "Tvoje narudžbine" header link with the
+  open count) and the app navigates (replace) to `/order/:id` (`/r/:slug/order/:id` in the path form). `pages/OrderPage.tsx`
+  polls `GET /orders/:id` every 5 s until a final status, renders the three-step progress, the rejection reason, "Otkaži"
+  (two-tap confirm, only while `new`), "Naruči ponovo" (re-fills the cart from `menuItemId`/`variantId` and opens it),
+  "Pozovi konobara" with the same cooldown, "Nazad na meni", and the session's earlier orders. API error codes map to copy
+  in `orderingErrorMessage()` (`ORDERING_PAUSED` shows the venue's own message). Status colours `text-ok`/`bg-ok-soft` and
+  `text-bad`/`bg-bad-soft` reuse the vegan/spicy tag tokens; `.pulse-dot` is the live indicator. The accent is additionally
+  used for the "+" glyph and the "Tvoje narudžbine" link (controls, not body text).
 - Scripts: `npm run dev|build|preview|typecheck|test -w @qr-menu/menu` (same for `@qr-menu/cms`). Root `npm run build` builds shared → api, menu, cms.
 
 ## Admin CMS app (`apps/cms`)

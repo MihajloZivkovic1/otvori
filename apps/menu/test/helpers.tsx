@@ -147,6 +147,20 @@ export const menuEn: PublicMenuDto = {
   ],
 };
 
+/** The same menu with table ordering switched on (and a paused variant). */
+export const menuOrdering: PublicMenuDto = {
+  ...menuSr,
+  restaurant: { ...menuSr.restaurant, orderingMode: 'order' },
+};
+export const menuPaused: PublicMenuDto = {
+  ...menuSr,
+  restaurant: { ...menuSr.restaurant, orderingMode: 'order', orderingPaused: true, pausedMessage: 'Kuhinja je zatvorena do 17:00.' },
+};
+export const menuCallsOnly: PublicMenuDto = {
+  ...menuSr,
+  restaurant: { ...menuSr.restaurant, orderingMode: 'call_waiter' },
+};
+
 export type FetchReply = { status?: number; body: unknown } | Error;
 export type FetchHandler = (url: URL, init: RequestInit | undefined) => FetchReply | Promise<FetchReply>;
 
@@ -180,8 +194,13 @@ export function menuRequests(spy: ReturnType<typeof mockFetch>) {
 }
 
 export function eventBodies(spy: ReturnType<typeof mockFetch>): Record<string, unknown>[] {
+  return bodiesFor(spy, '/events');
+}
+
+/** JSON bodies of the requests whose path ends with `suffix`. */
+export function bodiesFor(spy: ReturnType<typeof mockFetch>, suffix: string): Record<string, unknown>[] {
   return requests(spy)
-    .filter(({ url }) => url.pathname.endsWith('/events'))
+    .filter(({ url, init }) => url.pathname.endsWith(suffix) && init?.body)
     .map(({ init }) => JSON.parse(String(init?.body)) as Record<string, unknown>);
 }
 

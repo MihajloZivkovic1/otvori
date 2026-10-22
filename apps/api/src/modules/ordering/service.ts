@@ -123,6 +123,8 @@ export function toPublicOrderDto(order: Order, restaurant: Pick<Restaurant, 'cur
     rejectedReason: order.rejectedReason,
     items: sortedItems(order).map((item) => ({
       id: item.id,
+      menuItemId: item.menuItemId,
+      variantId: item.variantId,
       name: resolveText(item.name, order.locale, restaurant.defaultLocale),
       variantName: item.variantName,
       unitPriceCents: item.unitPriceCents,

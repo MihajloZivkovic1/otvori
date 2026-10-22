@@ -1,4 +1,5 @@
-import { Fragment, type KeyboardEvent } from 'react';
+import { Fragment, type KeyboardEvent, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import type { Dictionary, UiLocale } from '../lib/i18n';
 import { TableChip } from './Chips';
 import { CloseIcon, SearchIcon } from './icons';
@@ -22,6 +23,10 @@ interface Props {
   onToggleSearch: () => void;
   query: string;
   onQueryChange: (query: string) => void;
+  /** "Your orders" link with the number of open orders (ordering only, once the session has placed one). */
+  ordersLink?: { to: string; count: number } | null;
+  /** Call-waiter bar / paused banner, rendered under the table chip row. */
+  children?: ReactNode;
 }
 
 export function Header({
@@ -35,6 +40,8 @@ export function Header({
   onToggleSearch,
   query,
   onQueryChange,
+  ordersLink = null,
+  children,
 }: Props) {
   const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
@@ -86,12 +93,26 @@ export function Header({
         </div>
       </div>
 
-      {(tableNumber !== null || restaurant.menuNote) && (
-        <div className="flex items-center gap-2">
-          {tableNumber !== null && <TableChip label={`${t.table} ${tableNumber}`} />}
-          {restaurant.menuNote && <span className="text-xs text-muted">{restaurant.menuNote}</span>}
+      {(tableNumber !== null || restaurant.menuNote || ordersLink) && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {tableNumber !== null && <TableChip label={`${t.table} ${tableNumber}`} />}
+            {restaurant.menuNote && <span className="truncate text-xs text-muted">{restaurant.menuNote}</span>}
+          </div>
+          {ordersLink && (
+            <Link to={ordersLink.to} className="inline-flex h-11 flex-none items-center gap-1.5 text-[13px] font-semibold text-accent no-underline">
+              {t.yourOrders}
+              {ordersLink.count > 0 && (
+                <span className="inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-[5px] text-[11px] font-semibold text-on-accent tabular-nums">
+                  {ordersLink.count}
+                </span>
+              )}
+            </Link>
+          )}
         </div>
       )}
+
+      {children}
 
       {searchOpen && (
         <div className="relative">

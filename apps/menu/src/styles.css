@@ -19,6 +19,11 @@
   --color-scrim: var(--scrim);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
+  /* Status colours (order accepted / rejected, "waiter notified"): the same pairs as the vegan / spicy tags. */
+  --color-ok: var(--tag-vegan-fg);
+  --color-ok-soft: var(--tag-vegan-bg);
+  --color-bad: var(--tag-spicy-fg);
+  --color-bad-soft: var(--tag-spicy-bg);
 }
 
 :root {
@@ -146,6 +151,10 @@ input[type="search"]::-webkit-search-decoration {
 .safe-bottom {
   padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
 }
+/* Fixed cart bar: 20px above the bottom edge plus the home-indicator inset. */
+.safe-bottom-bar {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
 
 .tag-vegan {
   background: var(--tag-vegan-bg);
@@ -189,6 +198,15 @@ input[type="search"]::-webkit-search-decoration {
     opacity: 0.55;
   }
 }
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
 
 .sheet-enter {
   animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -201,11 +219,16 @@ input[type="search"]::-webkit-search-decoration {
   border-radius: 8px;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
+/* Live indicator dot ("waiter notified", order status step, auto-refresh). */
+.pulse-dot {
+  animation: dot-pulse 1.6s ease-in-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .sheet-enter,
   .scrim-enter,
-  .skeleton {
+  .skeleton,
+  .pulse-dot {
     animation: none;
   }
 }
