@@ -4,6 +4,8 @@ const LAST_RESTAURANT = 'tabla.cms.lastRestaurant';
 const REMEMBER = 'tabla.cms.remember';
 const SESSION = 'tabla.cms.session';
 const INSTALL_DISMISSED = 'tabla.cms.installDismissed';
+const ORDERS_MUTED = 'tabla.cms.ordersMuted';
+const NOTIFICATIONS_ASKED = 'tabla.cms.notificationsAsked';
 
 function read(storage: Storage, key: string): string | null {
   try {
@@ -46,4 +48,16 @@ export const sessionFlags = {
 export const installHint = {
   dismissed: (): boolean => read(localStorage, INSTALL_DISMISSED) === '1',
   dismiss: (): void => write(localStorage, INSTALL_DISMISSED, '1'),
+};
+
+/** Waiter screen: alert sound off/on (device-wide, survives reloads). */
+export const ordersMuted = {
+  get: (): boolean => read(localStorage, ORDERS_MUTED) === '1',
+  set: (muted: boolean): void => write(localStorage, ORDERS_MUTED, muted ? '1' : null),
+};
+
+/** The system-notification permission prompt is shown once. */
+export const notificationsAsked = {
+  get: (): boolean => read(localStorage, NOTIFICATIONS_ASKED) === '1',
+  set: (): void => write(localStorage, NOTIFICATIONS_ASKED, '1'),
 };

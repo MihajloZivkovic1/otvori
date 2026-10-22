@@ -25,8 +25,8 @@ Tests live in `apps/api/test`.
 
 `apps/cms/src`: `main.tsx` (QueryClient → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx` (route
 tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/forgot/magic/reset), `components/ui/` (primitives),
-`components/shell/` (sidebar, top bar, tab bar, layouts, guards), `components/{menu,tables,branding,settings,superadmin}/`,
-`lib/` (api, auth, queries, storage, format, screens, crop, download, color), `hooks/`, `styles.css`. Tests in `apps/cms/test`.
+`components/shell/` (sidebar, top bar, tab bar, layouts, guards), `components/{menu,tables,branding,settings,superadmin,orders}/`,
+`lib/` (api, auth, queries, storage, format, screens, crop, download, color, notify), `hooks/`, `styles.css`. Tests in `apps/cms/test`.
 
 `apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
 (routes `/r/:slug/t/:table`, `/r/:slug/*`, `/t/:table` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
@@ -134,7 +134,9 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
 - **Restaurant flags** (`PATCH /admin/restaurants/:id`, owner only): `orderingMode` = `off` (default, view-only) |
   `call_waiter` (call/bill buttons only) | `order` (guests order; calls included); `orderingPaused` + `pausedMessage`
   (≤ 120 chars). Paused = the menu shows the banner and hides "+" / cart, `POST /orders` → 409 `ORDERING_PAUSED`;
-  calls keep working. Both flags are in `RestaurantDto` and in `PublicMenuDto.restaurant`.
+  calls keep working. Both flags are in `RestaurantDto` and in `PublicMenuDto.restaurant`; because the public menu is
+  cached for 30 s (HTTP + query staleTime) a mode/pause change reaches open guest menus within about a minute, while
+  the API enforces it immediately (a stale client gets the 409/403 and refetches).
 - **Entities**: `orders` (restaurant_id, table_id SET NULL + `table_number` snapshot, session_id, status, `number` =
   daily sequential per restaurant in its time zone (assigned under `SELECT … FOR UPDATE` on the restaurant row, shown as
   "#142"), guest_name ≤ 40, note ≤ 200, total_cents (always computed server-side; the client's total is ignored), locale,
@@ -276,7 +278,8 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
 Stack: React 19, Vite 8, TypeScript strict, Tailwind v4 (`@tailwindcss/vite`), React Router 8 **data router** (`createBrowserRouter`
 in `router.tsx`, every page is a `lazy` chunk, tests mount the same `routes` with `createMemoryRouter`), TanStack Query 5,
 react-hook-form + `@hookform/resolvers/zod` with the schemas from `@qr-menu/shared`, `@dnd-kit/core` + `sortable` for reordering.
-No UI kit; icons are inline SVGs traced from the design (`components/icons.tsx`). Design source: `design/Tabla Admin Panel (1).html`.
+No UI kit; icons are inline SVGs traced from the design (`components/icons.tsx`). Design sources: `design/Tabla Admin Panel (1).html`
+and `design/ordering-cms.html` (waiter screen).
 
 ### Running it on this machine
 ```bash
@@ -304,13 +307,34 @@ same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija
   (superadmins) → `/no-venue`. `/r/:restaurantId/*` → `RestaurantLayout` checks the membership (superadmins pass as owners), loads
   `GET /admin/restaurants/:id`, stores it as last used and provides `useRestaurantContext()` = `{ restaurant, role, isOwner, isMobile }`.
 - Screens: `menu` (`?c=<categoryId>` selected category, `?item=<id>|new` opens the editor), `menu/unavailable`, `tables`,
-  `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile), index = Home on phones / redirect to `menu` otherwise.
+  `orders` (only while `orderingMode ≠ 'off'`), `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile),
+  index = Home on phones / redirect to `menu` otherwise.
   `/superadmin` lists every venue (`SuperadminLayout` keeps the last venue in the switcher); clicking a row opens `/r/:id/menu`.
 - Venue switcher (`Sidebar` dropdown, `VenueSheet` on phones): tile in the venue's `primaryColor`/logo, city as secondary text,
   and “+ Add a venue” at the end → `AddVenueModal` (name → `POST /api/admin/restaurants` → `refreshMe()` → `/r/:id/menu`).
   `canAddVenue(me)` = owner of a venue on plan `pro` or superadmin; everyone else sees the row disabled with “Available on Pro”.
   Superadmin rows use the same tile (`primaryColor`, `logoUrl`) and show the city.
 - Owner-only UI (settings/branding edits, Publish, Delete) is gated with `isOwner`; the API enforces it anyway.
+- **Orders / waiter screen** (design/ordering-cms.html B1–B9, English like the rest of the admin): `OrderingProvider`
+  (`components/orders/OrderingProvider.tsx`, mounted by `RestaurantLayout`) is idle while `orderingMode === 'off'`; otherwise it
+  loads `['orders', rid]` + `['requests', rid]`, opens the SSE stream (`POST /sse-token` → `EventSource(…/events?token=)`,
+  fresh token on every reconnect, exponential backoff ≤ 30 s, a watchdog that reconnects after 60 s without a `ping`, refetch on
+  `open` and on `visibilitychange`) and applies `order.*` / `request.*` events to the query cache (`upsertOrder` / `upsertRequest`,
+  newer `updatedAt` wins). While the stream is down both lists poll every 10 s and the pill says "Reconnecting…". `useOrdering()`
+  gives `{ enabled, orders, requests, counts: { calls, newOrders, inProgress, open, badge }, connected, muted, setMuted }` anywhere
+  under the venue; outside the provider it is the disabled default. Badge = `new` orders + open calls: on the sidebar / rail
+  "Orders" item, the phone tab bar (`[Menu, Tables, Orders, More]`, Analytics moves under More) and the document title
+  (`(2) Orders · Kafeterija Dorćol`, set in `AppShell`). `order.created` / `request.created` play `public/sounds/order.wav`
+  (generated by `scripts/make-sound.mjs`, cached by the service worker) unless muted (`localStorage['tabla.cms.ordersMuted']`),
+  vibrate where supported and show a system notification when the tab is hidden; the permission prompt is requested once, from
+  the first tap on the Orders screen. `pages/OrdersPage.tsx`: Calls / New / In progress groups (oldest first), accept / deliver /
+  done, the reject sheet with reason chips in the venue's **default menu locale** (the guest reads them; `components/orders/reasons.ts`)
+  plus an optional message, the collapsed "Today" history with totals, the empty state, and the desktop three-column board. Home
+  gets the open-count card, Settings the owner-only "Ordering" card (`components/settings/OrderingCard.tsx`: mode, pause,
+  paused message ≤ 120), Tables "Block 30 min" / "Blocked until hh:mm · Unblock" (both roles) with "#142 new" / "1 call" tags,
+  Analytics the "Ordering" card (orders, accepted %, median time to accept, ordered revenue). Query keys `['orders', rid]`,
+  `['requests', rid]`; tests stub `EventSource` with `MockEventSource` from `test/helpers.tsx` (jsdom has none, so without the
+  stub the provider runs in polling mode).
 
 ### Layout & tokens
 - `≤640px` = phone (bottom tab bar, full-screen `Sheet`s, swipe rows, `useIsMobile()`); `641–1024px` = 64px icon rail with tooltips
@@ -346,9 +370,9 @@ the switch was touched so a "back at 06:00" state survives an unrelated edit. Cl
 ### Mobile specifics
 `SwipeRow` (pointer events, −144px reveal for Edit/Delete), press-and-hold grip reorder (dnd-kit `PointerSensor` delay), FAB,
 `UnavailablePage` (one switch per item: off → `{available:false, until:'tomorrow-06:00'}`, on → `{available:true}`, "Turn all on"),
-Tables rows expand with Share (`navigator.share`, clipboard fallback) and Download, `VenueSheet` switcher, `InstallHint`
-(`beforeinstallprompt`, iOS Share hint; dismissal in localStorage). PWA: `public/manifest.webmanifest`, `public/icons/*`,
-`public/sw.js` (app shell only, never `/api`), registered in production builds only.
+Tables rows expand with Share (`navigator.share`, clipboard fallback), Download and the ordering block, `VenueSheet` switcher,
+`InstallHint` (`beforeinstallprompt`, iOS Share hint; dismissal in localStorage). PWA: `public/manifest.webmanifest`, `public/icons/*`,
+`public/sw.js` (app shell + the alert sound, never `/api`), registered in production builds only.
 
 ### Tests (`apps/cms/test`)
 vitest + Testing Library in jsdom. `helpers.tsx` has DTO fixtures, `mockApi(state, override?)` (default answers for every

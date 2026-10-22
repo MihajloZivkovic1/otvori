@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost' | 'accent-text';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-solid' | 'danger-ghost' | 'accent-text';
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'mobile';
 
 const VARIANT: Record<ButtonVariant, string> = {
@@ -9,6 +9,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   secondary: 'border border-line bg-surface text-ink font-medium hover:bg-line-2 disabled:opacity-50',
   ghost: 'bg-transparent text-ink-2 font-medium hover:bg-line-2 disabled:opacity-50',
   danger: 'border border-danger-line bg-surface text-danger-text font-medium hover:bg-[#fef2f2] disabled:opacity-50',
+  'danger-solid': 'bg-danger-text text-white font-semibold hover:brightness-95 disabled:opacity-50',
   'danger-ghost': 'bg-transparent text-danger-text font-medium hover:bg-[#fef2f2] disabled:opacity-50',
   'accent-text': 'bg-transparent text-accent font-semibold text-[15px] disabled:opacity-50',
 };

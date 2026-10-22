@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import type { MembershipRole, RestaurantDto } from '@qr-menu/shared';
 import { useIsCompact, useIsMobile } from '../../hooks/useMediaQuery';
+import { screenTitle, useScreen } from '../../lib/screens';
+import { useOrdering } from '../orders/OrderingProvider';
 import { InstallHint } from './InstallHint';
 import { MobileTabBar } from './MobileTabBar';
 import { Sidebar } from './Sidebar';
@@ -21,6 +23,14 @@ interface AppShellProps {
 export function AppShell({ restaurant, role, title, children }: AppShellProps) {
   const isMobile = useIsMobile();
   const compact = useIsCompact();
+  const screen = useScreen();
+  const { counts } = useOrdering();
+
+  // "(2) Orders · Kafeterija Dorćol": the open count (new orders + calls) leads the tab title on every screen.
+  useEffect(() => {
+    const base = title ? `${title} · salveta` : restaurant ? `${screenTitle(screen)} · ${restaurant.name}` : 'salveta admin';
+    document.title = counts.badge > 0 ? `(${counts.badge}) ${base}` : base;
+  }, [counts.badge, restaurant, screen, title]);
 
   // Drawers are portaled to <body>; this lets their scrim stop at the sidebar edge.
   useEffect(() => {

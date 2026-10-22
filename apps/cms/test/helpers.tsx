@@ -9,9 +9,14 @@ import type {
   MeDto,
   MembershipDto,
   MenuItemDto,
+  OrderDto,
+  OrderingEvent,
+  OrderingMode,
   RestaurantDto,
+  ServiceRequestDto,
   SuperadminRestaurantDto,
   TableDto,
+  UpdateOrderStatusInput,
   UserDto,
 } from '@qr-menu/shared';
 import { ToastProvider } from '../src/components/ui/Toast';
@@ -58,6 +63,12 @@ export const ids = {
   cappuccino: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   avocado: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   table7: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  order142: '14214214-2142-4142-8142-142142142142',
+  order143: '14314314-3143-4143-8143-143143143143',
+  order141: '14114114-1141-4141-8141-141141141141',
+  order140: '14014014-0140-4140-8140-140140140140',
+  call4: 'ca11ca11-ca11-4a11-8a11-ca11ca11ca11',
+  bill8: 'b111b111-b111-4111-8111-b111b111b111',
   user: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
   admin: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
   membership: '99999999-9999-4999-8999-999999999999',
@@ -218,6 +229,169 @@ export const analytics: AnalyticsDto = {
   },
 };
 
+/** The same venue with table ordering switched on. */
+export const restaurantOrdering: RestaurantDto = { ...restaurant, orderingMode: 'order' };
+
+const orderStamps = { createdAt: '2026-10-22T11:42:00.000Z', updatedAt: '2026-10-22T11:42:00.000Z' };
+export const orders: OrderDto[] = [
+  {
+    id: ids.order142,
+    restaurantId: ids.restaurant,
+    number: 142,
+    status: 'new',
+    tableId: ids.table7,
+    tableNumber: 7,
+    guestName: 'Marko',
+    note: 'Sve odjednom, molim.',
+    totalCents: 171000,
+    locale: 'sr',
+    rejectedReason: null,
+    items: [
+      { id: 'l1', menuItemId: ids.espresso, variantId: null, name: { sr: 'Flat white' }, variantName: 'Large 300 ml', unitPriceCents: 34000, quantity: 2, lineTotalCents: 68000, lineNote: null },
+      { id: 'l2', menuItemId: ids.cappuccino, variantId: null, name: { sr: 'Šakšuka', en: 'Shakshuka' }, variantName: null, unitPriceCents: 79000, quantity: 1, lineTotalCents: 79000, lineNote: 'bez čilija' },
+      { id: 'l3', menuItemId: ids.espresso, variantId: null, name: { sr: 'Cortado' }, variantName: null, unitPriceCents: 24000, quantity: 1, lineTotalCents: 24000, lineNote: null },
+    ],
+    ...orderStamps,
+    acceptedAt: null,
+    deliveredAt: null,
+    closedAt: null,
+    expiresAt: '2026-10-22T12:02:00.000Z',
+  },
+  {
+    id: ids.order143,
+    restaurantId: ids.restaurant,
+    number: 143,
+    status: 'new',
+    tableId: null,
+    tableNumber: 2,
+    guestName: null,
+    note: null,
+    totalCents: 76000,
+    locale: 'sr',
+    rejectedReason: null,
+    items: [
+      { id: 'l4', menuItemId: ids.espresso, variantId: null, name: { sr: 'Domaća kafa' }, variantName: null, unitPriceCents: 20000, quantity: 1, lineTotalCents: 20000, lineNote: null },
+      { id: 'l5', menuItemId: ids.cappuccino, variantId: null, name: { sr: 'Cardamom bun' }, variantName: null, unitPriceCents: 28000, quantity: 2, lineTotalCents: 56000, lineNote: null },
+    ],
+    createdAt: '2026-10-22T11:35:00.000Z',
+    updatedAt: '2026-10-22T11:35:00.000Z',
+    acceptedAt: null,
+    deliveredAt: null,
+    closedAt: null,
+    expiresAt: '2026-10-22T11:55:00.000Z',
+  },
+  {
+    id: ids.order141,
+    restaurantId: ids.restaurant,
+    number: 141,
+    status: 'accepted',
+    tableId: null,
+    tableNumber: 11,
+    guestName: 'Jelena',
+    note: null,
+    totalCents: 104000,
+    locale: 'sr',
+    rejectedReason: null,
+    items: [
+      { id: 'l6', menuItemId: ids.cappuccino, variantId: null, name: { sr: 'Granola bowl' }, variantName: 'Large', unitPriceCents: 72000, quantity: 1, lineTotalCents: 72000, lineNote: null },
+      { id: 'l7', menuItemId: ids.espresso, variantId: null, name: { sr: 'Filter, Ethiopia Guji' }, variantName: 'Cup 250 ml', unitPriceCents: 32000, quantity: 1, lineTotalCents: 32000, lineNote: null },
+    ],
+    createdAt: '2026-10-22T11:30:00.000Z',
+    updatedAt: '2026-10-22T11:31:00.000Z',
+    acceptedAt: '2026-10-22T11:31:00.000Z',
+    deliveredAt: null,
+    closedAt: null,
+    expiresAt: null,
+  },
+  {
+    id: ids.order140,
+    restaurantId: ids.restaurant,
+    number: 140,
+    status: 'delivered',
+    tableId: null,
+    tableNumber: 5,
+    guestName: null,
+    note: null,
+    totalCents: 103000,
+    locale: 'sr',
+    rejectedReason: null,
+    items: [{ id: 'l8', menuItemId: ids.espresso, variantId: null, name: { sr: 'Espresso' }, variantName: null, unitPriceCents: 103000, quantity: 1, lineTotalCents: 103000, lineNote: null }],
+    createdAt: '2026-10-22T10:50:00.000Z',
+    updatedAt: '2026-10-22T11:02:00.000Z',
+    acceptedAt: '2026-10-22T10:52:00.000Z',
+    deliveredAt: '2026-10-22T11:02:00.000Z',
+    closedAt: '2026-10-22T11:02:00.000Z',
+    expiresAt: null,
+  },
+];
+
+export const serviceRequests: ServiceRequestDto[] = [
+  { id: ids.call4, restaurantId: ids.restaurant, tableId: ids.table7, tableNumber: 4, type: 'call_waiter', status: 'open', createdAt: '2026-10-22T11:43:00.000Z', updatedAt: '2026-10-22T11:43:00.000Z', doneAt: null },
+  { id: ids.bill8, restaurantId: ids.restaurant, tableId: ids.table7, tableNumber: 8, type: 'bill', status: 'done', createdAt: '2026-10-22T11:20:00.000Z', updatedAt: '2026-10-22T11:25:00.000Z', doneAt: '2026-10-22T11:25:00.000Z' },
+];
+
+/** Override that answers GET /restaurant with the given ordering mode (everything else falls through). */
+export function orderingMode(mode: OrderingMode): FetchHandler {
+  return ({ url, method }) =>
+    url.pathname === `/api/admin/restaurants/${ids.restaurant}` && method === 'GET' ? { body: { ...restaurant, orderingMode: mode } } : undefined;
+}
+
+/**
+ * Override with an in-memory copy of the orders and requests, so refetches (after the stream opens, on focus…) do not
+ * undo what a test pushed through the stream. Mutations still come from `defaultApi`.
+ */
+export function liveOrdering(mode: OrderingMode = 'order'): { handler: FetchHandler; orders: OrderDto[]; requests: ServiceRequestDto[] } {
+  const live = { orders: orders.map((o) => ({ ...o })), requests: serviceRequests.map((r) => ({ ...r })) };
+  const base = `/api/admin/restaurants/${ids.restaurant}`;
+  const handler: FetchHandler = ({ url, method }) => {
+    if (url.pathname === base && method === 'GET') return { body: { ...restaurant, orderingMode: mode } };
+    if (url.pathname === `${base}/orders` && method === 'GET') return { body: live.orders };
+    if (url.pathname === `${base}/requests` && method === 'GET') return { body: live.requests };
+    return undefined;
+  };
+  return { handler, orders: live.orders, requests: live.requests };
+}
+
+/** EventSource stand-in for the waiter screen's live stream; tests open it and push events by hand. */
+export class MockEventSource {
+  static instances: MockEventSource[] = [];
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+  readonly url: string;
+  readyState = 0;
+  private readonly listeners = new Map<string, Set<(event: Event) => void>>();
+
+  constructor(url: string) {
+    this.url = url;
+    MockEventSource.instances.push(this);
+  }
+  addEventListener(type: string, listener: (event: Event) => void): void {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type)!.add(listener);
+  }
+  removeEventListener(type: string, listener: (event: Event) => void): void {
+    this.listeners.get(type)?.delete(listener);
+  }
+  close(): void {
+    this.readyState = MockEventSource.CLOSED;
+  }
+  private dispatch(type: string, event: Event): void {
+    this.listeners.get(type)?.forEach((listener) => listener(event));
+  }
+  /** The server accepted the stream. */
+  open(): void {
+    this.readyState = MockEventSource.OPEN;
+    this.dispatch('open', new Event('open'));
+  }
+  emit(event: OrderingEvent): void {
+    this.dispatch(event.type, new MessageEvent(event.type, { data: JSON.stringify(event) }));
+  }
+  fail(): void {
+    this.dispatch('error', new Event('error'));
+  }
+}
+
 export const superadminRows: SuperadminRestaurantDto[] = [
   {
     id: restaurant.id,
@@ -305,6 +479,7 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
   if (path === '/api/auth/logout') return { body: { ok: true } };
   if (path === '/api/auth/me') return { body: me };
   if (path === base && method === 'GET') return { body: restaurant };
+  if (path === base && method === 'PATCH') return { body: { ...restaurant, ...(body as Partial<RestaurantDto>) } };
   if (path === `${base}/categories` && method === 'GET') return { body: categories };
   if (path === `${base}/items` && method === 'GET') return { body: items };
   if (path === `${base}/items` && method === 'POST') {
@@ -326,7 +501,41 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
     };
   }
   if (path === `${base}/tables`) return { body: tables };
+  const block = new RegExp(`^${base}/tables/([^/]+)/block$`).exec(path);
+  if (block && (method === 'POST' || method === 'DELETE')) {
+    const table = tables.find((t) => t.id === block[1]);
+    if (!table) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Table not found' } } };
+    return { body: { ...table, blockedUntil: method === 'POST' ? new Date(Date.now() + 30 * 60_000).toISOString() : null } };
+  }
   if (path === `${base}/analytics`) return { body: analytics };
+  if (path === `${base}/orders` && method === 'GET') return { body: orders };
+  if (path === `${base}/requests` && method === 'GET') return { body: serviceRequests };
+  if (path === `${base}/sse-token` && method === 'POST') return { body: { token: 'sse-token', expiresIn: 300 } };
+  const orderPatch = new RegExp(`^${base}/orders/([^/]+)$`).exec(path);
+  if (orderPatch && method === 'PATCH') {
+    const order = orders.find((o) => o.id === orderPatch[1]);
+    if (!order) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Order not found' } } };
+    const input = body as UpdateOrderStatusInput;
+    const at = '2026-10-22T11:50:00.000Z';
+    return {
+      body: {
+        ...order,
+        status: input.status,
+        rejectedReason: input.rejectedReason ?? null,
+        acceptedAt: input.status === 'accepted' ? at : order.acceptedAt,
+        deliveredAt: input.status === 'delivered' ? at : null,
+        closedAt: input.status === 'accepted' ? null : at,
+        expiresAt: null,
+        updatedAt: at,
+      },
+    };
+  }
+  const requestPatch = new RegExp(`^${base}/requests/([^/]+)$`).exec(path);
+  if (requestPatch && method === 'PATCH') {
+    const request = serviceRequests.find((r) => r.id === requestPatch[1]);
+    if (!request) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Request not found' } } };
+    return { body: { ...request, status: 'done', doneAt: '2026-10-22T11:50:00.000Z', updatedAt: '2026-10-22T11:50:00.000Z' } };
+  }
   if (path === '/api/superadmin/restaurants') return { body: { items: superadminRows, total: superadminRows.length, page: 1, pageSize: 50 } };
   if (path.endsWith('/qr.svg')) return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', { headers: { 'Content-Type': 'image/svg+xml' } });
   return { status: 404, body: { error: { code: 'NOT_FOUND', message: `No mock for ${method} ${path}` } } };

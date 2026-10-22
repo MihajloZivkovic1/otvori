@@ -96,3 +96,21 @@ export function publicMenuUrlFromTemplate(slug: string): string | null {
 export function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 }
+
+/** "13:31" (device time; the staff phone is in the venue). */
+export function clock(iso: string): string {
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Minutes until an order expires (0 once it is due). */
+export function minutesUntil(iso: string, now = new Date()): number {
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / 60_000));
+}
+
+/** "1:40" for a median of 100 seconds; "—" when unknown. */
+export function minutesSeconds(seconds: number | null): string {
+  if (seconds === null) return '—';
+  const whole = Math.round(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}

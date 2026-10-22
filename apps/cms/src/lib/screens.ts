@@ -1,11 +1,13 @@
 import { useLocation } from 'react-router';
 import type { IconName } from '../components/icons';
 
-export type Screen = 'menu' | 'tables' | 'branding' | 'analytics' | 'settings';
+export type Screen = 'menu' | 'tables' | 'orders' | 'branding' | 'analytics' | 'settings';
 
+/** Sidebar order. `orders` is only shown while the venue's orderingMode is not `off` (see Sidebar / MobileTabBar). */
 export const NAV: ReadonlyArray<{ key: Screen; label: string; icon: IconName }> = [
   { key: 'menu', label: 'Menu', icon: 'menu' },
   { key: 'tables', label: 'Tables & QR', icon: 'tables' },
+  { key: 'orders', label: 'Orders', icon: 'orders' },
   { key: 'branding', label: 'Branding', icon: 'branding' },
   { key: 'analytics', label: 'Analytics', icon: 'analytics' },
   { key: 'settings', label: 'Settings', icon: 'settings' },
@@ -14,6 +16,7 @@ export const NAV: ReadonlyArray<{ key: Screen; label: string; icon: IconName }> 
 const TITLES: Record<string, string> = {
   menu: 'Menu',
   tables: 'Tables & QR',
+  orders: 'Orders',
   branding: 'Branding',
   analytics: 'Analytics',
   settings: 'Settings',

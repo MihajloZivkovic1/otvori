@@ -11,14 +11,14 @@ export const serviceRequestStatusSchema = z.enum(SERVICE_REQUEST_STATUSES);
 /** Table number as printed on the QR card; the inline cart field may send it as a string. */
 export const tableNumberSchema = z.coerce.number().int().min(1).max(9999);
 
-/** Free text where '' means "none". */
+/** Free text where '' means "none" (the key stays optional in the parsed type). */
 const optionalNote = (max: number) =>
   z
     .string()
     .trim()
     .max(max)
-    .optional()
-    .transform((v) => (v ? v : undefined));
+    .transform((v) => (v ? v : undefined))
+    .optional();
 
 export const orderLineSchema = z.object({
   itemId: uuidSchema,

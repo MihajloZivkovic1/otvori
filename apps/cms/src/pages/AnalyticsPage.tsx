@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router';
-import { ANALYTICS_RANGES, type AnalyticsDto, type AnalyticsRange } from '@qr-menu/shared';
+import { ANALYTICS_RANGE_DAYS, ANALYTICS_RANGES, type AnalyticsDto, type AnalyticsRange } from '@qr-menu/shared';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { Button } from '../components/ui/Button';
@@ -8,7 +8,7 @@ import { Segmented } from '../components/ui/Segmented';
 import { Skeleton } from '../components/ui/Skeleton';
 import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
-import { percent, shortDate, text } from '../lib/format';
+import { formatPrice, minutesSeconds, percent, shortDate, text } from '../lib/format';
 import { useAnalytics } from '../lib/queries';
 
 const RANGE_OPTIONS = [
@@ -54,14 +54,29 @@ export function AnalyticsPage() {
         ) : query.isError ? (
           <EmptyState variant="inline" icon="warning" title="Could not load analytics" description={errorMessage(query.error)} actions={<Button size="sm" onClick={() => void query.refetch()}>Try again</Button>} />
         ) : (
-          <Report data={query.data} defaultLocale={restaurant.defaultLocale} />
+          <Report
+            data={query.data}
+            defaultLocale={restaurant.defaultLocale}
+            currency={restaurant.currency}
+            rangeDays={ANALYTICS_RANGE_DAYS[range]}
+            showOrdering={restaurant.orderingMode !== 'off' || query.data.ordering.orders.value > 0}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function Report({ data, defaultLocale }: { data: AnalyticsDto; defaultLocale: string }) {
+interface ReportProps {
+  data: AnalyticsDto;
+  defaultLocale: string;
+  currency: string;
+  rangeDays: number;
+  /** Ordering card (design B8): shown while ordering is on, or when the period has orders anyway. */
+  showOrdering: boolean;
+}
+
+function Report({ data, defaultLocale, currency, rangeDays, showOrdering }: ReportProps) {
   const days = data.scansPerDay;
   const max = Math.max(0, ...days.map((d) => d.scans));
   const peak = days.reduce<{ date: string; scans: number } | null>((best, day) => (!best || day.scans > best.scans ? day : best), null);
@@ -111,6 +126,8 @@ function Report({ data, defaultLocale }: { data: AnalyticsDto; defaultLocale: st
         </div>
       </section>
 
+      {showOrdering ? <OrderingStats data={data} currency={currency} days={rangeDays} /> : null}
+
       <div className="grid grid-cols-2 gap-4 max-tab:grid-cols-1 max-tab:gap-3">
         <RankedList
           title="Most viewed items"
@@ -136,6 +153,37 @@ function Report({ data, defaultLocale }: { data: AnalyticsDto; defaultLocale: st
         />
       </div>
     </>
+  );
+}
+
+/** Orders, accepted rate, median time to accept, ordered revenue (design B8). */
+function OrderingStats({ data, currency, days }: { data: AnalyticsDto; currency: string; days: number }) {
+  const { ordering } = data;
+  const stats = [
+    { value: count.format(ordering.orders.value), label: ordering.orders.value === 1 ? 'order' : 'orders', delta: percent(ordering.orders.deltaPct) },
+    { value: `${Math.round(ordering.acceptedRate.value)}%`, label: 'accepted', delta: percent(ordering.acceptedRate.deltaPct) },
+    { value: minutesSeconds(ordering.medianAcceptSeconds), label: 'median time to accept', delta: ordering.previousMedianAcceptSeconds === null ? 'No previous data' : `${minutesSeconds(ordering.previousMedianAcceptSeconds)} previous period` },
+    { value: formatPrice(ordering.orderedRevenueCents.value, currency), label: 'ordered', delta: percent(ordering.orderedRevenueCents.deltaPct) },
+  ];
+  return (
+    <section className="flex flex-col gap-4 rounded-[10px] border border-line bg-surface p-5" aria-labelledby="ordering-stats">
+      <div className="flex items-center justify-between">
+        <h2 id="ordering-stats" className="text-[15px] font-semibold">
+          Ordering
+        </h2>
+        <span className="text-xs text-muted">Last {days} days</span>
+      </div>
+      <dl className="grid grid-cols-4 gap-x-5 gap-y-3.5 max-tab:grid-cols-2">
+        {stats.map((stat) => (
+          <div key={stat.label} className="flex flex-col gap-0.5">
+            <dd className="text-2xl font-semibold leading-[1.1] tracking-[-.01em] tabular-nums">{stat.value}</dd>
+            <dt className="text-xs text-muted">{stat.label}</dt>
+            <span className="text-[11px] text-faint">{stat.delta}</span>
+          </div>
+        ))}
+      </dl>
+      <p className="border-t border-line-2 pt-2.5 text-xs text-faint">Ordered ≠ paid: guests pay the waiter, so this is the sum of accepted and delivered orders.</p>
+    </section>
   );
 }
 

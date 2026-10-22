@@ -37,6 +37,7 @@ export const routes: RouteObject[] = [
               { path: 'menu', lazy: () => import('./pages/MenuPage').then((m) => ({ Component: m.MenuPage })) },
               { path: 'menu/unavailable', lazy: () => import('./pages/UnavailablePage').then((m) => ({ Component: m.UnavailablePage })) },
               { path: 'tables', lazy: () => import('./pages/TablesPage').then((m) => ({ Component: m.TablesPage })) },
+              { path: 'orders', lazy: () => import('./pages/OrdersPage').then((m) => ({ Component: m.OrdersPage })) },
               { path: 'branding', lazy: () => import('./pages/BrandingPage').then((m) => ({ Component: m.BrandingPage })) },
               { path: 'analytics', lazy: () => import('./pages/AnalyticsPage').then((m) => ({ Component: m.AnalyticsPage })) },
               { path: 'settings', lazy: () => import('./pages/SettingsPage').then((m) => ({ Component: m.SettingsPage })) },

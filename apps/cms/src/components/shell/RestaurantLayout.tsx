@@ -7,6 +7,7 @@ import { useMe } from '../../lib/auth';
 import { useRestaurant } from '../../lib/queries';
 import { lastRestaurant } from '../../lib/storage';
 import { HomePage } from '../../pages/HomePage';
+import { OrderingProvider } from '../orders/OrderingProvider';
 import { Button } from '../ui/Button';
 import { AppShell } from './AppShell';
 import { FullPageLoading } from './RequireAuth';
@@ -62,9 +63,12 @@ export function RestaurantLayout() {
   const role: MembershipRole = me.user.isSuperadmin ? 'owner' : membership!.role;
   return (
     <RestaurantContext.Provider value={{ restaurant: query.data, role, isOwner: role === 'owner', isMobile }}>
-      <AppShell restaurant={query.data} role={role}>
-        <Outlet />
-      </AppShell>
+      {/* Live orders/calls (SSE + polling fallback) for the nav badge, the title and the waiter screen; idle when ordering is off. */}
+      <OrderingProvider restaurant={query.data}>
+        <AppShell restaurant={query.data} role={role}>
+          <Outlet />
+        </AppShell>
+      </OrderingProvider>
     </RestaurantContext.Provider>
   );
 }

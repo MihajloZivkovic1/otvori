@@ -9,14 +9,18 @@ import type {
   CreateRestaurantInput,
   CreateTableInput,
   MenuItemDto,
+  OrderDto,
   PaginatedDto,
   RestaurantDto,
+  ServiceRequestDto,
+  SseTokenDto,
   SuperadminListRestaurantsQuery,
   SuperadminRestaurantDto,
   SuperadminUpdateRestaurantInput,
   TableDto,
   UpdateCategoryInput,
   UpdateItemInput,
+  UpdateOrderStatusInput,
   UpdateRestaurantInput,
   UpdateTableInput,
 } from '@qr-menu/shared';
@@ -28,6 +32,8 @@ export const keys = {
   items: (rid: string) => ['items', rid] as const,
   tables: (rid: string) => ['tables', rid] as const,
   analytics: (rid: string, range: AnalyticsRange) => ['analytics', rid, range] as const,
+  orders: (rid: string) => ['orders', rid] as const,
+  requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
   superadminRestaurants: (query: Partial<SuperadminListRestaurantsQuery>) => ['superadmin', 'restaurants', query] as const,
 };
@@ -341,6 +347,90 @@ export const downloads = {
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => apiBlob(`${base(rid)}/tables/${tableId}/qr.${format}`),
   qrSheet: (rid: string) => apiBlob(`${base(rid)}/tables/qr-sheet.pdf`),
 };
+
+/* ------------------------------------------------------------------ ordering */
+
+/** Open orders plus today's (the API default). Polled only while the SSE stream is down. */
+export function useOrders(rid: string, enabled = true, refetchInterval: number | false = false) {
+  return useQuery({
+    queryKey: keys.orders(rid),
+    queryFn: () => api<OrderDto[]>(`${base(rid)}/orders`),
+    enabled,
+    refetchInterval,
+    staleTime: 5_000,
+  });
+}
+
+export function useServiceRequests(rid: string, enabled = true, refetchInterval: number | false = false) {
+  return useQuery({
+    queryKey: keys.requests(rid),
+    queryFn: () => api<ServiceRequestDto[]>(`${base(rid)}/requests`),
+    enabled,
+    refetchInterval,
+    staleTime: 5_000,
+  });
+}
+
+/** Insert or replace one order in the cache (SSE events and mutation results); older updates never win. */
+export function upsertOrder(client: QueryClient, rid: string, order: OrderDto): void {
+  client.setQueryData<OrderDto[]>(keys.orders(rid), (prev) => {
+    if (!prev) return [order];
+    const index = prev.findIndex((o) => o.id === order.id);
+    if (index < 0) return [...prev, order];
+    if (prev[index]!.updatedAt > order.updatedAt) return prev;
+    const next = [...prev];
+    next[index] = order;
+    return next;
+  });
+}
+
+export function upsertRequest(client: QueryClient, rid: string, request: ServiceRequestDto): void {
+  client.setQueryData<ServiceRequestDto[]>(keys.requests(rid), (prev) => {
+    if (!prev) return [request];
+    const index = prev.findIndex((r) => r.id === request.id);
+    if (index < 0) return [...prev, request];
+    if (prev[index]!.updatedAt > request.updatedAt) return prev;
+    const next = [...prev];
+    next[index] = request;
+    return next;
+  });
+}
+
+export function useUpdateOrderStatus(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateOrderStatusInput }) =>
+      api<OrderDto>(`${base(rid)}/orders/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: (order) => upsertOrder(client, rid, order),
+    // A 409 means another phone got there first: reload the board.
+    onError: () => void client.invalidateQueries({ queryKey: keys.orders(rid) }),
+  });
+}
+
+export function useCompleteRequest(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<ServiceRequestDto>(`${base(rid)}/requests/${id}`, { method: 'PATCH', body: { status: 'done' } }),
+    onSuccess: (request) => upsertRequest(client, rid, request),
+    onError: () => void client.invalidateQueries({ queryKey: keys.requests(rid) }),
+  });
+}
+
+/** POST (block for 30 minutes) or DELETE (unblock) /tables/:id/block. */
+export function useBlockTable(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, block }: { id: string; block: boolean }) =>
+      api<TableDto>(`${base(rid)}/tables/${id}/block`, { method: block ? 'POST' : 'DELETE' }),
+    // The returned DTO is complete, so the row is replaced in place (no refetch, no flash of the old state).
+    onSuccess: (table) => client.setQueryData<TableDto[]>(keys.tables(rid), (prev) => prev?.map((t) => (t.id === table.id ? table : t))),
+  });
+}
+
+/** Short-lived token for the EventSource URL (it cannot send the bearer header). */
+export function fetchSseToken(rid: string): Promise<SseTokenDto> {
+  return api<SseTokenDto>(`${base(rid)}/sse-token`, { method: 'POST' });
+}
 
 /* ------------------------------------------------------------------ analytics */
 

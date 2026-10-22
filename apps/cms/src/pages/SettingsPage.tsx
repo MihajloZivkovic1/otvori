@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { LOCALES, updateRestaurantSchema, type RestaurantDto, type UpdateRestaurantInput } from '@qr-menu/shared';
 import { DeleteVenueModal } from '../components/settings/DeleteVenueModal';
+import { OrderingCard } from '../components/settings/OrderingCard';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { Button } from '../components/ui/Button';
@@ -135,6 +136,8 @@ export function SettingsPage() {
           Time zone: <span className="text-ink">{restaurant.timezone}</span>
         </div>
       </section>
+
+      {isOwner ? <OrderingCard /> : null}
 
       {isOwner ? (
         <div className={cn('flex items-center justify-between gap-4 rounded-[10px] border border-danger-line bg-surface p-5', isMobile && 'mx-4')}>

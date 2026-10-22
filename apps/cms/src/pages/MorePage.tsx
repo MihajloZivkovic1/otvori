@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Icon, type IconName } from '../components/icons';
 import { LogoTile } from '../components/LogoTile';
+import { useOrdering } from '../components/orders/OrderingProvider';
 import { MobileHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { VenueSheet } from '../components/shell/VenueSheet';
@@ -16,6 +17,7 @@ export function MorePage() {
   const me = useMe();
   const { signOut } = useAuth();
   const [switching, setSwitching] = useState(false);
+  const ordering = useOrdering();
   const venues = me.memberships.length;
 
   const row = (icon: IconName, label: string, to: string) => (
@@ -46,6 +48,7 @@ export function MorePage() {
 
         <nav className="overflow-hidden rounded-[14px] border border-line bg-surface" aria-label="More">
           {row('branding', 'Branding', `/r/${restaurant.id}/branding`)}
+          {ordering.enabled ? row('analytics', 'Analytics', `/r/${restaurant.id}/analytics`) : null}
           {row('settings', 'Settings', `/r/${restaurant.id}/settings`)}
           <button type="button" onClick={() => setSwitching(true)} className={`${ROW} cursor-pointer bg-transparent`}>
             <Icon name="venues" size={20} className="text-muted" />

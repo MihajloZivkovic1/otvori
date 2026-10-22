@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import type { TableDto } from '@qr-menu/shared';
+import type { OrderDto, ServiceRequestDto, TableDto } from '@qr-menu/shared';
 import { Icon } from '../components/icons';
+import { useOrdering } from '../components/orders/OrderingProvider';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { PrintAllModal } from '../components/tables/PrintAllModal';
 import { QrImage } from '../components/tables/QrImage';
 import { TableFormModal } from '../components/tables/TableFormModal';
 import { Button, IconButton } from '../components/ui/Button';
-import { Badge } from '../components/ui/Chip';
+import { Badge, MiniTag } from '../components/ui/Chip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Menu } from '../components/ui/Menu';
 import { ConfirmModal } from '../components/ui/Modal';
@@ -16,10 +17,12 @@ import { useToast } from '../components/ui/Toast';
 import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
 import { downloadBlob } from '../lib/download';
-import { displayUrl, relativeTime } from '../lib/format';
-import { downloads, useDeleteTable, useTables } from '../lib/queries';
+import { clock, displayUrl, relativeTime } from '../lib/format';
+import { downloads, useBlockTable, useDeleteTable, useTables } from '../lib/queries';
 
 const GRID = 'grid grid-cols-[56px_1fr_140px_120px_220px] items-center gap-3';
+/** With ordering on: scans + last scan share a column to make room for "Ordering" (block / blocked chip). */
+const GRID_ORDERING = 'grid grid-cols-[56px_1fr_120px_170px_210px] items-center gap-3';
 
 function useTableActions() {
   const { restaurant } = useRestaurantContext();
@@ -55,15 +58,67 @@ function useTableActions() {
   return { download, share, busy };
 }
 
+/** "#142 NEW", "#141 IN PROGRESS", "1 CALL" for a table (design B6 "Open" column). */
+function openTags(table: TableDto, orders: OrderDto[], requests: ServiceRequestDto[]): string[] {
+  const tags = orders
+    .filter((order) => order.tableId === table.id && (order.status === 'new' || order.status === 'accepted'))
+    .map((order) => `#${order.number} ${order.status === 'new' ? 'new' : 'in progress'}`);
+  const calls = requests.filter((request) => request.tableId === table.id && request.status === 'open').length;
+  if (calls > 0) tags.push(`${calls} ${calls === 1 ? 'call' : 'calls'}`);
+  return tags;
+}
+
+function isBlocked(table: TableDto, now = new Date()): boolean {
+  return Boolean(table.blockedUntil && new Date(table.blockedUntil).getTime() > now.getTime());
+}
+
+/** "Block 30 min" ↔ "Blocked until 14:32 · Unblock" (both roles). */
+function BlockControls({ table }: { table: TableDto }) {
+  const { restaurant } = useRestaurantContext();
+  const toast = useToast();
+  const block = useBlockTable(restaurant.id);
+  const blocked = isBlocked(table);
+  const toggle = () => block.mutate({ id: table.id, block: !blocked }, { onError: (error) => toast.error(errorMessage(error)) });
+
+  if (blocked) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex h-[26px] items-center gap-1.5 rounded-full bg-[#FEE2E2] px-2.5 text-xs font-semibold tabular-nums text-[#991B1B]">
+          <Icon name="lock" size={12} strokeWidth={2.2} />
+          Blocked until {clock(table.blockedUntil!)}
+        </span>
+        <Button variant="accent-text" size="sm" className="px-2 text-[13px]" onClick={toggle} loading={block.isPending}>
+          Unblock
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <Button size="sm" className="h-8 rounded-md px-3 text-[13px]" icon={<Icon name="lock" size={13} strokeWidth={2} />} onClick={toggle} loading={block.isPending}>
+      Block 30 min
+    </Button>
+  );
+}
+
+const BLOCKED_NOTE = (
+  <div className="flex flex-wrap items-baseline gap-2 px-4 py-3 text-xs text-muted">
+    <span className="font-semibold text-ink-2">A guest at a blocked table sees:</span>
+    <span className="italic">“Ordering from this table is temporarily disabled. Please call the waiter.”</span>
+    <span className="ml-auto font-mono text-[11px] text-faint">423</span>
+  </div>
+);
+
 export function TablesPage() {
   const { restaurant, isOwner, isMobile } = useRestaurantContext();
   const toast = useToast();
   const query = useTables(restaurant.id);
   const remove = useDeleteTable(restaurant.id);
+  const ordering = useOrdering();
   const [editing, setEditing] = useState<TableDto | null | 'new'>(null);
   const [deleting, setDeleting] = useState<TableDto | null>(null);
   const [printing, setPrinting] = useState(false);
   const tables = query.data ?? [];
+  const grid = ordering.enabled ? GRID_ORDERING : GRID;
 
   const modals = (
     <>
@@ -115,17 +170,17 @@ export function TablesPage() {
         }
       />
       <div className="overflow-hidden rounded-[10px] border border-line bg-surface">
-        <div className={cn(GRID, 'h-9 border-b border-line-2 px-4 text-[11px] font-semibold uppercase tracking-[.06em] text-muted')}>
+        <div className={cn(grid, 'h-9 border-b border-line-2 px-4 text-[11px] font-semibold uppercase tracking-[.06em] text-muted')}>
           <span />
           <span>Table</span>
-          <span>Scans · 7d</span>
-          <span>Last scan</span>
-          <span>Download</span>
+          <span>{ordering.enabled ? 'Scans · 7d' : 'Scans · 7d'}</span>
+          <span>{ordering.enabled ? 'Download' : 'Last scan'}</span>
+          <span>{ordering.enabled ? 'Ordering' : 'Download'}</span>
         </div>
         {query.isPending ? (
           <div role="status" aria-busy="true" aria-label="Loading tables">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className={cn(GRID, 'h-[60px] border-b border-line-2 px-4')}>
+              <div key={i} className={cn(grid, 'h-[60px] border-b border-line-2 px-4')}>
                 <Skeleton className="size-10 rounded-md" />
                 <div className="flex flex-col gap-2">
                   <Skeleton className="h-3.5 w-24" />
@@ -144,48 +199,69 @@ export function TablesPage() {
         ) : (
           <ul aria-label="Tables">
             {tables.map((table) => (
-              <DesktopTableRow key={table.id} table={table} onEdit={() => setEditing(table)} onDelete={isOwner ? () => setDeleting(table) : undefined} />
+              <DesktopTableRow key={table.id} table={table} grid={grid} onEdit={() => setEditing(table)} onDelete={isOwner ? () => setDeleting(table) : undefined} />
             ))}
           </ul>
         )}
+        {ordering.enabled && tables.length > 0 ? BLOCKED_NOTE : null}
       </div>
       {modals}
     </div>
   );
 }
 
-function DesktopTableRow({ table, onEdit, onDelete }: { table: TableDto; onEdit: () => void; onDelete?: () => void }) {
+function DesktopTableRow({ table, grid, onEdit, onDelete }: { table: TableDto; grid: string; onEdit: () => void; onDelete?: () => void }) {
   const { restaurant } = useRestaurantContext();
+  const ordering = useOrdering();
   const { download, busy } = useTableActions();
+  const tags = ordering.enabled ? openTags(table, ordering.orders, ordering.requests) : [];
+  const downloadsCell = (
+    <div className="flex items-center gap-1.5">
+      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-png`} onClick={() => void download(table, 'png')}>
+        PNG
+      </Button>
+      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-svg`} onClick={() => void download(table, 'svg')}>
+        SVG
+      </Button>
+      <Menu
+        items={[
+          { label: 'Edit table', onSelect: onEdit },
+          { label: 'Copy link', onSelect: () => void navigator.clipboard?.writeText(table.menuUrl) },
+          ...(onDelete ? [{ label: 'Delete table', onSelect: onDelete, danger: true }] : []),
+        ]}
+        trigger={(props) => (
+          <IconButton label={`More actions for ${table.label}`} className="ml-auto" {...props}>
+            <Icon name="more" size={16} />
+          </IconButton>
+        )}
+      />
+    </div>
+  );
+
   return (
-    <li className={cn(GRID, 'h-[60px] border-b border-line-2 px-4 last:border-b-0')}>
+    <li className={cn(grid, 'min-h-[60px] border-b border-line-2 px-4 py-2 last:border-b-0')}>
       <QrImage restaurantId={restaurant.id} tableId={table.id} label={table.label} size={40} />
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-sm font-medium">{table.label}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium">{table.label}</span>
+          {tags.map((tag) => (
+            <MiniTag key={tag} className="shrink-0 bg-accent-soft text-accent">
+              {tag}
+            </MiniTag>
+          ))}
+        </span>
         <span className="truncate text-xs text-muted">{displayUrl(table.menuUrl)}</span>
       </div>
-      <div className="tabular-nums">{table.scansLast7Days}</div>
-      <div className="text-[13px] text-muted">{relativeTime(table.lastScanAt)}</div>
-      <div className="flex items-center gap-1.5">
-        <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-png`} onClick={() => void download(table, 'png')}>
-          PNG
-        </Button>
-        <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-svg`} onClick={() => void download(table, 'svg')}>
-          SVG
-        </Button>
-        <Menu
-          items={[
-            { label: 'Edit table', onSelect: onEdit },
-            { label: 'Copy link', onSelect: () => void navigator.clipboard?.writeText(table.menuUrl) },
-            ...(onDelete ? [{ label: 'Delete table', onSelect: onDelete, danger: true }] : []),
-          ]}
-          trigger={(props) => (
-            <IconButton label={`More actions for ${table.label}`} className="ml-auto" {...props}>
-              <Icon name="more" size={16} />
-            </IconButton>
-          )}
-        />
-      </div>
+      {ordering.enabled ? (
+        <div className="flex flex-col gap-0.5">
+          <span className="tabular-nums">{table.scansLast7Days}</span>
+          <span className="text-xs text-muted">{relativeTime(table.lastScanAt)}</span>
+        </div>
+      ) : (
+        <div className="tabular-nums">{table.scansLast7Days}</div>
+      )}
+      {ordering.enabled ? downloadsCell : <div className="text-[13px] text-muted">{relativeTime(table.lastScanAt)}</div>}
+      {ordering.enabled ? <BlockControls table={table} /> : downloadsCell}
     </li>
   );
 }
@@ -199,9 +275,10 @@ interface MobileTablesProps {
   onPrint: () => void;
 }
 
-/** Design M9: expandable rows with the QR, Share (Web Share API) and Download. */
+/** Design M9: expandable rows with the QR, Share (Web Share API), Download and, with ordering on, the 30-minute block. */
 function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: MobileTablesProps) {
   const { restaurant } = useRestaurantContext();
+  const ordering = useOrdering();
   const { download, share, busy } = useTableActions();
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -239,17 +316,27 @@ function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: Mob
         ) : (
           tables.map((table) => {
             const open = expanded === table.id;
+            const tags = ordering.enabled ? openTags(table, ordering.orders, ordering.requests) : [];
+            const blocked = ordering.enabled && isBlocked(table);
             return (
               <div key={table.id} className="border-b border-line-2">
                 <button
                   type="button"
                   aria-expanded={open}
                   onClick={() => setExpanded(open ? null : table.id)}
-                  className="flex h-[60px] w-full cursor-pointer items-center gap-3 px-4 text-left text-ink"
+                  className="flex min-h-[60px] w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-ink"
                 >
                   <QrImage restaurantId={restaurant.id} tableId={table.id} label={table.label} size={36} />
-                  <span className="flex flex-1 flex-col gap-px">
-                    <span className="text-base font-medium">{table.label}</span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-px">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-base font-medium">{table.label}</span>
+                      {blocked ? <MiniTag className="bg-[#FEE2E2] text-[#991B1B]">Blocked</MiniTag> : null}
+                      {tags.map((tag) => (
+                        <MiniTag key={tag} className="bg-accent-soft text-accent">
+                          {tag}
+                        </MiniTag>
+                      ))}
+                    </span>
                     <span className="text-xs text-muted">{table.scansLast7Days} scans · 7d</span>
                   </span>
                   <Icon name="chevronRight" size={16} strokeWidth={1.8} className={cn('text-muted transition-transform', open && 'rotate-90')} />
@@ -266,6 +353,7 @@ function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: Mob
                         Download
                       </Button>
                     </div>
+                    {ordering.enabled ? <BlockControls table={table} /> : null}
                     <div className="flex gap-4 text-[13px]">
                       <button type="button" className="cursor-pointer font-medium text-accent" onClick={() => onEdit(table)}>
                         Edit

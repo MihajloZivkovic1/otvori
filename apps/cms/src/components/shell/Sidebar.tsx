@@ -7,6 +7,7 @@ import { cn } from '../../lib/cn';
 import { NAV, restaurantPath, useScreen } from '../../lib/screens';
 import { Icon } from '../icons';
 import { LogoTile } from '../LogoTile';
+import { useOrdering } from '../orders/OrderingProvider';
 import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Chip';
 import { Tooltip } from '../ui/Tooltip';
@@ -35,7 +36,10 @@ function initials(name: string): string {
 export function Sidebar({ restaurant, role, compact }: SidebarProps) {
   const me = useMe();
   const { signOut } = useAuth();
+  const ordering = useOrdering();
   const wide = !compact;
+  // "Orders" only exists while the venue takes orders or calls (design B9).
+  const items = NAV.filter((item) => item.key !== 'orders' || ordering.enabled);
 
   return (
     <aside className={cn('relative z-30 flex shrink-0 flex-col border-r border-line bg-surface', wide ? 'w-60' : 'w-16')}>
@@ -44,7 +48,8 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
       </div>
       {restaurant ? (
         <nav aria-label="Sections" className="flex flex-col gap-0.5 px-3 py-1">
-          {NAV.map((item) => {
+          {items.map((item) => {
+            const badge = item.key === 'orders' ? ordering.counts.badge : 0;
             const link = (
               <NavLink
                 key={item.key}
@@ -52,7 +57,7 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
                 title={wide ? undefined : item.label}
                 className={({ isActive }) =>
                   cn(
-                    'flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium no-underline transition-colors',
+                    'relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium no-underline transition-colors',
                     isActive ? 'bg-line-2 text-ink' : 'text-ink-2 hover:bg-line-2 hover:text-ink',
                     !wide && 'w-10 justify-center px-0',
                   )
@@ -60,6 +65,17 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
               >
                 <Icon name={item.icon} size={18} className="shrink-0" />
                 {wide ? <span className="flex-1">{item.label}</span> : <span className="sr-only">{item.label}</span>}
+                {badge > 0 ? (
+                  <span
+                    aria-label={`${badge} open`}
+                    className={cn(
+                      'inline-grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent tabular-nums',
+                      !wide && 'absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1',
+                    )}
+                  >
+                    {badge}
+                  </span>
+                ) : null}
               </NavLink>
             );
             return wide ? (

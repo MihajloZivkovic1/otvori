@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Icon } from '../components/icons';
 import { LogoTile } from '../components/LogoTile';
+import { useOrdering } from '../components/orders/OrderingProvider';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { VenueSheet } from '../components/shell/VenueSheet';
-import { StatusPill } from '../components/ui/Chip';
+import { StatusDot, StatusPill } from '../components/ui/Chip';
 import { Skeleton } from '../components/ui/Skeleton';
 import { plural, text } from '../lib/format';
 import { useAnalytics, useCategories, useItems, useTables } from '../lib/queries';
@@ -17,6 +18,7 @@ export function HomePage() {
   const items = useItems(rid);
   const tables = useTables(rid);
   const analytics = useAnalytics(rid, '7d');
+  const ordering = useOrdering();
   const [switching, setSwitching] = useState(false);
 
   const allItems = items.data ?? [];
@@ -53,6 +55,30 @@ export function HomePage() {
       </div>
 
       <div className="flex flex-col gap-5 px-5 pb-6 pt-3">
+        {ordering.enabled ? (
+          <Link
+            to={`/r/${rid}/orders`}
+            aria-label={`Orders: ${ordering.counts.open} open`}
+            className="flex flex-col gap-3.5 rounded-[14px] border border-line bg-surface p-[18px] text-ink no-underline"
+          >
+            <span className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Orders</span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-ink-2">
+                <StatusDot tone={ordering.connected ? 'success' : 'warning'} />
+                {ordering.connected ? 'Live' : 'Polling'}
+              </span>
+            </span>
+            <span>
+              <span className="block text-[32px] font-semibold leading-none tracking-[-.02em] tabular-nums">
+                {ordering.counts.open} <span className="text-[15px] font-medium tracking-normal text-muted">open</span>
+              </span>
+              <span className="mt-2 block text-[13px] text-muted">
+                {ordering.counts.newOrders} new · {ordering.counts.inProgress} in progress · {ordering.counts.calls} {ordering.counts.calls === 1 ? 'call' : 'calls'}
+              </span>
+            </span>
+            <span className="inline-flex h-9 items-center justify-center rounded-lg bg-accent text-[13px] font-semibold text-on-accent">Open orders</span>
+          </Link>
+        ) : null}
         <div className="grid grid-cols-2 gap-3">
           <Link to={`/r/${rid}/menu`} className={`${card} bg-accent text-on-accent`}>
             <Icon name="pencil" size={22} />
