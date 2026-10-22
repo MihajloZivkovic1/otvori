@@ -60,15 +60,15 @@ export async function sendMail(message: MailMessage): Promise<void> {
 export function sendMagicLink(email: string, url: string): Promise<void> {
   return sendMail({
     to: email,
-    subject: 'Your salveta sign-in link',
-    text: `Sign in to salveta by opening this link (valid for 15 minutes):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
+    subject: 'Your otvori sign-in link',
+    text: `Sign in to otvori by opening this link (valid for 15 minutes):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
   });
 }
 
 export function sendPasswordReset(email: string, url: string): Promise<void> {
   return sendMail({
     to: email,
-    subject: 'Reset your salveta password',
+    subject: 'Reset your otvori password',
     text: `Reset your password by opening this link (valid for 1 hour):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
   });
 }

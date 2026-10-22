@@ -169,7 +169,7 @@ export function OrderPage() {
     if (order.isError || !UUID_RE.test(orderId)) {
       return (
         <div className="mx-auto flex min-h-dvh max-w-[640px] flex-col">
-          <title>{`${t.order} · salveta`}</title>
+          <title>{`${t.order} · otvori`}</title>
           <main className="flex flex-1 flex-col items-center justify-center gap-3.5 px-10 py-10 text-center">
             <h1 className="font-serif text-[22px] leading-[1.25] font-bold text-pretty">{t.orderNotFound}</h1>
             <p className="max-w-[280px] text-[15px] leading-[1.5] text-muted text-pretty">{t.orderNotFoundBody}</p>
@@ -192,7 +192,7 @@ export function OrderPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-[640px] flex-col">
-      <title>{`${t.order} #${data.number} · ${venueName ?? 'salveta'}`}</title>
+      <title>{`${t.order} #${data.number} · ${venueName ?? 'otvori'}`}</title>
       <div className="safe-top flex flex-1 flex-col gap-[22px] px-5 pb-8">
         <div className="flex items-center justify-between gap-3">
           <Link to={back} className="inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-ink no-underline">

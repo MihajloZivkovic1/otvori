@@ -28,7 +28,7 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
 
   // "(2) Orders · Kafeterija Dorćol": the open count (new orders + calls) leads the tab title on every screen.
   useEffect(() => {
-    const base = title ? `${title} · salveta` : restaurant ? `${screenTitle(screen)} · ${restaurant.name}` : 'salveta admin';
+    const base = title ? `${title} · otvori` : restaurant ? `${screenTitle(screen)} · ${restaurant.name}` : 'otvori admin';
     document.title = counts.badge > 0 ? `(${counts.badge}) ${base}` : base;
   }, [counts.badge, restaurant, screen, title]);
 

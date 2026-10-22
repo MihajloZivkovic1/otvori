@@ -4,7 +4,7 @@ import { resendProvider } from '../src/utils/mailer.js';
 describe('resend mail provider', () => {
   it('posts the message to the Resend API with the bearer key', async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'msg_1' }), { status: 200 }));
-    const provider = resendProvider('re_test_key', 'salveta <no-reply@salveta.menu>', fetchMock as unknown as typeof fetch);
+    const provider = resendProvider('re_test_key', 'otvori <zdravo@otvori.menu>', fetchMock as unknown as typeof fetch);
     await provider.send({ to: 'ana@example.com', subject: 'Hi', text: 'Hello' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -13,7 +13,7 @@ describe('resend mail provider', () => {
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer re_test_key');
     expect(JSON.parse(String(init.body))).toEqual({
-      from: 'salveta <no-reply@salveta.menu>',
+      from: 'otvori <zdravo@otvori.menu>',
       to: ['ana@example.com'],
       subject: 'Hi',
       text: 'Hello',

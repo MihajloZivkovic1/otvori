@@ -1,4 +1,4 @@
-/* salveta admin — app-shell service worker. Caches the shell (HTML, hashed assets, manifest, icons) only.
+/* otvori admin — app-shell service worker. Caches the shell (HTML, hashed assets, manifest, icons) only.
  * API responses (/api/*) and uploads are never cached: the CMS must always show live data. */
 const VERSION = 'tabla-cms-shell-v2';
 // The orders route is an SPA route (served by '/'); the alert sound must be playable while offline too.

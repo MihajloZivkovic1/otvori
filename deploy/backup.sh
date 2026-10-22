@@ -2,7 +2,7 @@
 # Nightly database backup: pg_dump | gzip → the Spaces bucket under BACKUP_PREFIX/, keeping BACKUP_KEEP_DAYS days.
 #
 #   ./deploy/backup.sh                     # one backup now
-#   crontab:  15 3 * * * /opt/salveta/deploy/backup.sh >> /var/log/salveta-backup.log 2>&1
+#   crontab:  15 3 * * * /opt/otvori/deploy/backup.sh >> /var/log/otvori-backup.log 2>&1
 #
 # Needs: the compose stack running, the aws CLI (apt install -y awscli) and the Spaces keys in .env.prod
 # (S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT). Objects are private (no public-read ACL).

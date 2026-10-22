@@ -21,7 +21,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  DOMAIN: ${{ vars.DOMAIN || 'salveta.menu' }}
+  DOMAIN: ${{ vars.DOMAIN || 'otvori.menu' }}
 
 jobs:
   build:
@@ -54,7 +54,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push salveta-api
+      - name: Build and push otvori-api
         if: steps.meta.outputs.build == 'true'
         uses: docker/build-push-action@v6
         with:
@@ -62,14 +62,14 @@ jobs:
           file: deploy/Dockerfile.api
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-api:${{ steps.meta.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-api:latest
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/otvori-api:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/otvori-api:latest
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.tag }}
             SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
-      - name: Build and push salveta-caddy
+      - name: Build and push otvori-caddy
         if: steps.meta.outputs.build == 'true'
         uses: docker/build-push-action@v6
         with:
@@ -77,8 +77,8 @@ jobs:
           file: deploy/Dockerfile.caddy
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-caddy:${{ steps.meta.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/salveta-caddy:latest
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/otvori-caddy:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/otvori-caddy:latest
           build-args: |
             DOMAIN=${{ env.DOMAIN }}
             PUBLIC_ANALYTICS_SRC=${{ vars.PUBLIC_ANALYTICS_SRC }}
@@ -108,7 +108,7 @@ jobs:
           envs: GHCR_USER,GHCR_TOKEN,IMAGE_TAG
           script: |
             set -eu
-            cd /opt/salveta
+            cd /opt/otvori
             # The droplet only needs deploy/ (compose file + scripts) from the repo; keep it on main.
             git pull --ff-only --quiet origin main
             ./deploy/deploy.sh "$IMAGE_TAG"

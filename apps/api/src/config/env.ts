@@ -34,7 +34,7 @@ const envSchema = z.object({
   S3_PUBLIC_URL: z.string().optional(),
   UPLOADS_DIR: z.string().default('./uploads'),
 
-  MAIL_FROM: z.string().default('salveta <no-reply@salveta.menu>'),
+  MAIL_FROM: z.string().default('otvori <zdravo@otvori.menu>'),
   /** `log` writes mails to the log (dev/test), `resend` sends them through https://resend.com. */
   MAIL_PROVIDER: z.enum(['log', 'resend']).default('log'),
   RESEND_API_KEY: z.string().optional(),

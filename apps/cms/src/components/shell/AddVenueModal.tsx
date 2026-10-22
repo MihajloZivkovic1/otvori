@@ -58,7 +58,7 @@ export function AddVenueModal({ onClose }: { onClose: () => void }) {
     >
       <form id="add-venue-form" onSubmit={(event) => void submit(event)} noValidate className="flex flex-col gap-4 text-sm text-ink-2">
         <p>The new venue gets its own menu, tables, QR codes and analytics, and starts on a 14-day trial. You become its owner.</p>
-        <Field label="Restaurant name" htmlFor="add-venue-name" hint="Becomes its menu address, e.g. kafeterija.salveta.menu" error={error ?? undefined}>
+        <Field label="Restaurant name" htmlFor="add-venue-name" hint="Becomes its menu address, e.g. kafeterija.otvori.menu" error={error ?? undefined}>
           <Input
             id="add-venue-name"
             value={name}

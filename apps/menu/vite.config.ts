@@ -24,7 +24,7 @@ function inlineCss(): Plugin {
 }
 
 /**
- * Same-origin deployments ({slug}.salveta.menu with /api reverse-proxied): start fetching the menu while the JS
+ * Same-origin deployments ({slug}.otvori.menu with /api reverse-proxied): start fetching the menu while the JS
  * is still downloading. The app requests exactly this URL in that setup (host-based, no locale parameter).
  */
 function preloadMenu(enabled: boolean): Plugin {

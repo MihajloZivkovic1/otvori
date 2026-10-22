@@ -9,13 +9,13 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
-/** Centred 360px column (desktop) / full-width phone layout (M1) with the salveta wordmark. */
+/** Centred 360px column (desktop) / full-width phone layout (M1) with the otvori wordmark. */
 export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <div className="flex flex-1 flex-col justify-center px-6 py-10 tab:items-center">
         <div className="flex w-full flex-col gap-6 tab:w-[360px] tab:gap-7">
-          <Link to="/login" className="flex items-center no-underline" aria-label="salveta">
+          <Link to="/login" className="flex items-center no-underline" aria-label="otvori">
             <Wordmark size={26} />
           </Link>
           <div className="flex flex-col gap-1.5">

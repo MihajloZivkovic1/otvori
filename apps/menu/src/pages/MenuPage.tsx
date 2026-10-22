@@ -253,7 +253,7 @@ export function MenuPage() {
 
   return (
     <div className={`mx-auto min-h-dvh max-w-[640px] ${showCartBar ? 'pb-28' : 'pb-10'}`}>
-      <title>{`${current.name} · salveta`}</title>
+      <title>{`${current.name} · otvori`}</title>
       <Header
         restaurant={current}
         tableNumber={tableNumber}

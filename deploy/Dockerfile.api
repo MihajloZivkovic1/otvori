@@ -1,5 +1,5 @@
 # Build context: repository root. Built by .github/workflows/deploy.yml (never on the droplet) and pushed to
-# ghcr.io/<owner>/salveta-api:<git short sha>. Produces the Express API with @qr-menu/shared compiled in.
+# ghcr.io/<owner>/otvori-api:<git short sha>. Produces the Express API with @qr-menu/shared compiled in.
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json turbo.json ./
@@ -25,7 +25,7 @@ WORKDIR /app
 COPY package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
-RUN printf '{"name":"salveta-api-runtime","private":true,"workspaces":["apps/api","packages/shared"]}\n' > package.json \
+RUN printf '{"name":"otvori-api-runtime","private":true,"workspaces":["apps/api","packages/shared"]}\n' > package.json \
  && npm install --package-lock-only --omit=dev --ignore-scripts --no-audit --no-fund \
  && npm ci --omit=dev --no-audit --no-fund \
  && npm cache clean --force

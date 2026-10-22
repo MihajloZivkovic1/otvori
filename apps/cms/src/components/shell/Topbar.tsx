@@ -18,7 +18,7 @@ export function Topbar({ restaurant, role, title }: TopbarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-6">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px] text-muted">
-        <span className="truncate">{restaurant?.name ?? 'salveta'}</span>
+        <span className="truncate">{restaurant?.name ?? 'otvori'}</span>
         <span className="text-line-strong" aria-hidden="true">
           /
         </span>

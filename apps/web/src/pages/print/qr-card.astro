@@ -3,13 +3,13 @@
  * Napkin-shaped 90×90 mm table card, print-ready (@page 90mm 90mm, no margins).
  * Query params: venue (name), logo (image URL), table (number/label), qr (URL to encode) or qrImage (ready image URL),
  * lang (sr|en), url (short link printed under the code; defaults to `qr` without the scheme).
- * Example: /print/qr-card/?venue=Kafeterija%20Dor%C4%87ol&table=7&qr=https://kafeterija.salveta.menu/t/7
+ * Example: /print/qr-card/?venue=Kafeterija%20Dor%C4%87ol&table=7&qr=https://kafeterija.otvori.menu/t/7
  */
 import Glyph from '../../components/Glyph.astro';
 import Base from '../../layouts/Base.astro';
 ---
 
-<Base locale="sr" seo={false} noindex title="salveta — QR kartica za sto" description="Print-ready 90×90 mm table card">
+<Base locale="sr" seo={false} noindex title="otvori — QR kartica za sto" description="Print-ready 90×90 mm table card">
   <style is:global slot="head">
     @page {
       size: 90mm 90mm;
@@ -47,7 +47,7 @@ import Base from '../../layouts/Base.astro';
       <div class="flex w-full items-center justify-between">
         <span class="inline-flex items-center gap-[5px] text-plum">
           <Glyph size={16} />
-          <span class="font-serif text-base leading-none font-bold tracking-[-.02em]">salveta</span>
+          <span class="font-serif text-base leading-none tracking-[-.02em]">otvori</span>
         </span>
         <span
           id="logo-slot"

@@ -1,4 +1,4 @@
-# salveta production routing. DOMAIN, ACME_EMAIL and CF_API_TOKEN come from the container environment.
+# otvori production routing. DOMAIN, ACME_EMAIL and CF_API_TOKEN come from the container environment.
 # Keep deploy/Caddyfile.local (the laptop variant with self-signed certificates) in sync when changing routes.
 {
 	email {$ACME_EMAIL}

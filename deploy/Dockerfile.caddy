@@ -1,7 +1,7 @@
-# Build context: repository root. Built by .github/workflows/deploy.yml and pushed to ghcr.io/<owner>/salveta-caddy.
+# Build context: repository root. Built by .github/workflows/deploy.yml and pushed to ghcr.io/<owner>/otvori-caddy.
 # Bundles the three static builds (menu, cms, web) and serves them with Caddy (TLS via Cloudflare DNS, wildcard included).
 FROM node:22-alpine AS build
-ARG DOMAIN=salveta.menu
+ARG DOMAIN=otvori.menu
 WORKDIR /app
 COPY package.json package-lock.json turbo.json ./
 COPY packages/shared/package.json packages/shared/

@@ -3,7 +3,7 @@
 # statements drop and recreate every table), starts the API again (which re-runs migrations, a no-op after a restore).
 #
 #   ./deploy/restore.sh --list                                   # backups available in the bucket
-#   ./deploy/restore.sh backups/salveta-20261021-031500.sql.gz   # object key in the bucket
+#   ./deploy/restore.sh backups/salveta-20261021-031500.sql.gz   # object key in the bucket (dumps are named after POSTGRES_DB)
 #   ./deploy/restore.sh /path/to/salveta-20261021-031500.sql.gz  # local file
 #   ./deploy/restore.sh --yes <key-or-file>                      # skip the confirmation prompt
 set -euo pipefail

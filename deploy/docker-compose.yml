@@ -1,5 +1,7 @@
-# salveta production stack for one small host (1 GB droplet). Images are built in GitHub Actions and pulled here;
+# otvori production stack for one small host (1 GB droplet). Images are built in GitHub Actions and pulled here;
 # nothing is built on the host. Run through deploy/deploy.sh (it passes --env-file .env.prod and the image tag).
+# Compose project name. Kept as the historical "salveta": it prefixes the volume names (salveta_pgdata, …) of the
+# running stack, so renaming it would detach the existing database and upload volumes.
 name: salveta
 
 x-logging: &logging
@@ -53,7 +55,7 @@ services:
     logging: *logging
 
   api:
-    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/salveta-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/otvori-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -73,7 +75,7 @@ services:
       # app.DOMAIN (APP_URL) and every {slug}.DOMAIN (PUBLIC_MENU_BASE_URL) are allowed implicitly; add the apex + www here.
       CORS_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
       MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
-      MAIL_FROM: ${MAIL_FROM:-salveta <no-reply@salveta.menu>}
+      MAIL_FROM: ${MAIL_FROM:-otvori <zdravo@otvori.menu>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-}
@@ -98,7 +100,7 @@ services:
     logging: *logging
 
   caddy:
-    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/salveta-caddy:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-mihajlozivkovic1}/otvori-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       api:

@@ -7,7 +7,7 @@ import { hashPassword } from '../utils/password.js';
 
 /**
  * Creates (or promotes) a superadmin: `npm run create-superadmin -- <email> <password>`.
- * Inside the production container: `docker compose exec api npm run create-superadmin -- admin@salveta.menu '<password>'`.
+ * Inside the production container: `docker compose exec api npm run create-superadmin -- admin@otvori.menu '<password>'`.
  * An existing user keeps their name and memberships; their password is replaced and isSuperadmin set.
  */
 async function main(): Promise<void> {
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     await existing.update({ isSuperadmin: true, passwordHash });
     process.stdout.write(`Updated ${email}: now a superadmin, password replaced.\n`);
   } else {
-    await User.create({ email, name: 'salveta admin', passwordHash, isSuperadmin: true });
+    await User.create({ email, name: 'otvori admin', passwordHash, isSuperadmin: true });
     process.stdout.write(`Created superadmin ${email}.\n`);
   }
   await sequelize.close();

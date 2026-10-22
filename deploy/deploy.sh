@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy — or roll back — salveta on the droplet: pull the images for one tag, restart what changed, prune old images.
+# Deploy — or roll back — otvori on the droplet: pull the images for one tag, restart what changed, prune old images.
 #
 #   ./deploy/deploy.sh             # tag from IMAGE_TAG in .env.prod (default: latest)
 #   ./deploy/deploy.sh a1b2c3d     # a specific git short SHA built by the Deploy workflow; any earlier tag = rollback

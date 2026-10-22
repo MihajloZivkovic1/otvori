@@ -5,14 +5,14 @@
 #   curl -k https://api.localhost/api/health   (Caddy answers for *.localhost; add the hosts to /etc/hosts for a browser)
 services:
   api:
-    image: salveta-api:local
+    image: otvori-api:local
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
       args:
         APP_VERSION: local
   caddy:
-    image: salveta-caddy:local
+    image: otvori-caddy:local
     build:
       context: ..
       dockerfile: deploy/Dockerfile.caddy

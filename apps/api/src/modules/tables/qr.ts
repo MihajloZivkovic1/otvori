@@ -7,26 +7,41 @@ const require = createRequire(import.meta.url);
 // DejaVu Sans covers Serbian Latin (č, ć, đ, š, ž) and Cyrillic, which pdfkit's built-in fonts do not.
 export const FONT_REGULAR = require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans.ttf');
 export const FONT_BOLD = require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf');
-// Libre Baskerville Bold (OFL) renders the "salveta" wordmark; apps/api/assets is outside src so the path works from dist too.
-export const FONT_SERIF_BOLD = fileURLToPath(new URL('../../../assets/fonts/LibreBaskerville-Bold.ttf', import.meta.url));
+// Libre Baskerville Regular (OFL) renders the "otvori" wordmark; apps/api/assets is outside src so the path works from dist too.
+export const FONT_SERIF = fileURLToPath(new URL('../../../assets/fonts/LibreBaskerville-Regular.ttf', import.meta.url));
 
 const PLUM = '#7A3E48';
-const PLUM_FOLD = '#C98391';
-/** Napkin glyph from the design (24×24 viewBox): a square with a folded top-right corner. */
-const GLYPH_BODY = 'M3 3h12.5L21 8.5V21H3z';
-const GLYPH_FOLD = 'M15.5 3v5.5H21z';
+/**
+ * The otvori mark from design/otvori-brand.html (32×32 grid): a QR finder square whose right side has swung open
+ * toward the viewer. Frame stroke 3.2 (round joins), inner 8×8 square (radius 1.5), door hinged at x=24.5.
+ */
+const MARK_FRAME = 'M23 6H9a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h14';
+const MARK_DOOR = 'M24.5 6.4 30 2.2v27.6l-5.5-4.2z';
 
-/** Draws the glyph + "salveta" wordmark centred on `centerX`, with the glyph `size` points tall. */
+/** Draws the mark + "otvori" wordmark centred on `centerX`, with the text `size` points tall (the mark is 1.125× that). */
 function drawWordmark(doc: PDFKit.PDFDocument, centerX: number, y: number, size: number): void {
+  const mark = size * 1.125;
   const gap = size * 0.4;
   doc.font('Serif').fontSize(size);
-  const textWidth = doc.widthOfString('salveta', { characterSpacing: -size * 0.025 });
-  const total = size + gap + textWidth;
+  const textWidth = doc.widthOfString('otvori', { characterSpacing: -size * 0.02 });
+  const total = mark + gap + textWidth;
   const x = centerX - total / 2;
-  const scale = size / 24;
-  doc.save().translate(x, y).scale(scale).path(GLYPH_BODY).fill(PLUM).path(GLYPH_FOLD).fill(PLUM_FOLD).restore();
-  // Libre Baskerville's cap height sits around 0.72em; shift so the x-height visually centres on the glyph.
-  doc.fillColor(PLUM).text('salveta', x + size + gap, y - size * 0.02, { lineBreak: false, characterSpacing: -size * 0.025 });
+  const scale = mark / 32;
+  doc
+    .save()
+    .translate(x, y - mark * 0.1)
+    .scale(scale)
+    .path(MARK_FRAME)
+    .lineWidth(3.2)
+    .lineJoin('round')
+    .strokeColor(PLUM)
+    .stroke()
+    .roundedRect(11.3, 12, 8, 8, 1.5)
+    .fill(PLUM)
+    .path(MARK_DOOR)
+    .fill(PLUM)
+    .restore();
+  doc.fillColor(PLUM).text('otvori', x + mark + gap, y, { lineBreak: false, characterSpacing: -size * 0.02 });
 }
 
 export function qrPng(url: string, width = 1024): Promise<Buffer> {
@@ -65,17 +80,17 @@ const COLS = 2;
 const ROWS = 3;
 const PER_PAGE = COLS * ROWS;
 
-/** A4 sheet with 6 cut-out cards per page: logo, restaurant name, QR, table label, "Scan to view the menu", salveta wordmark. */
+/** A4 sheet with 6 cut-out cards per page: logo, restaurant name, QR, table label, "Scan to view the menu", otvori wordmark. */
 export async function renderQrSheet(options: QrSheetOptions): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
     margin: 0,
     autoFirstPage: false,
-    info: { Title: `${options.restaurantName} – table QR codes`, Author: 'salveta' },
+    info: { Title: `${options.restaurantName} – table QR codes`, Author: 'otvori' },
   });
   doc.registerFont('Sans', FONT_REGULAR);
   doc.registerFont('SansBold', FONT_BOLD);
-  doc.registerFont('Serif', FONT_SERIF_BOLD);
+  doc.registerFont('Serif', FONT_SERIF);
 
   const done = new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];

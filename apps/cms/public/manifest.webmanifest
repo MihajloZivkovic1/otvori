@@ -1,7 +1,7 @@
 {
-  "name": "salveta",
-  "short_name": "salveta",
-  "description": "salveta admin — manage your menu, tables and branding",
+  "name": "otvori",
+  "short_name": "otvori",
+  "description": "otvori admin — manage your menu, tables, orders and branding",
   "id": "/",
   "start_url": "/",
   "scope": "/",

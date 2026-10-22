@@ -1,11 +1,25 @@
-# salveta (qr-menu) — project conventions
+# otvori (qr-menu) — project conventions
 
 Multi-tenant QR table-menu SaaS for restaurants. npm-workspaces monorepo driven by Turborepo.
-Product name: **salveta** (lowercase wordmark, domain `salveta.menu`; the repo, package names, env vars and storage keys keep the
-historical `qr-menu` / `tabla` identifiers). Public menus live on `https://{slug}.salveta.menu`, the admin CMS on `app.salveta.menu`,
-the API on `api.salveta.menu`, the marketing site on the apex. Brand assets (napkin glyph + "salveta" wordmark in Libre Baskerville 700,
-plum `#7A3E48`) come from `design/salveta.menu website.html`; the CMS uses `components/Wordmark.tsx`, the PDF QR sheet draws the same
-glyph path with `apps/api/assets/fonts/LibreBaskerville-Bold.ttf`.
+Product name: **otvori** (lowercase in running text and in the wordmark; "otvori.menu" when referring to the service or the
+domain). Tagline "Skeniraj. Otvori. Naruči." (EN "Scan. Open. Order."); the concept is *opening* — the code opens the menu,
+the venue opens its doors — never napkins. Public menus live on `https://{slug}.otvori.menu`, the admin CMS on
+`app.otvori.menu`, the API on `api.otvori.menu`, the marketing site on the apex. Brand assets come from
+`design/otvori-brand.html` (Claude Design export, markup in the `__bundler/template` script tag): the mark is a QR finder
+square whose right side has swung open (32-unit grid, frame stroke 3.2, inner square 8, door hinged at x=24.5), the wordmark
+is lowercase "otvori" in Libre Baskerville **400**, plum `#7A3E48`, paper `#F7F2EB`, ink `#1F1A17`; the favicon tile is the
+mark at 75 % on a plum square with radius 7/32. The CMS uses `components/Wordmark.tsx` (`OtvoriMark` + `Wordmark`), the menu
+app inlines the mark in `components/Footer.tsx`, the PDF QR sheet draws the same paths with
+`apps/api/assets/fonts/LibreBaskerville-Regular.ttf`, the marketing site has `components/Mark.astro` + `Wordmark.astro`
+(icons via `scripts/icons.mjs`, OG images via `scripts/og.mjs`), the CMS icons via `scripts/make-icons.mjs`.
+
+**Historical identifiers that deliberately keep old names** (renaming them would break existing installs, sessions and
+saved browser state for no user-visible gain): the repo and npm scope (`qr-menu`, `@qr-menu/*`), env var names, the refresh
+cookie `tabla_refresh`, every `tabla.*` localStorage / sessionStorage key, the service-worker cache name `tabla-cms-shell-*`,
+the Postgres role/database defaults (`salveta`, baked into the production data volume), the compose project name `salveta`
+(prefixes the volume names) and the demo passwords `tabla1234`. Anything a user can read — UI copy, mail, PDF, titles,
+manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, the mail sender `otvori <zdravo@otvori.menu>`
+— says otvori.
 
 ## Layout
 
@@ -116,7 +130,7 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
 ## Public menu
 
 - `GET /api/public/:slug/menu?locale=sr` or, host-based, `GET /api/public/menu` with `Host: {slug}.<suffix>` where the suffix
-  comes from `PUBLIC_MENU_BASE_URL` (`http://{slug}.localhost:5174` in dev, `https://{slug}.salveta.menu` in prod).
+  comes from `PUBLIC_MENU_BASE_URL` (`http://{slug}.localhost:5174` in dev, `https://{slug}.otvori.menu` in prod).
 - Only when `published_at` is set and status ≠ `suspended`; hidden categories and categories without items are omitted;
   unavailable items are included with `isAvailable:false`. Response has `Cache-Control: public, max-age=30`.
 - `POST /api/public/:slug/events` with `{type:'scan', sessionId, tableNumber?}` or `{type:'item_view', sessionId, itemId}`
@@ -208,7 +222,7 @@ npm run dev -w @qr-menu/menu           # http://localhost:5174/t/7  ·  http://k
 ```
 `apps/menu/.env` (gitignored, copy from `.env.example`): `VITE_API_URL=http://localhost:3100`, `VITE_DEFAULT_SLUG=kafeterija`.
 The dev and preview servers listen on 5174 and proxy `/api` to `API_PROXY_TARGET || VITE_API_URL` with the Host header preserved
-(`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.salveta.menu`.
+(`changeOrigin: false`), so `{slug}.localhost:5174` lets the API resolve the slug from the Host exactly like `{slug}.otvori.menu`.
 Useful URL bits: `/t/7` table (legacy `?t=7` still works), `?lang=en`, `?item=<itemId>` opens the sheet, `?cart=1` the cart,
 `/order/<orderId>` the status page (only readable with the session that placed it).
 
@@ -217,7 +231,7 @@ To reproduce the production same-origin setup (and the Lighthouse run): `VITE_AP
 and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
 
 ### Conventions
-- **Restaurant resolution** (`lib/tenant.ts` → `resolveTenant`): `/r/:slug` path → host subdomain (`kafeterija.salveta.menu`,
+- **Restaurant resolution** (`lib/tenant.ts` → `resolveTenant`): `/r/:slug` path → host subdomain (`kafeterija.otvori.menu`,
   `kafeterija.localhost`; apex/`www`/IPs/`localhost` give nothing) → `VITE_DEFAULT_SLUG` → none. With a slug the app calls
   `/api/public/:slug/menu`; with none, or when the slug came from the host *and* the API is same-origin, it calls the host-based
   `/api/public/menu` — the URL the production build preloads (`<link rel="preload" as="fetch">`, emitted only when `VITE_API_URL` is empty).
@@ -235,7 +249,7 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   reproduces the design's light/dark accent pairs. The accent is only used for chips, the logo tile, the retry button and focus rings,
   never for body text. Light/dark palettes, type sizes and spacing come from `design/Tabla Guest Menu.html`.
 - **Fonts**: Google Fonts (Figtree 400/500/600, Libre Baskerville 400/700, `display=swap`) via preconnect + a non-blocking stylesheet
-  in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "salveta" wordmark.
+  in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "otvori" wordmark in the footer (400).
 - **index.html** carries a static copy of `MenuSkeleton` inside `#root` (first paint without JS; React replaces it) and the build
   inlines the stylesheet (`inlineCss` plugin in `vite.config.ts`). Keep the static skeleton in sync when `MenuSkeleton` changes.
 - **i18n** (`lib/i18n.ts`): UI strings for `sr`/`en` only; menu content arrives resolved from the API. UI locale =
@@ -287,7 +301,7 @@ npm run dev -w @qr-menu/api            # PORT=3100 (apps/api/.env); APP_URL=http
 npm run dev -w @qr-menu/cms            # http://localhost:5173 — Vite proxies /api to VITE_API_URL (apps/cms/.env, gitignored)
 ```
 `apps/cms/.env.example`: `VITE_API_URL=http://localhost:3100` (dev proxy target; production builds call it directly, empty =
-same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@salveta.menu` /
+same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@otvori.menu` /
 `admin1234` (superadmin, no memberships → lands on `/superadmin`).
 
 ### Auth flow (`lib/api.ts`, `lib/auth.tsx`)
@@ -341,7 +355,7 @@ same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija
   (`useIsCompact()`); `>1024px` = 240px sidebar. Custom Tailwind breakpoints `tab` (641px) and `wide` (1025px); `max-tab:`/`max-wide:` for the inverse.
 - Tokens on `:root` (`--bg --surface --ink --ink-2 --ink-3 --muted --faint --line --line2 --line-strong --accent --on-accent
   --accent-soft`) mapped by `@theme inline` to `bg-canvas text-ink text-ink-2 text-muted text-faint border-line bg-line-2
-  bg-accent text-on-accent …`. The accent is always the salveta plum `#7A3E48`; the tenant's `primaryColor` is only used by
+  bg-accent text-on-accent …`. The accent is always the otvori plum `#7A3E48`; the tenant's `primaryColor` is only used by
   `LogoTile` and the Branding `PhonePreview`. The dark variant (`#141416 / #1C1C20 / accent #B86F7C`) applies via
   `prefers-color-scheme: dark` **on phone widths only** (design frame M4). `a` color is in `@layer base` so utilities override it.
 - `--sidebar-w` on `<html>` lets the `Drawer` scrim stop at the sidebar edge (drawers/modals/sheets portal to `<body>`).
@@ -385,8 +399,8 @@ sets the session flag and lets the app restore through the mocked `POST /api/aut
 Stack: Astro 7 (`output: 'static'`, `trailingSlash: 'always'`, `compressHTML`, stylesheet inlined), TypeScript strict, Tailwind v4
 via `@tailwindcss/vite`, `@astrojs/sitemap`. **No React**: the only interactivity (SR/EN switch, monthly/yearly pricing, FAQ accordion,
 phone nav) is plain TypeScript in `src/scripts/*.ts` (`init*(root)` functions, < 1 KB gzipped, inlined by Astro). Design source:
-`design/salveta.menu website.html` (Claude Design export: markup in the `__bundler/template` script tag, fonts base64 in
-`__bundler/manifest`). Lighthouse mobile on the seeded preview: 100/100/100/100 (sr), 99/100/100/100 (en).
+`design/otvori-brand.html` for the brand and the Phase 5 export `design/salveta.menu website.html` for the page structure
+(Claude Design exports: markup in the `__bundler/template` script tag, fonts base64 in `__bundler/manifest`). Lighthouse mobile on the seeded preview: 100/100/100/100 (sr), 99/100/100/100 (en).
 
 ```bash
 npm run dev -w @qr-menu/web          # http://localhost:4321  ·  /en/  ·  /print/qr-card/?venue=…&table=7&qr=https://…
@@ -424,9 +438,9 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
 ## Deployment (`deploy/`)
 
 Target: one 1 GB DigitalOcean droplet (Ubuntu 24.04, fra1) running `deploy/docker-compose.yml`: `postgres:16-alpine`
-(tuned: `shared_buffers=128MB`, `max_connections=40`, limit 256m), `salveta-api` (limit 256m) and `salveta-caddy` (limit 128m,
+(tuned: `shared_buffers=128MB`, `max_connections=40`, limit 256m), `otvori-api` (limit 256m) and `otvori-caddy` (limit 128m,
 the three static builds inside). **Images are built by `.github/workflows/deploy.yml`** (after CI succeeds on `main`) and pushed to
-`ghcr.io/<owner>/salveta-api|salveta-caddy:<git short sha>` + `latest`; the droplet only runs `deploy/deploy.sh <tag>`
+`ghcr.io/<owner>/otvori-api|otvori-caddy:<git short sha>` + `latest`; the droplet only runs `deploy/deploy.sh <tag>`
 (`compose pull && up -d`, waits for the API health check, `image prune`). Rollback = `deploy.sh <older tag>`.
 
 - Runtime config is `deploy/.env.prod` (gitignored; `.env.prod.example` documents every variable; secrets from
@@ -437,7 +451,7 @@ the three static builds inside). **Images are built by `.github/workflows/deploy
   stack (`docker-compose.local.yml`, `DOMAIN=localhost`).
 - API in production: `TRUST_PROXY=1`, CORS allowlist = `APP_URL` + `CORS_ORIGINS` (apex, www) + every `{slug}.DOMAIN`, secure
   httpOnly cookies, auth/public-event rate limits, JSON logs, graceful SIGTERM (10 s), migrations on start, `APP_VERSION` = image tag.
-- Storage: Spaces bucket `salveta` (fra1, CDN): `restaurants/<id>/…` public-read via `S3_PUBLIC_URL` (CDN), `backups/` private.
+- Storage: Spaces bucket `otvori` (fra1, CDN): `restaurants/<id>/…` public-read via `S3_PUBLIC_URL` (CDN), `backups/` private.
   `deploy/backup.sh` (cron, `pg_dump | gzip`, keeps 14 days) and `deploy/restore.sh` use the aws CLI with the Spaces endpoint.
 - `deploy/README.md` is the full checklist (DNS records, Spaces, droplet, swap, Docker, secrets, first deploy, superadmin, backups,
   rollback, logs); `deploy/TODO-manual.md` the one-time manual steps.
@@ -451,7 +465,7 @@ the three static builds inside). **Images are built by `.github/workflows/deploy
 - `apps/menu`: vitest + Testing Library in jsdom (`npm test -w @qr-menu/menu`). `test/setup.ts` stubs `IntersectionObserver`
   (drive it with `MockIntersectionObserver.instances[i].trigger(...)`), `scrollIntoView`/`scrollTo`, and clears storage;
   `mockFetch(handler)` replaces `fetch` per test and `renderMenu(route)` mounts the app in a `MemoryRouter` with a fresh QueryClient.
-- Seed credentials: superadmin `admin@salveta.menu` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
+- Seed credentials: superadmin `admin@otvori.menu` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
   (restaurant "Kafeterija Dorćol", slug `kafeterija`); other demo owners use `tabla1234`.
 
 ## When adding an endpoint

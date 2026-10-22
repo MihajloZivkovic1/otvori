@@ -102,7 +102,7 @@ interface SeedRestaurant {
   orderDays?: number;
 }
 
-const SUPERADMIN = { email: 'admin@salveta.menu', password: 'admin1234', name: 'salveta admin' };
+const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
 
 const kafeterija: SeedRestaurant = {
   slug: 'kafeterija',

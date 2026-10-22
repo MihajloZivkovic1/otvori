@@ -36,7 +36,7 @@ export const hexColorSchema = z
   .trim()
   .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a hex color like #7A3E48');
 
-/** DNS-safe label used as the public subdomain, e.g. `kafeterija` in kafeterija.salveta.menu. */
+/** DNS-safe label used as the public subdomain, e.g. `kafeterija` in kafeterija.otvori.menu. */
 export const slugSchema = z
   .string()
   .trim()

@@ -53,10 +53,10 @@ describe('search', () => {
 
 describe('tenant from host', () => {
   it('reads the subdomain and ignores apex / localhost / IPs', () => {
-    expect(slugFromHost('kafeterija.salveta.menu')).toBe('kafeterija');
+    expect(slugFromHost('kafeterija.otvori.menu')).toBe('kafeterija');
     expect(slugFromHost('kafeterija.localhost')).toBe('kafeterija');
-    expect(slugFromHost('salveta.menu')).toBeNull();
-    expect(slugFromHost('www.salveta.menu')).toBeNull();
+    expect(slugFromHost('otvori.menu')).toBeNull();
+    expect(slugFromHost('www.otvori.menu')).toBeNull();
     expect(slugFromHost('localhost')).toBeNull();
     expect(slugFromHost('127.0.0.1')).toBeNull();
   });
