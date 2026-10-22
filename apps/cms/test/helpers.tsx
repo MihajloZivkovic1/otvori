@@ -107,6 +107,7 @@ export const restaurant: RestaurantDto = {
   publicUrl: 'http://kafeterija.localhost:5174',
   modules: { ordering: false, payments: false, pos: false },
   paymentConfig: { provider: null, merchantId: null, hasSecret: false, tipPresets: [0, 5, 10, 15], receiptEmailEnabled: false, simulator: false },
+  posConfig: { provider: null, baseUrl: null, hasApiKey: false, tableMapping: {}, sendOrdersToPos: false, closeOnPayment: true, printOnClose: false, closeMode: 'reuse-external-id', simulator: false },
   orderingMode: 'off',
   orderingPaused: false,
   pausedMessage: null,
@@ -152,6 +153,7 @@ export const items: MenuItemDto[] = [
     priceCents: 18000,
     imageUrl: null,
     thumbnailUrl: null,
+    posProductCode: null,
     allergens: [],
     tags: [],
     isAvailable: true,
@@ -170,6 +172,7 @@ export const items: MenuItemDto[] = [
     priceCents: 25000,
     imageUrl: null,
     thumbnailUrl: null,
+    posProductCode: null,
     allergens: ['M'],
     tags: ['new'],
     isAvailable: true,
@@ -188,6 +191,7 @@ export const items: MenuItemDto[] = [
     priceCents: 65000,
     imageUrl: null,
     thumbnailUrl: null,
+    posProductCode: null,
     allergens: ['G', 'Se'],
     tags: ['vegan'],
     isAvailable: false,
@@ -577,6 +581,35 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
     }
   }
   if (path === `${base}/payment-config/test` && method === 'POST') return { body: { ok: true, message: 'Simulator ready' } };
+  if (path === `${base}/pos-config`) {
+    if (method === 'GET') return { body: restaurant.posConfig };
+    if (method === 'PATCH') {
+      const { apiKey, ...rest } = body as { apiKey?: string } & Partial<typeof restaurant.posConfig>;
+      return { body: { ...restaurant.posConfig, ...rest, hasApiKey: restaurant.posConfig.hasApiKey || Boolean(apiKey), simulator: rest.provider === 'mock' } };
+    }
+  }
+  if (path === `${base}/pos-config/test` && method === 'POST') return { body: { ok: true, message: 'Mock register ready — 4 products' } };
+  if (path === `${base}/pos/products` && method === 'GET') {
+    return {
+      body: {
+        fetchedAt: '2026-10-22T12:00:00.000Z',
+        create: [{ code: 'CAP', name: 'Kapućino', group: 'Kafa', priceCents: 25000, taxLabel: '20%', active: true }],
+        update: [{ itemId: ids.espresso, code: 'ESP', name: 'Espresso', currentPriceCents: 18000, priceCents: 19000 }],
+        missing: [],
+        unmapped: 2,
+      },
+    };
+  }
+  if (path === `${base}/pos/sync` && method === 'POST') {
+    const input = body as { createCodes: string[]; updateCodes: string[] };
+    return { body: { created: input.createCodes.length, updated: input.updateCodes.length, categoryId: ids.coffee } };
+  }
+  const fiscalRetry = new RegExp(`^${base}/orders/([^/]+)/fiscal/retry$`).exec(path);
+  if (fiscalRetry && method === 'POST') {
+    const order = orders.find((o) => o.id === fiscalRetry[1]);
+    if (!order) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Order not found' } } };
+    return { body: { ...order, fiscalStatus: 'pending', fiscalError: null, updatedAt: '2026-10-22T11:51:00.000Z' } };
+  }
   const orderPatch = new RegExp(`^${base}/orders/([^/]+)$`).exec(path);
   if (orderPatch && method === 'PATCH') {
     const order = orders.find((o) => o.id === orderPatch[1]);

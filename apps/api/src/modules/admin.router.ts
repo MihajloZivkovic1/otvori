@@ -9,6 +9,8 @@ import * as orderingController from './ordering/controller.js';
 import { ordersRouter, requestsRouter } from './ordering/router.js';
 import * as paymentsController from './payments/controller.js';
 import { paymentConfigRouter } from './payments/router.js';
+import * as posController from './pos/controller.js';
+import { posConfigRouter, posRouter } from './pos/router.js';
 import { requireSseToken, streamEvents } from './ordering/sse.js';
 import * as restaurantsController from './restaurants/controller.js';
 import { restaurantsRouter } from './restaurants/router.js';
@@ -36,6 +38,10 @@ scoped.post('/sse-token', requireModule('ordering'), orderingController.sseToken
 // Online payment (Phase 9c): the waiter marks cash; owners configure the provider.
 scoped.patch('/orders/:id/payment', requireModule('ordering'), requireModule('payments'), paymentsController.markOrderPayment);
 scoped.use('/payment-config', paymentConfigRouter);
+// POS integration (Phase 9d): configuration, product sync and the fiscal retry on an order.
+scoped.use('/pos-config', posConfigRouter);
+scoped.use('/pos', posRouter);
+scoped.post('/orders/:id/fiscal/retry', requireModule('ordering'), requireModule('pos'), posController.retryFiscal);
 scoped.use('/', restaurantsRouter);
 
 adminRouter.use('/restaurants/:restaurantId', requireAuth, requireMembership(), scoped);

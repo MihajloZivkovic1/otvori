@@ -1,6 +1,7 @@
 import { Controller } from 'react-hook-form';
 import { ALLERGENS, TAGS, type Locale } from '@qr-menu/shared';
 import { cn } from '../../lib/cn';
+import { useRestaurantContext } from '../shell/RestaurantLayout';
 import { Chip } from '../ui/Chip';
 import { Field, Input, Textarea } from '../ui/Field';
 import { Switch } from '../ui/Switch';
@@ -24,6 +25,7 @@ interface ItemFieldsProps {
 const LANG_NAMES: Record<Locale, string> = { sr: 'Serbian', en: 'English' };
 
 export function ItemFields({ editor, lang, primaryLang, currency, currentImageUrl, layout }: ItemFieldsProps) {
+  const { restaurant, hasModule } = useRestaurantContext();
   const { form } = editor;
   const errors = form.formState.errors;
   const large = layout === 'sheet';
@@ -164,6 +166,36 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
     />
   );
 
+  // POS product code (Phase 9d): only with the POS module; a warning while the venue sends orders and the code is missing.
+  const posCode = hasModule('pos') ? (
+    <Controller
+      control={form.control}
+      name="posProductCode"
+      render={({ field }) => {
+        const missing = restaurant.posConfig.sendOrdersToPos && !(field.value ?? '').trim();
+        return (
+          <Field
+            label="POS product code"
+            htmlFor="item-pos-code"
+            hint={missing ? undefined : 'The code of this item on the register (Settings → Integrations → Sync products fills it in).'}
+            error={missing ? 'No POS code: guests cannot order this item while orders go to the register.' : undefined}
+          >
+            <Input
+              id="item-pos-code"
+              controlSize={controlSize}
+              maxLength={64}
+              value={field.value ?? ''}
+              onChange={(event) => field.onChange(event.target.value || null)}
+              onBlur={field.onBlur}
+              invalid={missing}
+              placeholder="e.g. ESP"
+            />
+          </Field>
+        );
+      }}
+    />
+  ) : null;
+
   const tags = (
     <Controller
       control={form.control}
@@ -205,6 +237,7 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
         <VariantsTable form={form} currency={currency} layout="sheet" />
         {allergens}
         {tags}
+        {posCode}
         {availability}
       </>
     );
@@ -222,6 +255,7 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
       <VariantsTable form={form} currency={currency} layout="drawer" />
       {allergens}
       {tags}
+      {posCode}
     </>
   );
 }

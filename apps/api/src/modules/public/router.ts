@@ -10,6 +10,7 @@ import {
 import { requireSession } from '../../middleware/session.js';
 import * as ordering from '../ordering/controller.js';
 import * as payments from '../payments/controller.js';
+import * as pos from '../pos/controller.js';
 import * as controller from './controller.js';
 
 export const publicRouter = Router();
@@ -26,5 +27,7 @@ for (const prefix of ['', '/:slug']) {
   // Online payment (Phase 9c): a payment attempt for an accepted order, and its status.
   publicRouter.post(`${prefix}/orders/:id/payments`, requireSession, sessionRequestsLimiter, publicRequestsLimiter, payments.createPayment);
   publicRouter.get(`${prefix}/orders/:id/payments/:ref`, requireSession, payments.getPayment);
+  // Fiscal receipt by e-mail (Phase 9d).
+  publicRouter.post(`${prefix}/orders/:id/receipt-email`, requireSession, sessionRequestsLimiter, publicRequestsLimiter, pos.emailReceipt);
   publicRouter.post(`${prefix}/requests`, requireSession, sessionRequestsLimiter, publicRequestsLimiter, ordering.createServiceRequest);
 }

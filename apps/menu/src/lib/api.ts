@@ -147,6 +147,10 @@ export function fetchPayment(slug: string | null, orderId: string, ref: string, 
   );
 }
 
+export function sendReceiptEmail(slug: string | null, orderId: string, email: string): Promise<{ ok: true }> {
+  return request<{ ok: true }>(publicUrl(slug, `orders/${encodeURIComponent(orderId)}/receipt-email`), jsonInit('POST', { email }));
+}
+
 export function createServiceRequest(
   slug: string | null,
   type: ServiceRequestType,

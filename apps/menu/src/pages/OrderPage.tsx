@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { canPayOrder, isFinalOrderStatus, type OrderStatus, type PublicOrderDto } from '@qr-menu/shared';
 import { TableChip } from '../components/Chips';
 import { BackIcon, CheckIcon } from '../components/icons';
+import { FiscalReceipt } from '../components/FiscalReceipt';
 import { OfflineScreen } from '../components/OfflineScreen';
 import { Toast } from '../components/Toast';
 import { useMenu } from '../hooks/useMenu';
@@ -256,6 +257,8 @@ export function OrderPage() {
           </div>
           {data.note && <p className="mt-1.5 text-[12.5px] leading-[1.45] text-muted italic">“{data.note}”</p>}
         </div>
+
+        {data.paymentStatus === 'paid' && <FiscalReceipt slug={slug} order={data} t={t} />}
 
         <div className="mt-auto flex flex-col gap-2.5">
           {data.payments.enabled && canPayOrder(data) && (

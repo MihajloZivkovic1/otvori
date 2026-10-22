@@ -50,6 +50,11 @@ export class MenuItem extends Model<InferAttributes<MenuItem>, InferCreationAttr
   @Column(DataType.TEXT)
   imageUrl!: CreationOptional<string | null>;
 
+  /** POS product code (Phase 9d): what the register knows this item as; required for ordering while sendOrdersToPos. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  posProductCode!: CreationOptional<string | null>;
+
   /** 160×160 WebP for list rows; null for photos uploaded before thumbnails existed (the menu falls back to imageUrl). */
   @AllowNull(true)
   @Column(DataType.TEXT)

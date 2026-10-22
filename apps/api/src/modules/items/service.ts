@@ -36,6 +36,7 @@ export function toItemDto(item: MenuItem, now = new Date()): MenuItemDto {
     priceCents: item.priceCents,
     imageUrl: item.imageUrl,
     thumbnailUrl: item.thumbnailUrl,
+    posProductCode: item.posProductCode,
     allergens: item.allergens,
     tags: item.tags,
     isAvailable: item.isAvailable,
@@ -120,6 +121,7 @@ export async function createItem(restaurantId: string, input: CreateItemInput): 
         isAvailable: input.isAvailable ?? true,
         unavailableUntil: input.unavailableUntil ? new Date(input.unavailableUntil) : null,
         sortOrder,
+        posProductCode: input.posProductCode?.trim() || null,
       },
       { transaction },
     );
@@ -136,10 +138,11 @@ export async function updateItem(restaurantId: string, itemId: string, input: Up
     if (input.categoryId && input.categoryId !== item.categoryId) {
       await assertCategory(restaurantId, input.categoryId, transaction);
     }
-    const { variants, description, unavailableUntil, ...rest } = input;
+    const { variants, description, unavailableUntil, posProductCode, ...rest } = input;
     await item.update(
       {
         ...definedOnly(rest),
+        ...(posProductCode !== undefined ? { posProductCode: posProductCode?.trim() || null } : {}),
         ...(description !== undefined ? { description: normalizeDescription(description) ?? null } : {}),
         ...(unavailableUntil !== undefined
           ? { unavailableUntil: unavailableUntil ? new Date(unavailableUntil) : null }

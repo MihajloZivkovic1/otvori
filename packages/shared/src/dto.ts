@@ -25,6 +25,7 @@ import {
 } from './schemas/ordering.js';
 import { restaurantModulesSchema } from './modules.js';
 import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
+import { posConfigDtoSchema } from './pos.js';
 
 const isoString = z.string();
 
@@ -124,6 +125,8 @@ export const restaurantDtoSchema = z.object({
   modules: restaurantModulesSchema,
   /** Online payment set-up (Phase 9c); the merchant secret never leaves the API (`hasSecret`). */
   paymentConfig: paymentConfigDtoSchema,
+  /** POS integration (Phase 9d); the API key never leaves the API (`hasApiKey`). */
+  posConfig: posConfigDtoSchema,
   /** Table ordering: off (view-only), call_waiter (call/bill buttons) or order (guests send orders). */
   orderingMode: orderingModeSchema,
   /** When true the public menu hides "+"/cart and shows `pausedMessage`; calls still work. */
@@ -164,6 +167,8 @@ export const menuItemDtoSchema = z.object({
   imageUrl: z.string().nullable(),
   /** 160×160 WebP for rows; null for photos uploaded before thumbnails existed. */
   thumbnailUrl: z.string().nullable(),
+  /** POS product code (Phase 9d). */
+  posProductCode: z.string().nullable(),
   allergens: z.array(allergenSchema.or(z.string())),
   tags: z.array(tagSchema.or(z.string())),
   isAvailable: z.boolean(),
@@ -393,6 +398,7 @@ export const publicOrderDtoSchema = z.object({
   fiscalStatus: fiscalStatusSchema,
   fiscalInvoiceNumber: z.string().nullable(),
   fiscalVerificationUrl: z.string().nullable(),
+  fiscalReceiptText: z.string().nullable(),
 });
 export type PublicOrderDto = z.infer<typeof publicOrderDtoSchema>;
 

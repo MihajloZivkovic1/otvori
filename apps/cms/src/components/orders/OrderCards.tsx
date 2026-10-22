@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn';
 import { clock, formatPrice, minutesUntil, relativeTime, text } from '../../lib/format';
 import { Icon } from '../icons';
 import { Button } from '../ui/Button';
+import { FiscalChip } from './FiscalChip';
 import { PaymentChip } from './PaymentChip';
 
 export type GroupTone = 'amber' | 'accent' | 'green';
@@ -141,14 +142,18 @@ interface InProgressCardProps {
   payments?: boolean;
   onDeliver: () => void;
   onCash?: () => void;
+  /** POS module on: fiscal chip (and Retry when the register failed). */
+  pos?: boolean;
+  onRetryFiscal?: () => void;
 }
 
 /** An accepted order being prepared: one button, Delivered. */
-export function InProgressCard({ order, currency, defaultLocale, busy, compact, payments = false, onDeliver, onCash }: InProgressCardProps) {
+export function InProgressCard({ order, currency, defaultLocale, busy, compact, payments = false, onDeliver, onCash, pos = false, onRetryFiscal }: InProgressCardProps) {
   return (
     <article aria-label={`Order #${order.number}, table ${order.tableNumber}`} className="flex flex-col gap-3 rounded-[14px] border border-line bg-surface px-3.5 pb-3 pt-3.5">
       <OrderHeader order={order} currency={currency} payments={payments} right={<span className="text-[#166534]">accepted {order.acceptedAt ? clock(order.acceptedAt) : ''}</span>} />
       <Lines order={order} currency={currency} defaultLocale={defaultLocale} />
+      {pos && order.paymentStatus === 'paid' ? <FiscalChip order={order} busy={busy} onRetry={onRetryFiscal} /> : null}
       <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-2.5">
         <span className="text-base font-semibold tabular-nums">{formatPrice(order.totalCents, currency)}</span>
         <span className="flex items-center gap-2">

@@ -1,0 +1,12 @@
+{
+  "Success": true,
+  "Errors": [],
+  "Data": [
+    { "Id": 40, "Name": "Abisinth 0,03", "IsActive": true, "IsDecimal": false, "Price": 170, "Code": "96", "HotKeyDesktop": false, "CategoryId": 4, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
+    { "Id": 5252, "Name": "Akcija kafa+kroasan", "IsActive": true, "IsDecimal": false, "Price": 250, "Code": "", "HotKeyDesktop": false, "CategoryId": 14, "ModifierMinCount": 1, "ModifierMaxCount": 1, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
+    { "Id": 5, "Name": "Biter Lemon 0. 25l", "IsActive": true, "IsDecimal": false, "Price": 120, "Code": "53", "HotKeyDesktop": true, "CategoryId": 1, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": "https://demo-api.octopos.rs/Images/Products/5.jpg", "Logo": null, "Modifiers": [], "HappyHours": [ { "DayOfWeek": 1, "TimeFrom": "13:00", "TimeTo": "14:20", "Price": 100 } ] },
+    { "Id": 12268, "Name": "Espreso", "IsActive": true, "IsDecimal": false, "Price": 150, "Code": "ESP", "HotKeyDesktop": true, "CategoryId": 9, "ModifierMinCount": 1, "ModifierMaxCount": 1, "LogoPath": null, "Logo": null, "Modifiers": [ { "ProductId": 12271, "Price": 0 } ], "HappyHours": [], "ProductCategory": "Kafa", "TaxPercent": 20, "IsForSale": true },
+    { "Id": 2127, "Name": "ALPSKI", "IsActive": false, "IsDecimal": false, "Price": 0, "Code": "RA.10004", "HotKeyDesktop": false, "CategoryId": 2020, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
+    { "Id": 20, "Name": "Apatinsko 0,6l", "IsActive": true, "IsDecimal": false, "Price": 140.5, "Code": "20", "HotKeyDesktop": false, "CategoryId": 3, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] }
+  ]
+}

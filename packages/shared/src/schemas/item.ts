@@ -30,6 +30,8 @@ const itemFields = z.object({
   sortOrder: sortOrderSchema,
   /** Replace-all semantics: the provided list becomes the item's full variant list. */
   variants: z.array(itemVariantInputSchema).max(30),
+  /** POS product code (Phase 9d); required for ordering while the venue sends orders to the register. */
+  posProductCode: z.string().trim().max(64).nullable(),
 });
 
 export const createItemSchema = itemFields.partial({
@@ -40,6 +42,7 @@ export const createItemSchema = itemFields.partial({
   unavailableUntil: true,
   sortOrder: true,
   variants: true,
+  posProductCode: true,
 });
 export type CreateItemInput = z.infer<typeof createItemSchema>;
 

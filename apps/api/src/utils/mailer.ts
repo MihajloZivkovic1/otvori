@@ -65,6 +65,21 @@ export function sendMagicLink(email: string, url: string): Promise<void> {
   });
 }
 
+/** The fiscal receipt of an order paid online (Phase 9d): text + the tax authority's verification link. */
+export function sendFiscalReceipt(
+  email: string,
+  receipt: { venue: string; orderNumber: number; invoiceNumber: string; verificationUrl: string; text: string },
+): Promise<void> {
+  return sendMail({
+    to: email,
+    subject: `${receipt.venue} · fiskalni račun ${receipt.invoiceNumber}`,
+    text:
+      `Hvala na poseti — u prilogu je fiskalni račun za narudžbinu #${receipt.orderNumber} (${receipt.venue}).\n` +
+      `Thank you for your visit — this is the fiscal receipt for order #${receipt.orderNumber} (${receipt.venue}).\n\n` +
+      `Proveri račun / verify: ${receipt.verificationUrl}\n\n${receipt.text}\n\n— otvori.menu`,
+  });
+}
+
 export function sendPasswordReset(email: string, url: string): Promise<void> {
   return sendMail({
     to: email,

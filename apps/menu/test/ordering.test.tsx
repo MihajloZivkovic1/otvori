@@ -44,6 +44,7 @@ function orderDto(overrides: Partial<PublicOrderDto> = {}): PublicOrderDto {
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalReceiptText: null,
     ...overrides,
   };
 }

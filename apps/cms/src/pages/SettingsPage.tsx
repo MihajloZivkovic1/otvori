@@ -14,6 +14,7 @@ import {
 } from '@qr-menu/shared';
 import { DeleteVenueModal } from '../components/settings/DeleteVenueModal';
 import { OrderingCard } from '../components/settings/OrderingCard';
+import { IntegrationsCard } from '../components/settings/IntegrationsCard';
 import { PaymentCard } from '../components/settings/PaymentCard';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
@@ -178,6 +179,8 @@ export function SettingsPage() {
       {isOwner && hasModule('ordering') ? <OrderingCard /> : null}
 
       {isOwner && hasModule('payments') ? <PaymentCard /> : null}
+
+      {isOwner && hasModule('pos') ? <IntegrationsCard /> : null}
 
       {isOwner ? (
         <div className={cn('flex items-center justify-between gap-4 rounded-[10px] border border-danger-line bg-surface p-5', isMobile && 'mx-4')}>

@@ -29,6 +29,7 @@ function toFormValues(item: MenuItemDto | null, categoryId: string): Partial<Ite
       isAvailable: true,
       unavailableUntil: null,
       variants: [],
+      posProductCode: null,
     };
   }
   return {
@@ -41,6 +42,7 @@ function toFormValues(item: MenuItemDto | null, categoryId: string): Partial<Ite
     isAvailable: item.isEffectivelyAvailable,
     unavailableUntil: null,
     variants: item.variants.map((v) => ({ name: v.name, priceCents: v.priceCents })),
+    posProductCode: item.posProductCode,
   };
 }
 
@@ -92,6 +94,7 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
         allergens: values.allergens ?? [],
         tags: values.tags ?? [],
         variants: (values.variants ?? []).map((v, index) => ({ name: v.name, priceCents: v.priceCents, sortOrder: index })),
+        posProductCode: (values.posProductCode ?? '').trim() || null,
       };
       if (!item || availabilityTouched) {
         payload.isAvailable = values.isAvailable ?? true;

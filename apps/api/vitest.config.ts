@@ -17,6 +17,7 @@ export default defineConfig({
       LOG_LEVEL: 'silent',
       JWT_ACCESS_SECRET: 'test-only-secret-not-for-production',
       PAYMENTS_MOCK: 'true',
+      POS_MOCK: 'true',
       PAYMENTS_ENCRYPTION_KEY: 'test-only-encryption-key-32-bytes!!',
       JWT_ACCESS_TTL_SECONDS: '900',
       PUBLIC_MENU_BASE_URL: 'http://{slug}.localhost:5174',

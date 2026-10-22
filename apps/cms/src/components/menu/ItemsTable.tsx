@@ -10,6 +10,7 @@ import { MiniTag } from '../ui/Chip';
 import { EmptyState } from '../ui/EmptyState';
 import { Switch } from '../ui/Switch';
 import { useListSensors, verticalOnly } from './dnd';
+import { useRestaurantContext } from '../shell/RestaurantLayout';
 import { ItemThumb } from './ItemThumb';
 import { knownTags, TAG_LABELS } from './labels';
 
@@ -95,6 +96,8 @@ interface ItemRowProps {
 }
 
 function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, onDelete }: ItemRowProps) {
+  const { restaurant, hasModule } = useRestaurantContext();
+  const missingPosCode = hasModule('pos') && restaurant.posConfig.sendOrdersToPos && !item.posProductCode;
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const available = item.isEffectivelyAvailable;
   return (
@@ -127,6 +130,11 @@ function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, 
             <MiniTag key={tag}>{TAG_LABELS[tag]}</MiniTag>
           ))}
           {item.variants.length > 0 ? <span className="text-xs text-faint">{item.variants.length} variants</span> : null}
+          {missingPosCode ? (
+            <span className="rounded-sm bg-[#FEE2E2] px-1.5 py-0.5 text-[10px] font-semibold tracking-[.04em] text-[#991B1B]" title="Guests cannot order this item while orders go to the register">
+              NO POS CODE
+            </span>
+          ) : null}
         </div>
         {description ? <div className="truncate text-[13px] text-muted">{description}</div> : null}
       </div>

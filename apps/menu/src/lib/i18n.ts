@@ -135,6 +135,16 @@ export interface PaymentCopy {
   done: string;
   preparing: string;
   notAllowed: string;
+  // fiscal receipt (Phase 9d)
+  receiptTitle: string;
+  receiptPending: string;
+  receiptNumber: string;
+  openReceipt: string;
+  emailReceipt: string;
+  emailPlaceholder: string;
+  emailSend: string;
+  emailSent: string;
+  emailInvalid: string;
 }
 
 const srPlural = new Intl.PluralRules('sr');
@@ -256,6 +266,15 @@ export const dict: Record<UiLocale, Dictionary> = {
       done: 'Done',
       preparing: 'Preparing the payment…',
       notAllowed: 'This order cannot be paid right now.',
+      receiptTitle: 'Fiscal receipt',
+      receiptPending: 'The fiscal receipt is being issued at the register…',
+      receiptNumber: 'Receipt no.',
+      openReceipt: 'Open the receipt',
+      emailReceipt: 'Send to e-mail',
+      emailPlaceholder: 'you@example.com',
+      emailSend: 'Send',
+      emailSent: 'Sent. Check your inbox.',
+      emailInvalid: 'Enter a valid e-mail address.',
     },
     errors: {
       blocked: 'Ordering from this table is temporarily disabled. Please call the waiter.',
@@ -390,6 +409,15 @@ export const dict: Record<UiLocale, Dictionary> = {
       done: 'Gotovo',
       preparing: 'Pripremamo plaćanje…',
       notAllowed: 'Ova narudžbina trenutno ne može da se plati.',
+      receiptTitle: 'Fiskalni račun',
+      receiptPending: 'Fiskalni račun se izdaje na kasi…',
+      receiptNumber: 'Broj računa',
+      openReceipt: 'Otvori račun',
+      emailReceipt: 'Pošalji na mejl',
+      emailPlaceholder: 'ti@primer.rs',
+      emailSend: 'Pošalji',
+      emailSent: 'Poslato. Proveri sanduče.',
+      emailInvalid: 'Upiši ispravnu adresu.',
     },
     errors: {
       blocked: 'Naručivanje sa ovog stola je privremeno onemogućeno. Pozovite konobara.',

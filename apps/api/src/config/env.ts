@@ -47,6 +47,11 @@ const envSchema = z.object({
   PAYMENTS_ENCRYPTION_KEY: z.string().min(16).optional(),
   /** OTP eCommerce gateway base URL (sandbox or production); unset = provider unavailable. */
   OTP_ECOM_BASE_URL: z.url().optional(),
+  /** POS integration (Phase 9d). POS_MOCK=true enables the mock register (logs + fake fiscal receipts). */
+  POS_MOCK: boolFlag,
+  /** Octopos sandbox for the live integration tests only (never printed, never used by the app itself). */
+  OCTOPOS_SANDBOX_URL: z.string().optional(),
+  OCTOPOS_SANDBOX_AUTH: z.string().optional(),
 
   /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
   APP_VERSION: z.string().optional(),
@@ -66,6 +71,9 @@ const envSchema = z.object({
     }
     if (!value.PAYMENTS_ENCRYPTION_KEY) {
       ctx.addIssue({ code: 'custom', path: ['PAYMENTS_ENCRYPTION_KEY'], message: 'PAYMENTS_ENCRYPTION_KEY is required in production (openssl rand -base64 32)' });
+    }
+    if (value.POS_MOCK) {
+      ctx.addIssue({ code: 'custom', path: ['POS_MOCK'], message: 'POS_MOCK must be off in production (fake fiscal receipts)' });
     }
     if (value.PAYMENTS_MOCK) {
       ctx.addIssue({ code: 'custom', path: ['PAYMENTS_MOCK'], message: 'PAYMENTS_MOCK must be off in production (the simulator accepts payments without a bank)' });

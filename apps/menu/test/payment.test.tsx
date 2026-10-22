@@ -32,6 +32,7 @@ function order(overrides: Partial<PublicOrderDto> = {}): PublicOrderDto {
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalReceiptText: null,
     ...overrides,
   };
 }
@@ -158,5 +159,46 @@ describe('pay by phone', () => {
     renderMenu(`/r/kafeterija/order/${ORDER_ID}`);
     expect(await screen.findByText('Plaćeno kešom')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Plati telefonom' })).toBeNull();
+  });
+});
+
+describe('fiscal receipt', () => {
+  const paid = (fiscal: Partial<PublicOrderDto>) =>
+    order({ paymentStatus: 'paid', paidAmountCents: 66000, paidAt: '2026-10-22T11:50:00.000Z', ...fiscal });
+
+  it('shows the pending line while the register issues it, then the number, QR, link and e-mail form', async () => {
+    const api = paymentApi(paid({ fiscalStatus: 'pending' }));
+    mockFetch(api.handler);
+    renderMenu(`/r/kafeterija/order/${ORDER_ID}`);
+    expect(await screen.findByText('Fiskalni račun se izdaje na kasi…')).toBeInTheDocument();
+
+    const spy = mockFetch((url, init) =>
+      url.pathname.endsWith('/receipt-email') ? { status: 202, body: { ok: true } } : paymentApi(paid({
+        fiscalStatus: 'issued',
+        fiscalInvoiceNumber: 'MOCKPFR0-MOCKPFR0-001',
+        fiscalVerificationUrl: 'https://sandbox.suf.purs.gov.rs/v/?vl=MOCK1',
+        fiscalReceiptText: '=== ФИСКАЛНИ РАЧУН ===',
+      })).handler(url, init),
+    );
+    renderMenu(`/r/kafeterija/order/${ORDER_ID}`);
+    const user = userEvent.setup();
+    const section = await screen.findByRole('region', { name: 'Fiskalni račun' });
+    expect(within(section).getByText('MOCKPFR0-MOCKPFR0-001')).toBeInTheDocument();
+    expect(within(section).getByRole('img', { name: 'Fiskalni račun' })).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: 'Otvori račun' })).toHaveAttribute('href', 'https://sandbox.suf.purs.gov.rs/v/?vl=MOCK1');
+    await user.click(within(section).getByRole('button', { name: 'Pošalji' }));
+    expect(await within(section).findByRole('alert')).toHaveTextContent('Upiši ispravnu adresu.');
+    await user.type(within(section).getByLabelText('Pošalji na mejl'), 'gost@example.com');
+    await user.click(within(section).getByRole('button', { name: 'Pošalji' }));
+    expect(await within(section).findByText('Poslato. Proveri sanduče.')).toBeInTheDocument();
+    const mail = requests(spy).find((r) => r.url.pathname.endsWith('/receipt-email'));
+    expect(JSON.parse(String(mail?.init?.body))).toEqual({ email: 'gost@example.com' });
+  });
+
+  it('hides the e-mail form when the venue turned receipt mails off', async () => {
+    mockFetch(paymentApi(paid({ fiscalStatus: 'issued', fiscalInvoiceNumber: 'X-1', fiscalVerificationUrl: 'https://x/y', payments: { enabled: true, tipPresets: [0], receiptEmailEnabled: false } })).handler);
+    renderMenu(`/r/kafeterija/order/${ORDER_ID}`);
+    const section = await screen.findByRole('region', { name: 'Fiskalni račun' });
+    expect(within(section).queryByLabelText('Pošalji na mejl')).toBeNull();
   });
 });

@@ -31,7 +31,7 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 | `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
 | `deploy/` | Production stack for one 1 GB droplet: compose file, two Dockerfiles, Caddyfile, deploy/backup/restore scripts, README | Phase 4 (done) |
-| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a: findings, what was fixed, the open TODO list) | Phase 9a (done) |
+| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos API does + open questions), `DEMO.md` (end-to-end demo script) | Phase 9 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
@@ -239,6 +239,54 @@ domain; `controller.ts` + `router.ts`; `simulator.ts` the dev "bank" page; `reco
   provider, merchant ID, write-only secret, tip presets, receipt-mail switch, Test connection, SIMULATOR badge when
   `paymentConfig.simulator`. Analytics card gains "paid online", amount and "tips" tiles. Tests
   `test/payments.test.tsx`. Query keys `['paymentConfig', rid]`.
+
+## POS integration — Octopos (Phase 9d)
+
+Accepted orders open on the venue's register; an online payment closes them with a fiscal receipt. What the Octopos
+API does (and what it leaves open) is in `docs/octopos.md`; the end-to-end demo script is `docs/DEMO.md`. Code:
+`apps/api/src/modules/pos/` (`providers/types.ts` interface, `octopos.ts`, `mock.ts`, `index.ts`; `config.ts`;
+`service.ts`; `queue.ts`; `controller.ts` + `router.ts`).
+
+- **`PosProvider`**: `testConnection(credentials)`, `fetchProducts(credentials)` → `PosProduct[]` (code, name, group,
+  priceCents, taxLabel, active), `sendOrder({ order, lines, externalId, tableName })` (Octopos: `POST /weborder` with
+  `TableName` and no `Payments`), `closeOrder({ …, payment: { kind: instant | cash, amountCents }, closeMode, openRef })`
+  (`POST /weborder` with `Payments: [{ FiscalPaymentTypeId: 6 | 1, Amount }]`, `FiscalReceiptData.ReturnTextualRepresentation`,
+  `ExternalId` `otvori-<orderId>` — `otvori-dev-<orderId>` on mock / sandbox), `getFiscalReceipt(ref)`. Prices on the
+  wire are dinars, ours minor units. Every response is Zod-parsed and treated as untrusted. `posProvider('mock')` only
+  with `POS_MOCK=true` (production refuses to start with it). The mock register logs `[pos] would open/close …`,
+  keeps `mockPos.calls()` and returns fake receipts (`MOCKPFR0-MOCKPFR0-001`, a `sandbox.suf.purs.gov.rs` URL).
+- **Config** `restaurants.pos_config` JSONB `{ provider, baseUrl, apiKeyEncrypted, tableMapping { ourTableId: TableName },
+  sendOrdersToPos, closeOnPayment, printOnClose, closeMode: 'reuse-external-id' | 'new-receipt' }` (API key encrypted like
+  merchant secrets; DTO `posConfig` has `hasApiKey`). `GET/PATCH /admin/restaurants/:id/pos-config`, `POST …/test`
+  (owner; module `pos` → 403 `MODULE_DISABLED` otherwise). `closeMode` exists because the docs do not say how an order
+  opened on a table is closed (docs/octopos.md, open question 1).
+- **Menu ↔ POS**: `menu_items.pos_product_code` (`posProductCode` in item schemas/DTOs; the editor has the field with a
+  warning and the table a "NO POS CODE" tag). `GET …/pos/products` = preview (`create` = codes not in the menu,
+  `update` = mapped items whose register price differs, `missing`, `unmapped`), `POST …/pos/sync { createCodes,
+  updateCodes, categoryId? }` applies the reviewed rows (new items go to a hidden "Sa kase" category). With
+  `sendOrdersToPos` on, items without a code are `isAvailable: false` on the public menu and 409 `ITEM_UNAVAILABLE`
+  at order time (`orderableOnPos()` in `modules/public/service.ts`).
+- **Flow & queue**: `pos_jobs` (type `send_order | close_order`, status `queued | running | done | failed`, attempts,
+  next_run_at, last_error, payload). `onOrderAccepted` (`modules/ordering/hooks.ts`) → `send_order` when
+  `sendOrdersToPos`; `onOrderPaid` (`modules/payments/hooks.ts`) → `close_order` with the **pre-tip** amount when
+  `closeOnPayment` and `orders.fiscal_status = pending`. `startPosQueue()` (index.ts) runs `runDuePosJobs()` every 10 s:
+  jobs are claimed `FOR UPDATE SKIP LOCKED`, retried after 30 s / 2 m / 10 m / 30 m / 2 h (`POS_LIMITS.retryDelaysSeconds`),
+  then `failed` → `fiscal_status = failed` + `fiscal_error`; success stores `pos_ref`, `fiscal_invoice_number`,
+  `fiscal_verification_url`, `fiscal_receipt_text` and publishes `order.updated`. Failures never touch the paid state.
+  Staff `POST …/orders/:id/fiscal/retry` re-queues. Hooks are registered once by `registerPosHooks()` in `createApp()`.
+- **Guest**: `PublicOrderDto` carries `fiscalStatus`, `fiscalInvoiceNumber`, `fiscalVerificationUrl`,
+  `fiscalReceiptText`; `components/FiscalReceipt.tsx` shows the number, a QR of the verification URL, "Otvori račun"
+  and "Pošalji na mejl" (`POST …/orders/:id/receipt-email { email }` → `sendFiscalReceipt()` in the mailer; only
+  when `payments.receiptEmailEnabled`).
+- **CMS**: `components/orders/FiscalChip.tsx` (issued · last 8 chars / pending… / "Fiscal receipt pending — issue it
+  at the register" + Retry) on in-progress cards and Today rows; Settings → `components/settings/IntegrationsCard.tsx`
+  (provider, base URL, write-only API key, close mode, three switches, table mapping editor, Test connection, Sync
+  products → `PosSyncModal.tsx` review with checkboxes), MOCK REGISTER badge when `posConfig.simulator`.
+- **Sandbox & tests**: the public sandbox token (`.env` `OCTOPOS_SANDBOX_AUTH`, base `https://sandbox.octopos.rs/api`)
+  can read `GET /product` but every `POST /weborder` answers 401, so `apps/api/test/pos.test.ts` runs `fetchProducts`
+  live when the auth is set and the write path only against the recorded samples in `test/fixtures/octopos/`
+  ("fixture-only"); the full accept → pay (simulator webhook) → close → receipt → e-mail flow runs against the mock
+  register. CMS `test/pos.test.tsx`, menu `test/payment.test.tsx` ("fiscal receipt").
 
 ## Table ordering (Phase 6)
 

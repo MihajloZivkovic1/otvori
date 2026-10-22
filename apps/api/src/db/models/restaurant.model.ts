@@ -1,6 +1,6 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, Column, DataType, Default, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
-import type { PaymentProviderKey } from '@qr-menu/shared';
+import type { PaymentProviderKey, PosCloseMode, PosProviderKey } from '@qr-menu/shared';
 import {
   DEFAULT_MODULES,
   ORDERING_MODES,
@@ -29,6 +29,18 @@ export interface StoredPaymentConfig {
   secretEncrypted: string | null;
   tipPresets: number[];
   receiptEmailEnabled: boolean;
+}
+
+/** What `restaurants.pos_config` holds (Phase 9d). */
+export interface StoredPosConfig {
+  provider: PosProviderKey | null;
+  baseUrl: string | null;
+  apiKeyEncrypted: string | null;
+  tableMapping: Record<string, string>;
+  sendOrdersToPos: boolean;
+  closeOnPayment: boolean;
+  printOnClose: boolean;
+  closeMode: PosCloseMode;
 }
 
 @Table({ tableName: 'restaurants', timestamps: true, underscored: true })
@@ -125,6 +137,11 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @AllowNull(true)
   @Column(DataType.JSONB)
   paymentConfig!: CreationOptional<StoredPaymentConfig | null>;
+
+  /** POS integration set-up (Phase 9d); `apiKeyEncrypted` is AES-GCM, never sent to clients. */
+  @AllowNull(true)
+  @Column(DataType.JSONB)
+  posConfig!: CreationOptional<StoredPosConfig | null>;
 
   /** Table ordering: off (default, view-only menu), call_waiter or order. Only effective while modules.ordering. */
   @AllowNull(false)

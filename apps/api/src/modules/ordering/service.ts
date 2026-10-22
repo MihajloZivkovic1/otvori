@@ -37,9 +37,10 @@ import { AppError, badRequest, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import { toIso } from '../../utils/objects.js';
 import { startOfDayInZone } from '../../utils/time.js';
-import { loadPublishedRestaurant } from '../public/service.js';
+import { loadPublishedRestaurant, orderableOnPos } from '../public/service.js';
 import { toPaymentConfigDto } from '../payments/config.js';
 import { orderingBus } from './events.js';
+import { runAcceptedHooks } from './hooks.js';
 
 const ITEMS_INCLUDE = { model: OrderItem, as: 'items' } as const;
 const ORDER_SORT: SequelizeOrder = [
@@ -168,6 +169,7 @@ export function toPublicOrderDto(
     fiscalStatus: order.fiscalStatus,
     fiscalInvoiceNumber: order.fiscalInvoiceNumber,
     fiscalVerificationUrl: order.fiscalVerificationUrl,
+    fiscalReceiptText: order.fiscalReceiptText,
   };
 }
 
@@ -278,7 +280,7 @@ async function buildLines(restaurant: Restaurant, inputs: CreateOrderInput['item
       issues.push({ path: `items.${index}.itemId`, message: 'Unknown menu item', code: 'custom' });
       return null;
     }
-    if (!isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now)) {
+    if (!isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now) || !orderableOnPos(restaurant, item)) {
       unavailable.push(item.id);
       return null;
     }
@@ -497,6 +499,7 @@ export async function setOrderStatus(
   const fresh = await loadOrder(restaurantId, orderId);
   if (changed === 0) throw invalidTransition(fresh.status, input.status);
   publishOrder('order.updated', fresh);
+  if (input.status === 'accepted') await runAcceptedHooks(fresh);
   return toOrderDto(fresh);
 }
 

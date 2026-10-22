@@ -9,6 +9,8 @@ import {
   type OrderingMode,
   type PaymentProviderKey,
   type PaymentStatus,
+  type PosCloseMode,
+  type PosProviderKey,
   type RestaurantModules,
   type Plan,
   type RestaurantStatus,
@@ -80,6 +82,8 @@ interface SeedItem {
   isAvailable?: boolean;
   /** Relative weight used when generating fake item views. */
   popularity: number;
+  /** POS product code (Phase 9d); the demo venue maps every item so the mock register can close orders. */
+  posProductCode?: string;
 }
 interface SeedCategory {
   name: TranslatedText;
@@ -111,6 +115,8 @@ interface SeedRestaurant {
   modules?: Partial<RestaurantModules>;
   /** Online payment set-up (Phase 9c); the secret is encrypted at seed time. */
   paymentConfig?: { provider: PaymentProviderKey; merchantId: string; secret: string; tipPresets: number[]; receiptEmailEnabled: boolean };
+  /** POS integration (Phase 9d): mock register for the demo venue; table ids are mapped after the tables exist. */
+  posConfig?: { provider: PosProviderKey; baseUrl: string | null; apiKey: string; sendOrdersToPos: boolean; closeOnPayment: boolean; closeMode: PosCloseMode };
 }
 
 const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
@@ -238,6 +244,8 @@ const kafeterija: SeedRestaurant = {
   modules: { ordering: true, payments: true, pos: true },
   // Mock provider: scanning a payment QR opens the simulator page (PAYMENTS_MOCK=true), see docs/DEMO.md.
   paymentConfig: { provider: 'mock', merchantId: 'DEMO-KAFETERIJA', secret: 'demo-secret', tipPresets: [0, 5, 10, 15], receiptEmailEnabled: true },
+  // Mock register (POS_MOCK=true): accepted orders are "opened", paid ones "closed" with a fake fiscal receipt.
+  posConfig: { provider: 'mock', baseUrl: null, apiKey: 'demo-pos-key', sendOrdersToPos: true, closeOnPayment: true, closeMode: 'reuse-external-id' },
 };
 
 const smallMenu = (a: [string, string], b: [string, string], base: number): SeedCategory[] => [
@@ -616,6 +624,8 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
           tags: item.tags ?? [],
           isAvailable: item.isAvailable ?? true,
           sortOrder: itemIndex,
+          // Demo venue with a register: every item gets a code (K-<category><item>) so the mock POS can open/close orders.
+          posProductCode: item.posProductCode ?? (def.posConfig ? `K-${categoryIndex + 1}${String(itemIndex + 1).padStart(2, '0')}` : null),
         },
         { transaction },
       );
@@ -684,6 +694,24 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
   }
   for (let i = 0; i < views.length; i += 1000) {
     await ItemView.bulkCreate(views.slice(i, i + 1000), { transaction });
+  }
+  if (def.posConfig) {
+    await restaurant.update(
+      {
+        posConfig: {
+          provider: def.posConfig.provider,
+          baseUrl: def.posConfig.baseUrl,
+          apiKeyEncrypted: encryptSecret(def.posConfig.apiKey),
+          // Our table ids → the register's table names (here simply the table number).
+          tableMapping: Object.fromEntries(tables.map((table) => [table.id, String(table.number)])),
+          sendOrdersToPos: def.posConfig.sendOrdersToPos,
+          closeOnPayment: def.posConfig.closeOnPayment,
+          printOnClose: false,
+          closeMode: def.posConfig.closeMode,
+        },
+      },
+      { transaction },
+    );
   }
   if (def.orderDays) await seedOrders(restaurant, tables, orderableItems, def.orderDays, transaction);
   logger.info(

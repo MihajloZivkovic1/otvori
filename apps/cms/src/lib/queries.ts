@@ -11,6 +11,10 @@ import type {
   MenuItemDto,
   OrderDto,
   PaymentConfigDto,
+  PosConfigDto,
+  PosSyncPreviewDto,
+  PosSyncResultDto,
+  ApplyPosSyncInput,
   PaginatedDto,
   RestaurantDto,
   ServiceRequestDto,
@@ -23,6 +27,7 @@ import type {
   UpdateItemInput,
   UpdateOrderStatusInput,
   UpdatePaymentConfigInput,
+  UpdatePosConfigInput,
   UpdateRestaurantInput,
   UpdateTableInput,
 } from '@qr-menu/shared';
@@ -36,6 +41,7 @@ export const keys = {
   analytics: (rid: string, range: AnalyticsRange) => ['analytics', rid, range] as const,
   orders: (rid: string) => ['orders', rid] as const,
   paymentConfig: (rid: string) => ['paymentConfig', rid] as const,
+  posConfig: (rid: string) => ['posConfig', rid] as const,
   requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
   superadminRestaurants: (query: Partial<SuperadminListRestaurantsQuery>) => ['superadmin', 'restaurants', query] as const,
@@ -440,6 +446,52 @@ export function useUpdatePaymentConfig(rid: string) {
 export function useTestPaymentConnection(rid: string) {
   return useMutation({
     mutationFn: () => api<{ ok: boolean; message: string }>(`${base(rid)}/payment-config/test`, { method: 'POST', body: {} }),
+  });
+}
+
+/* ------------------------------------------------------------------ POS integration (Phase 9d) */
+
+export function usePosConfig(rid: string) {
+  return useQuery({ queryKey: keys.posConfig(rid), queryFn: () => api<PosConfigDto>(`${base(rid)}/pos-config`) });
+}
+
+export function useUpdatePosConfig(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdatePosConfigInput) => api<PosConfigDto>(`${base(rid)}/pos-config`, { method: 'PATCH', body: input }),
+    onSuccess: (config) => {
+      client.setQueryData(keys.posConfig(rid), config);
+      void client.invalidateQueries({ queryKey: keys.restaurant(rid) });
+    },
+  });
+}
+
+export function useTestPosConnection(rid: string) {
+  return useMutation({ mutationFn: () => api<{ ok: boolean; message: string }>(`${base(rid)}/pos-config/test`, { method: 'POST', body: {} }) });
+}
+
+export function usePosSyncPreview(rid: string) {
+  return useMutation({ mutationFn: () => api<PosSyncPreviewDto>(`${base(rid)}/pos/products`) });
+}
+
+export function useApplyPosSync(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ApplyPosSyncInput) => api<PosSyncResultDto>(`${base(rid)}/pos/sync`, { method: 'POST', body: input }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.items(rid) });
+      void client.invalidateQueries({ queryKey: keys.categories(rid) });
+    },
+  });
+}
+
+/** POST /orders/:id/fiscal/retry — re-queue a failed fiscalisation. */
+export function useRetryFiscal(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<OrderDto>(`${base(rid)}/orders/${id}/fiscal/retry`, { method: 'POST', body: {} }),
+    onSuccess: (order) => upsertOrder(client, rid, order),
+    onError: () => void client.invalidateQueries({ queryKey: keys.orders(rid) }),
   });
 }
 

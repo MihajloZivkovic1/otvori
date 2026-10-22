@@ -7,6 +7,7 @@ import { MenuItem } from './menu-item.model.js';
 import { Order } from './order.model.js';
 import { OrderItem } from './order-item.model.js';
 import { Payment } from './payment.model.js';
+import { PosJob } from './pos-job.model.js';
 import { Restaurant } from './restaurant.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
@@ -23,6 +24,7 @@ export {
   Order,
   OrderItem,
   Payment,
+  PosJob,
   Restaurant,
   RestaurantTable,
   ScanEvent,
@@ -45,4 +47,5 @@ export const allModels = [
   OrderItem,
   ServiceRequest,
   Payment,
+  PosJob,
 ];

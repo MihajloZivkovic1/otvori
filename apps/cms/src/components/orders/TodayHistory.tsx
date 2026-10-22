@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn';
 import { clock, formatPrice, plural } from '../../lib/format';
 import { Icon } from '../icons';
 import { Button } from '../ui/Button';
+import { FiscalChip } from './FiscalChip';
 import { PaymentChip } from './PaymentChip';
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -33,10 +34,12 @@ interface TodayHistoryProps {
   /** Payments module on: chips per row and "Cash" on delivered-but-unpaid orders. */
   payments?: boolean;
   onCash?: (order: OrderDto) => void;
+  pos?: boolean;
+  onRetryFiscal?: (order: OrderDto) => void;
 }
 
 /** Collapsed "Today" row with the day's totals; expands to the closed orders and a status breakdown. */
-export function TodayHistory({ orders, count, totalCents, currency, payments = false, onCash }: TodayHistoryProps) {
+export function TodayHistory({ orders, count, totalCents, currency, payments = false, onCash, pos = false, onRetryFiscal }: TodayHistoryProps) {
   const [open, setOpen] = useState(false);
   const tally = (status: OrderStatus) => orders.filter((order) => order.status === status).length;
   const breakdown = [
@@ -71,6 +74,7 @@ export function TodayHistory({ orders, count, totalCents, currency, payments = f
               <span className="text-muted">Table {order.tableNumber}</span>
               <span className={STATUS_TONE[order.status]}>{STATUS_LABEL[order.status]}</span>
               {payments && order.status === 'delivered' ? <PaymentChip order={order} currency={currency} className="h-5 text-[11px]" /> : null}
+              {pos && order.paymentStatus === 'paid' ? <FiscalChip order={order} onRetry={onRetryFiscal ? () => onRetryFiscal(order) : undefined} className="text-[11px]" /> : null}
               {payments && onCash && order.status === 'delivered' && order.paymentStatus !== 'paid' && order.paymentStatus !== 'cash' ? (
                 <Button size="sm" onClick={() => onCash(order)} aria-label={`Cash for #${order.number}`}>
                   Cash

@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { DEFAULT_MODULES, effectiveOrderingMode } from '@qr-menu/shared';
+import { DEFAULT_MODULES, effectiveOrderingMode, hasModule } from '@qr-menu/shared';
 import {
   isEffectivelyAvailable,
   pickLocale,
@@ -23,6 +23,12 @@ export async function loadPublishedRestaurant(slug: string): Promise<Restaurant>
     throw notFound('This menu is not published', 'MENU_NOT_PUBLISHED');
   }
   return restaurant;
+}
+
+/** With `sendOrdersToPos` on, only items the register knows (a POS code) can be ordered. */
+export function orderableOnPos(restaurant: Pick<Restaurant, 'modules' | 'posConfig'>, item: Pick<MenuItem, 'posProductCode'>): boolean {
+  if (!hasModule(restaurant, 'pos') || !restaurant.posConfig?.sendOrdersToPos) return true;
+  return Boolean(item.posProductCode);
 }
 
 export async function getPublicMenu(slug: string, requestedLocale?: string): Promise<PublicMenuDto> {
@@ -63,7 +69,7 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       thumbnailUrl: item.thumbnailUrl,
       allergens: item.allergens,
       tags: item.tags,
-      isAvailable: isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now),
+      isAvailable: isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now) && orderableOnPos(restaurant, item),
       variants: (item.variants ?? []).map((v) => ({ id: v.id, name: v.name, priceCents: v.priceCents })),
     });
     itemsByCategory.set(item.categoryId, list);

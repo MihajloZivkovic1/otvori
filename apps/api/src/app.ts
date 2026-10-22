@@ -11,6 +11,7 @@ import { authRouter } from './modules/auth/router.js';
 import { healthRouter } from './modules/health/router.js';
 import { paymentSimulatorRouter } from './modules/payments/simulator.js';
 import { paymentWebhookRouter } from './modules/payments/router.js';
+import { registerPosHooks } from './modules/pos/queue.js';
 import { publicRouter } from './modules/public/router.js';
 import { superadminRouter } from './modules/superadmin/router.js';
 import { logger } from './utils/logger.js';
@@ -36,6 +37,8 @@ export function stripTokenParam(url: string): string {
 }
 
 export function createApp(): express.Express {
+  // Accepted → open on the register, paid → close with a fiscal receipt (POS module, Phase 9d).
+  registerPosHooks();
   const app = express();
   app.disable('x-powered-by');
   if (env.TRUST_PROXY) app.set('trust proxy', 1);

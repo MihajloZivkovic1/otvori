@@ -7,6 +7,7 @@ import { startOrderExpiryJob } from './modules/ordering/expiry.js';
 import { closeAllStreams } from './modules/ordering/sse.js';
 import { startPaymentReconcileJob } from './modules/payments/reconcile.js';
 import { settleBackgroundWork } from './modules/payments/service.js';
+import { startPosQueue } from './modules/pos/queue.js';
 import { logger } from './utils/logger.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
@@ -32,6 +33,8 @@ async function main(): Promise<void> {
   const stopExpiryJob = startOrderExpiryJob();
   // Pending payments older than 2 minutes are checked against the provider (missed webhooks) and expired.
   const stopReconcileJob = startPaymentReconcileJob();
+  // Calls to the register (open on accept, close + fiscal receipt on payment) with retries.
+  const stopPosQueue = startPosQueue();
 
   let shuttingDown = false;
   const shutdown = (signal: string) => {
@@ -40,6 +43,7 @@ async function main(): Promise<void> {
     logger.info({ signal }, 'Shutting down: finishing in-flight requests');
     stopExpiryJob();
     stopReconcileJob();
+    stopPosQueue();
     // SSE streams never end on their own; close them so server.close() can finish (clients reconnect).
     closeAllStreams();
     // Webhook results still being applied finish before the pool closes.

@@ -18,6 +18,7 @@ import { slugify } from '../../utils/slug.js';
 import { deleteStoredUrl, storage } from '../../utils/storage.js';
 import { generateOpaqueToken } from '../../utils/tokens.js';
 import { toPaymentConfigDto } from '../payments/config.js';
+import { toPosConfigDto } from '../pos/config.js';
 
 const DAY_MS = 86_400_000;
 
@@ -44,6 +45,7 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     publicUrl: buildMenuUrl(r.slug),
     modules: { ...DEFAULT_MODULES, ...r.modules },
     paymentConfig: toPaymentConfigDto(r),
+    posConfig: toPosConfigDto(r),
     orderingMode: r.orderingMode,
     orderingPaused: r.orderingPaused,
     pausedMessage: r.pausedMessage,
