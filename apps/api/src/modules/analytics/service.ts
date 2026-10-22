@@ -25,6 +25,12 @@ interface TableRow {
   label: string;
   scans: number;
 }
+interface OrderingRow {
+  orders: number;
+  accepted: number;
+  revenue: string | number | null;
+  median_accept: string | number | null;
+}
 
 function select<T>(sql: string, replacements: Record<string, unknown>): Promise<T[]> {
   return sequelize.query(sql, { type: QueryTypes.SELECT, replacements }) as Promise<T[]>;
@@ -104,6 +110,32 @@ async function scansByTable(restaurantId: string, period: Period): Promise<Table
   return orphan > 0 ? [...tables, { table_id: null, number: null, label: 'No table', scans: orphan }] : tables;
 }
 
+/**
+ * Table ordering for one period. Guest-cancelled orders are left out everywhere; "accepted" means the order was
+ * accepted at some point (accepted or delivered); revenue is what guests ordered (accepted + delivered), not paid.
+ */
+async function orderingStats(restaurantId: string, period: Period) {
+  const rows = await select<OrderingRow>(
+    `SELECT COUNT(*) FILTER (WHERE status <> 'cancelled')::int AS orders,
+            COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted,
+            COALESCE(SUM(total_cents) FILTER (WHERE status IN ('accepted', 'delivered')), 0)::bigint AS revenue,
+            percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (accepted_at - created_at)))
+              FILTER (WHERE accepted_at IS NOT NULL) AS median_accept
+     FROM orders
+     WHERE restaurant_id = :restaurantId AND created_at >= :from AND created_at < :to`,
+    { restaurantId, from: period.from, to: period.to },
+  );
+  const row = rows[0];
+  const orders = row?.orders ?? 0;
+  const accepted = row?.accepted ?? 0;
+  return {
+    orders,
+    acceptedRate: orders > 0 ? Math.round((accepted / orders) * 1000) / 10 : 0,
+    medianAcceptSeconds: row?.median_accept == null ? null : Math.round(Number(row.median_accept)),
+    revenueCents: Number(row?.revenue ?? 0),
+  };
+}
+
 export function deltaPct(value: number, previous: number): number | null {
   if (previous === 0) return value === 0 ? 0 : null;
   return Math.round(((value - previous) / previous) * 1000) / 10;
@@ -121,7 +153,7 @@ export async function getAnalytics(restaurantId: string, range: AnalyticsRange, 
   const current: Period = { from: startOfDayInZone(now, timezone, -(days - 1)), to: now };
   const previous: Period = { from: startOfDayInZone(now, timezone, -(2 * days - 1)), to: current.from };
 
-  const [scans, prevScans, views, prevViews, perDay, top, byTable, prevByTable] = await Promise.all([
+  const [scans, prevScans, views, prevViews, perDay, top, byTable, prevByTable, ordering, prevOrdering] = await Promise.all([
     countScans(restaurantId, current),
     countScans(restaurantId, previous),
     countItemViews(restaurantId, current),
@@ -130,6 +162,8 @@ export async function getAnalytics(restaurantId: string, range: AnalyticsRange, 
     topItems(restaurantId, current, 10),
     scansByTable(restaurantId, current),
     scansByTable(restaurantId, previous),
+    orderingStats(restaurantId, current),
+    orderingStats(restaurantId, previous),
   ]);
   const prevTopViews = await viewsForItems(
     restaurantId,
@@ -173,5 +207,20 @@ export async function getAnalytics(restaurantId: string, range: AnalyticsRange, 
         deltaPct: deltaPct(row.scans, previousScans),
       };
     }),
+    ordering: {
+      orders: { value: ordering.orders, previous: prevOrdering.orders, deltaPct: deltaPct(ordering.orders, prevOrdering.orders) },
+      acceptedRate: {
+        value: ordering.acceptedRate,
+        previous: prevOrdering.acceptedRate,
+        deltaPct: deltaPct(ordering.acceptedRate, prevOrdering.acceptedRate),
+      },
+      medianAcceptSeconds: ordering.medianAcceptSeconds,
+      previousMedianAcceptSeconds: prevOrdering.medianAcceptSeconds,
+      orderedRevenueCents: {
+        value: ordering.revenueCents,
+        previous: prevOrdering.revenueCents,
+        deltaPct: deltaPct(ordering.revenueCents, prevOrdering.revenueCents),
+      },
+    },
   };
 }

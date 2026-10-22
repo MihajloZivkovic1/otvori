@@ -6,7 +6,7 @@ import { publicEventSchema, publicMenuQuerySchema, slugSchema } from './schemas.
 import * as service from './service.js';
 
 /** Slug from the route (/api/public/:slug/...) or from the Host subdomain (/api/public/...). */
-function slugOf(req: Request): string {
+export function slugOf(req: Request): string {
   const raw = req.params.slug ?? req.restaurantSlug;
   const parsed = slugSchema.safeParse(raw);
   if (!parsed.success) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');

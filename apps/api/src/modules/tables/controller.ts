@@ -24,6 +24,14 @@ export async function deleteTable(req: Request, res: Response): Promise<void> {
   res.status(204).end();
 }
 
+export async function blockTable(req: Request, res: Response): Promise<void> {
+  res.json(await service.blockTable(restaurantIdOf(req), uuidParam(req.params.id)));
+}
+
+export async function unblockTable(req: Request, res: Response): Promise<void> {
+  res.json(await service.unblockTable(restaurantIdOf(req), uuidParam(req.params.id)));
+}
+
 export async function reorderTables(req: Request, res: Response): Promise<void> {
   const { ids } = reorderSchema.parse(req.body);
   res.json(await service.reorderTables(restaurantIdOf(req), ids));

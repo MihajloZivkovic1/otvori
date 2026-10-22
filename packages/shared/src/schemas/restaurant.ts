@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LOCALES } from '../constants.js';
+import { LOCALES, ORDERING_LIMITS } from '../constants.js';
 import {
   hexColorSchema,
   localeSchema,
@@ -8,6 +8,7 @@ import {
   themeSchema,
   timezoneSchema,
 } from './common.js';
+import { orderingModeSchema } from './ordering.js';
 
 /** PATCH /admin/restaurants/:restaurantId — settings + branding (owner only). */
 export const updateRestaurantSchema = z
@@ -24,6 +25,10 @@ export const updateRestaurantSchema = z
     timezone: timezoneSchema,
     address: optionalTextSchema(200),
     city: optionalTextSchema(100),
+    /** Table ordering (Phase 6): off | call_waiter | order, plus the pause switch and its guest-facing message. */
+    orderingMode: orderingModeSchema,
+    orderingPaused: z.boolean(),
+    pausedMessage: optionalTextSchema(ORDERING_LIMITS.pausedMessageMax),
   })
   .partial()
   .refine(

@@ -12,3 +12,6 @@ tablesRouter.get('/:id/qr.png', controller.qrPng);
 tablesRouter.get('/:id/qr.svg', controller.qrSvg);
 tablesRouter.patch('/:id', controller.updateTable);
 tablesRouter.delete('/:id', requireOwner, controller.deleteTable);
+// "Block 30 min" (both roles): guests at the table get 423 on orders and calls until the block ends.
+tablesRouter.post('/:id/block', controller.blockTable);
+tablesRouter.delete('/:id/block', controller.unblockTable);

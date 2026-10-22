@@ -39,6 +39,9 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     trialEndsAt: toIso(r.trialEndsAt),
     publishedAt: toIso(r.publishedAt),
     publicUrl: buildMenuUrl(r.slug),
+    orderingMode: r.orderingMode,
+    orderingPaused: r.orderingPaused,
+    pausedMessage: r.pausedMessage,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };

@@ -124,6 +124,66 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   latest scan (one is created if missing). Table QR codes encode `PUBLIC_MENU_BASE_URL/t/<tableNumber>` (`utils/public-url.ts`;
   the menu app still accepts the older `?t=<tableNumber>`).
 
+## Table ordering (Phase 6)
+
+Guests send orders / call the waiter from the public menu; staff handle them on their phone in the CMS. No payment:
+orders are messages to staff, not transactions. API code lives in `apps/api/src/modules/ordering/` (`service.ts` domain,
+`controller.ts` guest + staff handlers, `router.ts` staff routers, `events.ts` in-process bus, `sse.ts` stream + token
+guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/router.ts`, table blocking in `modules/tables`.
+
+- **Restaurant flags** (`PATCH /admin/restaurants/:id`, owner only): `orderingMode` = `off` (default, view-only) |
+  `call_waiter` (call/bill buttons only) | `order` (guests order; calls included); `orderingPaused` + `pausedMessage`
+  (≤ 120 chars). Paused = the menu shows the banner and hides "+" / cart, `POST /orders` → 409 `ORDERING_PAUSED`;
+  calls keep working. Both flags are in `RestaurantDto` and in `PublicMenuDto.restaurant`.
+- **Entities**: `orders` (restaurant_id, table_id SET NULL + `table_number` snapshot, session_id, status, `number` =
+  daily sequential per restaurant in its time zone (assigned under `SELECT … FOR UPDATE` on the restaurant row, shown as
+  "#142"), guest_name ≤ 40, note ≤ 200, total_cents (always computed server-side; the client's total is ignored), locale,
+  rejected_reason, created/updated/accepted/delivered/closed_at), `order_items` (menu_item_id / variant_id SET NULL,
+  `name` JSONB snapshot in the guest locale + restaurant default locale, variant_name, unit_price_cents, quantity,
+  line_note ≤ 80, sort_order), `service_requests` (table_id CASCADE + table_number, type `call_waiter|bill`,
+  status `open|done`, done_at), `tables.blocked_until`. Indexes on (restaurant_id, status, created_at) and a partial
+  index on `new` orders for the expiry job. Orders never touch `restaurants.updated_at` (they are not menu content).
+- **Statuses** `ORDER_STATUSES` and the transition table `ORDER_TRANSITIONS` / `canTransitionOrder()` in
+  `packages/shared/src/ordering.ts`: `new → accepted | rejected | cancelled | expired`, `accepted → delivered | rejected`,
+  final states never change. Guests may only `cancel` while `new`; staff set `accepted | delivered | rejected`
+  (`STAFF_ORDER_STATUSES`; `rejectedReason` ≤ 200 only with `rejected`, the guest sees it); `expired` is set by
+  `expireStaleOrders()` (every minute via `startOrderExpiryJob()` in `index.ts`, plus lazily when a guest reads a stale
+  `new` order) after `ORDERING_LIMITS.expiryMinutes` = 20. Staff status changes are conditional updates on the status
+  that was read, so two waiters cannot both accept. Illegal moves → 409 `INVALID_TRANSITION`.
+- **Guest API** (`/api/public/:slug/…` and the host-based form; every route needs `X-Session-Id: <uuid>` = the menu
+  app's `sessionStorage['tabla.session']`, else 400 `SESSION_REQUIRED`): `POST /orders` `{ tableNumber, items:
+  [{ itemId, variantId?, quantity 1–20, note? }] (1–30 lines), note?, guestName?, locale? }` → 201 `PublicOrderDto`;
+  `GET /orders/:id` and `POST /orders/:id/cancel` only for the matching session (otherwise 404); `POST /requests`
+  `{ type, tableNumber }` → 201 (or 200 when the same type is already open for that table: its `updatedAt` is bumped,
+  one card per table and type). Validation at submit: the table must exist (404 `TABLE_NOT_FOUND`) and not be blocked
+  (423 `TABLE_BLOCKED`), items must belong to the restaurant, sit in a visible category and be effectively available
+  (409 `ITEM_UNAVAILABLE` with `details.itemIds`), a variant is required when the item has variants and must belong to
+  it (400), mode must allow it (403 `ORDERING_DISABLED`), max 3 open (`new`/`accepted`) orders per session (409
+  `TOO_MANY_OPEN_ORDERS`). Responses are `Cache-Control: no-store`.
+- **Staff API** (`/api/admin/restaurants/:id/…`, membership, both roles): `GET /orders?status=new,accepted&since=`
+  (no params = open orders ∪ today's, oldest first, `expiresAt` set while `new`), `GET /orders/:id`, `PATCH /orders/:id`
+  `{ status, rejectedReason? }`, `GET /requests?status=open` (no params = open ∪ today's), `PATCH /requests/:id`
+  `{ status: 'done' }` (idempotent), `POST /tables/:id/block` (30 min) / `DELETE /tables/:id/block`; `TableDto.blockedUntil`
+  is null once the block has passed. `GET /analytics` gained `ordering` (orders, accepted rate %, median seconds to
+  accept, ordered revenue = accepted + delivered; guest-cancelled orders are excluded everywhere).
+- **Real-time**: `POST /admin/restaurants/:id/sse-token` → `{ token, expiresIn: 300 }` (HS256 JWT `type: 'sse'`,
+  `rid` = restaurant), then `GET /admin/restaurants/:id/events?token=` (EventSource cannot send headers; the guard
+  re-checks the membership on connect and is mounted **before** the bearer-protected scoped router). Events:
+  `order.created`, `order.updated`, `request.created`, `request.updated` (payload = the staff DTO) and `ping` every
+  25 s; the stream sends `retry: 3000`, `Cache-Control: no-cache, no-transform` (Caddy's `encode` honours
+  `no-transform`, so the stream is never compressed/buffered; `deploy/Caddyfile*` also proxy `…/events` with
+  `flush_interval -1`), `X-Accel-Buffering: no`, and flushes headers immediately. Nothing in the API compresses
+  responses. Fan-out is the in-process `orderingBus` (one `EventEmitter`, channel per restaurant): **single API
+  instance only** — with several instances `publish()` would also go to Redis pub/sub and every instance would forward
+  what it receives to its own streams; the expiry job would run on one instance. Shutdown ends all streams first so
+  `server.close()` can finish; clients reconnect.
+- **Abuse controls** (`middleware/rate-limit.ts`, in-memory, skipped in tests): `POST /orders` 10 per session and 60 per
+  IP per 10 min, `POST /requests` 8 per session and 60 per IP per 10 min, plus the 3-open-orders cap and the staff
+  table block (423 "Ordering from this table is temporarily disabled. Please call the waiter."). All limits are in
+  `ORDERING_LIMITS` (shared).
+- Seed: Kafeterija Dorćol runs in `order` mode with a week of orders (mostly delivered, some rejected/expired/
+  cancelled), two `new` + one `accepted` right now and two open requests; Bistro Zemun is `call_waiter`.
+
 ## Uploads / storage
 
 - multer (memory) → sharp. Logo: 512×512 PNG (`fit: contain`, transparent). Item image: 800×800 WebP (`fit: cover`).

@@ -3,6 +3,8 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { sequelize } from './db/sequelize.js';
+import { startOrderExpiryJob } from './modules/ordering/expiry.js';
+import { closeAllStreams } from './modules/ordering/sse.js';
 import { logger } from './utils/logger.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
@@ -23,11 +25,17 @@ async function main(): Promise<void> {
   server.keepAliveTimeout = 65_000;
   server.headersTimeout = 66_000;
 
+  // Stale `new` orders expire after 20 minutes (in-process job; one instance only, see modules/ordering/expiry.ts).
+  const stopExpiryJob = startOrderExpiryJob();
+
   let shuttingDown = false;
   const shutdown = (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info({ signal }, 'Shutting down: finishing in-flight requests');
+    stopExpiryJob();
+    // SSE streams never end on their own; close them so server.close() can finish (clients reconnect).
+    closeAllStreams();
     server.close((error) => {
       if (error) logger.warn({ err: error }, 'HTTP server did not close cleanly');
       sequelize

@@ -17,6 +17,12 @@ import {
   translatedTextSchema,
   uuidSchema,
 } from './schemas/common.js';
+import {
+  orderStatusSchema,
+  orderingModeSchema,
+  serviceRequestStatusSchema,
+  serviceRequestTypeSchema,
+} from './schemas/ordering.js';
 
 const isoString = z.string();
 
@@ -96,6 +102,11 @@ export const restaurantDtoSchema = z.object({
   publishedAt: isoString.nullable(),
   /** Public menu URL for this restaurant (no table). */
   publicUrl: z.string(),
+  /** Table ordering: off (view-only), call_waiter (call/bill buttons) or order (guests send orders). */
+  orderingMode: orderingModeSchema,
+  /** When true the public menu hides "+"/cart and shows `pausedMessage`; calls still work. */
+  orderingPaused: z.boolean(),
+  pausedMessage: z.string().nullable(),
   createdAt: isoString,
   updatedAt: isoString,
 });
@@ -152,6 +163,8 @@ export const tableDtoSchema = z.object({
   menuUrl: z.string(),
   scansLast7Days: z.number().int(),
   lastScanAt: isoString.nullable(),
+  /** While set (and in the future) guests at this table get 423 TABLE_BLOCKED on orders and calls. */
+  blockedUntil: isoString.nullable(),
   createdAt: isoString,
 });
 export type TableDto = z.infer<typeof tableDtoSchema>;
@@ -192,6 +205,18 @@ export const analyticsDtoSchema = z.object({
       deltaPct: z.number().nullable(),
     }),
   ),
+  /** Table ordering for the same two periods (guest-cancelled orders are left out of every number). */
+  ordering: z.object({
+    /** Orders received. */
+    orders: analyticsMetricSchema,
+    /** Share of orders that were accepted (accepted or delivered), in percent. */
+    acceptedRate: analyticsMetricSchema,
+    /** Median seconds from "sent" to "accepted"; null when nothing was accepted. */
+    medianAcceptSeconds: z.number().nullable(),
+    previousMedianAcceptSeconds: z.number().nullable(),
+    /** Sum of accepted + delivered orders — guests pay the waiter, so this is "ordered", not "paid". */
+    orderedRevenueCents: analyticsMetricSchema,
+  }),
 });
 export type AnalyticsDto = z.infer<typeof analyticsDtoSchema>;
 
@@ -229,6 +254,9 @@ export const publicMenuDtoSchema = z.object({
     supportedLocales: z.array(z.string()),
     address: z.string().nullable(),
     city: z.string().nullable(),
+    orderingMode: orderingModeSchema,
+    orderingPaused: z.boolean(),
+    pausedMessage: z.string().nullable(),
   }),
   /** Locale the texts were resolved to. */
   locale: z.string(),
@@ -236,6 +264,121 @@ export const publicMenuDtoSchema = z.object({
   updatedAt: isoString,
 });
 export type PublicMenuDto = z.infer<typeof publicMenuDtoSchema>;
+
+/* ------------------------------------------------------------------ table ordering */
+
+export const orderItemDtoSchema = z.object({
+  id: uuidSchema,
+  /** Null once the menu item was deleted; the snapshot below still describes what was ordered. */
+  menuItemId: uuidSchema.nullable(),
+  variantId: uuidSchema.nullable(),
+  /** Name snapshot in the guest's locale and the restaurant default locale. */
+  name: translatedTextSchema,
+  variantName: z.string().nullable(),
+  unitPriceCents: z.number().int(),
+  quantity: z.number().int(),
+  lineTotalCents: z.number().int(),
+  lineNote: z.string().nullable(),
+});
+export type OrderItemDto = z.infer<typeof orderItemDtoSchema>;
+
+/** Staff view of an order (admin endpoints and SSE events). */
+export const orderDtoSchema = z.object({
+  id: uuidSchema,
+  restaurantId: uuidSchema,
+  /** Daily sequential number per restaurant, shown as "#142". */
+  number: z.number().int(),
+  status: orderStatusSchema,
+  tableId: uuidSchema.nullable(),
+  tableNumber: z.number().int(),
+  guestName: z.string().nullable(),
+  note: z.string().nullable(),
+  totalCents: z.number().int(),
+  locale: z.string(),
+  rejectedReason: z.string().nullable(),
+  items: z.array(orderItemDtoSchema),
+  createdAt: isoString,
+  updatedAt: isoString,
+  acceptedAt: isoString.nullable(),
+  deliveredAt: isoString.nullable(),
+  closedAt: isoString.nullable(),
+  /** While `new`: when the order expires unless somebody accepts it. */
+  expiresAt: isoString.nullable(),
+});
+export type OrderDto = z.infer<typeof orderDtoSchema>;
+
+export const publicOrderItemDtoSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  variantName: z.string().nullable(),
+  unitPriceCents: z.number().int(),
+  quantity: z.number().int(),
+  lineTotalCents: z.number().int(),
+  lineNote: z.string().nullable(),
+});
+export type PublicOrderItemDto = z.infer<typeof publicOrderItemDtoSchema>;
+
+/** Guest view of their own order (GET /api/public/:slug/orders/:id with the matching X-Session-Id). */
+export const publicOrderDtoSchema = z.object({
+  id: uuidSchema,
+  number: z.number().int(),
+  status: orderStatusSchema,
+  tableNumber: z.number().int(),
+  guestName: z.string().nullable(),
+  note: z.string().nullable(),
+  totalCents: z.number().int(),
+  currency: z.string(),
+  locale: z.string(),
+  rejectedReason: z.string().nullable(),
+  items: z.array(publicOrderItemDtoSchema),
+  createdAt: isoString,
+  acceptedAt: isoString.nullable(),
+  deliveredAt: isoString.nullable(),
+  closedAt: isoString.nullable(),
+  expiresAt: isoString.nullable(),
+});
+export type PublicOrderDto = z.infer<typeof publicOrderDtoSchema>;
+
+export const serviceRequestDtoSchema = z.object({
+  id: uuidSchema,
+  restaurantId: uuidSchema,
+  tableId: uuidSchema,
+  tableNumber: z.number().int(),
+  type: serviceRequestTypeSchema,
+  status: serviceRequestStatusSchema,
+  createdAt: isoString,
+  /** Bumped when the guest re-sends the same request while it is still open. */
+  updatedAt: isoString,
+  doneAt: isoString.nullable(),
+});
+export type ServiceRequestDto = z.infer<typeof serviceRequestDtoSchema>;
+
+export const publicServiceRequestDtoSchema = z.object({
+  id: uuidSchema,
+  type: serviceRequestTypeSchema,
+  status: serviceRequestStatusSchema,
+  createdAt: isoString,
+  updatedAt: isoString,
+});
+export type PublicServiceRequestDto = z.infer<typeof publicServiceRequestDtoSchema>;
+
+/** POST /admin/restaurants/:id/sse-token — short-lived token passed as ?token= to the EventSource URL. */
+export const sseTokenDtoSchema = z.object({
+  token: z.string(),
+  /** Seconds until the token expires. */
+  expiresIn: z.number().int(),
+});
+export type SseTokenDto = z.infer<typeof sseTokenDtoSchema>;
+
+/** Payload of every SSE message (`event:` carries the same `type`). */
+export const orderingEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('order.created'), order: orderDtoSchema }),
+  z.object({ type: z.literal('order.updated'), order: orderDtoSchema }),
+  z.object({ type: z.literal('request.created'), request: serviceRequestDtoSchema }),
+  z.object({ type: z.literal('request.updated'), request: serviceRequestDtoSchema }),
+  z.object({ type: z.literal('ping'), at: isoString }),
+]);
+export type OrderingEvent = z.infer<typeof orderingEventSchema>;
 
 export const superadminRestaurantDtoSchema = z.object({
   id: uuidSchema,

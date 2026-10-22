@@ -16,6 +16,14 @@
 
 # /api and locally stored uploads go to the API container (CORS is decided by the API's allowlist).
 (api_proxy) {
+	# Server-Sent Events for the waiter screen (GET …/events?token=): streamed, never buffered. Caddy already
+	# flushes text/event-stream responses immediately; flush_interval -1 makes that explicit. `encode` skips the
+	# stream because the API sends `Cache-Control: no-transform` (Caddy honours it), so nothing re-buffers it.
+	handle /api/admin/restaurants/*/events {
+		reverse_proxy api:3000 {
+			flush_interval -1
+		}
+	}
 	handle /api/* {
 		reverse_proxy api:3000
 	}
@@ -78,6 +86,11 @@ app.{$DOMAIN} {
 api.{$DOMAIN} {
 	import security
 	encode zstd gzip
+	# SSE stream (see api_proxy): explicit low-latency mode; `no-transform` from the API keeps `encode` away.
+	@sse path /api/admin/restaurants/*/events
+	reverse_proxy @sse api:3000 {
+		flush_interval -1
+	}
 	reverse_proxy api:3000
 }
 

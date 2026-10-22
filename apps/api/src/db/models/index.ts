@@ -4,12 +4,29 @@ import { ItemVariant } from './item-variant.model.js';
 import { ItemView } from './item-view.model.js';
 import { Membership } from './membership.model.js';
 import { MenuItem } from './menu-item.model.js';
+import { Order } from './order.model.js';
+import { OrderItem } from './order-item.model.js';
 import { Restaurant } from './restaurant.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
+import { ServiceRequest } from './service-request.model.js';
 import { User } from './user.model.js';
 
-export { AuthToken, Category, ItemVariant, ItemView, Membership, MenuItem, Restaurant, RestaurantTable, ScanEvent, User };
+export {
+  AuthToken,
+  Category,
+  ItemVariant,
+  ItemView,
+  Membership,
+  MenuItem,
+  Order,
+  OrderItem,
+  Restaurant,
+  RestaurantTable,
+  ScanEvent,
+  ServiceRequest,
+  User,
+};
 
 export const allModels = [
   Restaurant,
@@ -22,4 +39,7 @@ export const allModels = [
   RestaurantTable,
   ScanEvent,
   ItemView,
+  Order,
+  OrderItem,
+  ServiceRequest,
 ];

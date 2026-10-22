@@ -1,5 +1,5 @@
 import { literal, type FindAttributeOptions, type Order } from 'sequelize';
-import type { CreateTableInput, TableDto, UpdateTableInput } from '@qr-menu/shared';
+import { ORDERING_LIMITS, type CreateTableInput, type TableDto, type UpdateTableInput } from '@qr-menu/shared';
 import { Restaurant, RestaurantTable } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import { conflict, notFound } from '../../utils/errors.js';
@@ -27,8 +27,9 @@ const TABLE_ORDER: Order = [
   ['number', 'ASC'],
 ];
 
-function toTableDto(table: RestaurantTable, slug: string): TableDto {
+function toTableDto(table: RestaurantTable, slug: string, now = new Date()): TableDto {
   const lastScan = table.get('lastScanAt') as Date | string | null | undefined;
+  const blockedUntil = table.blockedUntil && table.blockedUntil.getTime() > now.getTime() ? table.blockedUntil : null;
   return {
     id: table.id,
     restaurantId: table.restaurantId,
@@ -38,6 +39,7 @@ function toTableDto(table: RestaurantTable, slug: string): TableDto {
     menuUrl: buildMenuUrl(slug, table.number),
     scansLast7Days: Number(table.get('scansLast7Days') ?? 0),
     lastScanAt: lastScan ? toIso(new Date(lastScan)) : null,
+    blockedUntil: toIso(blockedUntil),
     createdAt: table.createdAt.toISOString(),
   };
 }
@@ -62,7 +64,8 @@ export async function listTables(restaurantId: string): Promise<TableDto[]> {
     loadRestaurant(restaurantId),
     RestaurantTable.findAll({ where: { restaurantId }, attributes: TABLE_ATTRIBUTES, order: TABLE_ORDER }),
   ]);
-  return tables.map((table) => toTableDto(table, restaurant.slug));
+  const now = new Date();
+  return tables.map((table) => toTableDto(table, restaurant.slug, now));
 }
 
 export async function getTable(restaurantId: string, tableId: string): Promise<TableDto> {
@@ -121,6 +124,19 @@ export async function reorderTables(restaurantId: string, ids: string[]): Promis
     await touchRestaurant(restaurantId, transaction);
   });
   return listTables(restaurantId);
+}
+
+/** Abuse control for table ordering: orders and calls from this table get 423 TABLE_BLOCKED for 30 minutes. */
+export async function blockTable(restaurantId: string, tableId: string, now = new Date()): Promise<TableDto> {
+  const table = await loadTable(restaurantId, tableId);
+  await table.update({ blockedUntil: new Date(now.getTime() + ORDERING_LIMITS.tableBlockMinutes * 60_000) });
+  return getTable(restaurantId, tableId);
+}
+
+export async function unblockTable(restaurantId: string, tableId: string): Promise<TableDto> {
+  const table = await loadTable(restaurantId, tableId);
+  await table.update({ blockedUntil: null });
+  return getTable(restaurantId, tableId);
 }
 
 export async function tableQrPng(restaurantId: string, tableId: string): Promise<Buffer> {

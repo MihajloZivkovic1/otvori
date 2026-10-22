@@ -94,6 +94,9 @@ export const restaurant: RestaurantDto = {
   trialEndsAt: null,
   publishedAt: '2026-09-01T10:00:00.000Z',
   publicUrl: 'http://kafeterija.localhost:5174',
+  orderingMode: 'off',
+  orderingPaused: false,
+  pausedMessage: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-10-20T09:12:00.000Z',
 };
@@ -190,6 +193,7 @@ export const tables: TableDto[] = [
     menuUrl: 'http://kafeterija.localhost:5174/t/7',
     scansLast7Days: 63,
     lastScanAt: '2026-10-20T09:00:00.000Z',
+    blockedUntil: null,
     createdAt: stamps.createdAt,
   },
 ];
@@ -205,6 +209,13 @@ export const analytics: AnalyticsDto = {
   scansPerDay: ['14', '15', '16', '17', '18', '19', '20'].map((d, i) => ({ date: `2026-10-${d}`, scans: 10 + i * 3 })),
   topItems: [{ itemId: ids.espresso, name: { sr: 'Espresso' }, views: 41, previousViews: 30, deltaPct: 37 }],
   scansByTable: [{ tableId: ids.table7, number: 7, label: 'Table 7', scans: 63, previousScans: 50, deltaPct: 26 }],
+  ordering: {
+    orders: { value: 212, previous: 180, deltaPct: 17.8 },
+    acceptedRate: { value: 94, previous: 91, deltaPct: 3.3 },
+    medianAcceptSeconds: 100,
+    previousMedianAcceptSeconds: 120,
+    orderedRevenueCents: { value: 23845000, previous: 20100000, deltaPct: 18.6 },
+  },
 };
 
 export const superadminRows: SuperadminRestaurantDto[] = [

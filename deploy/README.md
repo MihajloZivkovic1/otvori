@@ -230,6 +230,15 @@ Container logs are capped at 3 × 10 MB per service. `docker image prune -f` run
 `docker system prune -f` keeps build leftovers away. Ubuntu's `unattended-upgrades` is on by default; reboot when
 `/var/run/reboot-required` appears (the stack has `restart: unless-stopped`).
 
+## Live orders (Server-Sent Events)
+
+The waiter screen keeps `GET /api/admin/restaurants/<id>/events?token=…` open. The Caddyfile proxies that path with
+`flush_interval -1` and the API answers with `Cache-Control: no-cache, no-transform`, which Caddy's `encode` honours, so
+the stream is never compressed or buffered. Events are fanned out in-process (one `EventEmitter` per API process) and
+the order-expiry job runs inside the API too: the stack is **one API container**. Scaling to several would need Redis
+pub/sub behind `modules/ordering/events.ts` and a single job runner. `docker compose logs api | grep -i expired` shows the
+job's work; an open stream shows up in Caddy's access log as a very long request.
+
 ## Laptop full-stack check
 
 ```bash

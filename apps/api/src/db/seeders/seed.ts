@@ -1,10 +1,18 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'sequelize';
-import { RESTAURANT_DEFAULTS, type Plan, type RestaurantStatus, type TranslatedText } from '@qr-menu/shared';
+import {
+  RESTAURANT_DEFAULTS,
+  type OrderStatus,
+  type OrderingMode,
+  type Plan,
+  type RestaurantStatus,
+  type ServiceRequestType,
+  type TranslatedText,
+} from '@qr-menu/shared';
 import { logger } from '../../utils/logger.js';
 import { hashPassword } from '../../utils/password.js';
-import { startOfDayInZone, zonedParts } from '../../utils/time.js';
+import { formatZonedDate, startOfDayInZone, zonedParts } from '../../utils/time.js';
 import { runMigrations } from '../migrate.js';
 import {
   Category,
@@ -12,18 +20,23 @@ import {
   ItemView,
   Membership,
   MenuItem,
+  Order,
+  OrderItem,
   Restaurant,
   RestaurantTable,
   ScanEvent,
+  ServiceRequest,
   User,
 } from '../models/index.js';
 import { sequelize } from '../sequelize.js';
 
 const DAY_MS = 86_400_000;
+const MINUTE_MS = 60_000;
 const TIMEZONE = 'Europe/Belgrade';
 const now = new Date();
 const daysAgo = (days: number) => new Date(now.getTime() - days * DAY_MS);
 const daysAhead = (days: number) => new Date(now.getTime() + days * DAY_MS);
+const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * MINUTE_MS);
 
 // Deterministic PRNG so re-seeding produces the same analytics.
 function mulberry32(seed: number): () => number {
@@ -84,6 +97,9 @@ interface SeedRestaurant {
   /** Number of past days to generate scan events for. */
   scanDays: number;
   dailyScans: [number, number];
+  /** Table ordering (Phase 6): off by default; `orderDays` adds a week of fake orders plus a few open ones. */
+  orderingMode?: OrderingMode;
+  orderDays?: number;
 }
 
 const SUPERADMIN = { email: 'admin@salveta.menu', password: 'admin1234', name: 'salveta admin' };
@@ -205,6 +221,8 @@ const kafeterija: SeedRestaurant = {
   ],
   scanDays: 30,
   dailyScans: [18, 55],
+  orderingMode: 'order',
+  orderDays: 7,
 };
 
 const smallMenu = (a: [string, string], b: [string, string], base: number): SeedCategory[] => [
@@ -242,6 +260,7 @@ const others: SeedRestaurant[] = [
     tables: fourTables,
     scanDays: 30,
     dailyScans: [6, 22],
+    orderingMode: 'call_waiter',
   },
   {
     slug: 'pekara-luna',
@@ -310,6 +329,202 @@ const HOUR_WEIGHTS = [3, 8, 10, 8, 6, 9, 9, 6, 4, 4, 4, 3, 2];
 const VIEW_COUNTS = [0, 1, 2, 3, 4, 5];
 const VIEW_WEIGHTS = [10, 25, 30, 20, 10, 5];
 
+/* ------------------------------------------------------------------ orders (Phase 6) */
+
+interface OrderableItem {
+  id: string;
+  name: TranslatedText;
+  priceCents: number;
+  variants: { id: string; name: string; priceCents: number }[];
+}
+interface SeedLine {
+  menuItemId: string;
+  variantId: string | null;
+  name: TranslatedText;
+  variantName: string | null;
+  unitPriceCents: number;
+  quantity: number;
+  lineNote: string | null;
+}
+interface SeedOrder {
+  createdAt: Date;
+  status: OrderStatus;
+  table: RestaurantTable;
+  lines: SeedLine[];
+  guestName?: string;
+  note?: string;
+  rejectedReason?: string;
+  acceptedAt?: Date;
+  deliveredAt?: Date;
+  closedAt?: Date;
+}
+
+const GUEST_NAMES = ['Marko', 'Jelena', 'Nikola', 'Ana', 'Stefan', 'Milica'];
+const ORDER_NOTES = ['Sve odjednom, molim.', 'Bez šećera u kafi.', 'Račun odvojeno, molim.'];
+const REJECT_REASONS = ['Nema na stanju', 'Kuhinja je zatvorena', 'Velika gužva, kasnije'];
+const ORDER_HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
+const ORDER_HOUR_WEIGHTS = [6, 9, 7, 8, 9, 7, 4, 2];
+
+function randomLines(items: OrderableItem[], guestLocale: string, defaultLocale: string): SeedLine[] {
+  const count = weightedPick([1, 2, 3], [45, 40, 15]);
+  const lines: SeedLine[] = [];
+  for (let i = 0; i < count; i++) {
+    const item = items[randInt(0, items.length - 1)]!;
+    const variant = item.variants.length ? item.variants[randInt(0, item.variants.length - 1)]! : null;
+    const name: TranslatedText = {};
+    for (const locale of [defaultLocale, guestLocale]) {
+      const value = item.name[locale as keyof TranslatedText] ?? item.name.sr ?? item.name.en;
+      if (value) name[locale as keyof TranslatedText] = value;
+    }
+    lines.push({
+      menuItemId: item.id,
+      variantId: variant?.id ?? null,
+      name,
+      variantName: variant?.name ?? null,
+      unitPriceCents: variant?.priceCents ?? item.priceCents,
+      quantity: weightedPick([1, 2, 3], [70, 25, 5]),
+      lineNote: rand() < 0.12 ? 'bez čilija' : null,
+    });
+  }
+  return lines;
+}
+
+/** A week of history (mostly delivered, a few rejected/expired/cancelled), then a few open orders and two open calls. */
+async function seedOrders(
+  restaurant: Restaurant,
+  tables: RestaurantTable[],
+  items: OrderableItem[],
+  days: number,
+  transaction: Transaction,
+): Promise<void> {
+  if (items.length === 0 || tables.length === 0) return;
+  const orders: SeedOrder[] = [];
+  for (let dayOffset = days - 1; dayOffset >= 0; dayOffset--) {
+    const dayStart = startOfDayInZone(now, TIMEZONE, -dayOffset);
+    const count = randInt(4, 8);
+    for (let i = 0; i < count; i++) {
+      const hour = weightedPick(ORDER_HOURS, ORDER_HOUR_WEIGHTS);
+      const createdAt = new Date(dayStart.getTime() + hour * 3600_000 + randInt(0, 3599) * 1000);
+      if (createdAt.getTime() > now.getTime() - 30 * MINUTE_MS) continue;
+      const guestLocale = rand() < 0.25 ? 'en' : restaurant.defaultLocale;
+      const order: SeedOrder = {
+        createdAt,
+        status: 'delivered',
+        table: weightedPick(tables, tables.map((_, index) => (index < 2 ? 3 : 2))),
+        lines: randomLines(items, guestLocale, restaurant.defaultLocale),
+        guestName: rand() < 0.4 ? GUEST_NAMES[randInt(0, GUEST_NAMES.length - 1)] : undefined,
+        note: rand() < 0.2 ? ORDER_NOTES[randInt(0, ORDER_NOTES.length - 1)] : undefined,
+      };
+      const roll = rand();
+      if (roll < 0.06) {
+        order.status = 'rejected';
+        order.rejectedReason = REJECT_REASONS[randInt(0, REJECT_REASONS.length - 1)];
+        order.closedAt = new Date(createdAt.getTime() + randInt(40, 240) * 1000);
+      } else if (roll < 0.1) {
+        order.status = 'expired';
+        order.closedAt = new Date(createdAt.getTime() + 20 * MINUTE_MS);
+      } else if (roll < 0.13) {
+        order.status = 'cancelled';
+        order.closedAt = new Date(createdAt.getTime() + randInt(20, 120) * 1000);
+      } else {
+        order.acceptedAt = new Date(createdAt.getTime() + randInt(25, 240) * 1000);
+        order.deliveredAt = new Date(order.acceptedAt.getTime() + randInt(4, 18) * MINUTE_MS);
+        order.closedAt = order.deliveredAt;
+      }
+      orders.push(order);
+    }
+  }
+  // Open right now: two waiting for a waiter, one being prepared (the seeded waiter screen is never empty).
+  const byNumber = (number: number) => tables.find((t) => t.number === number) ?? tables[0]!;
+  orders.push(
+    {
+      createdAt: minutesAgo(11),
+      status: 'accepted',
+      acceptedAt: minutesAgo(9),
+      table: byNumber(5),
+      guestName: 'Jelena',
+      lines: randomLines(items, restaurant.defaultLocale, restaurant.defaultLocale),
+    },
+    {
+      createdAt: minutesAgo(9),
+      status: 'new',
+      table: byNumber(2),
+      lines: randomLines(items, restaurant.defaultLocale, restaurant.defaultLocale),
+    },
+    {
+      createdAt: minutesAgo(2),
+      status: 'new',
+      table: byNumber(7),
+      guestName: 'Marko',
+      note: 'Sve odjednom, molim.',
+      lines: randomLines(items, restaurant.defaultLocale, restaurant.defaultLocale).map((line, index) =>
+        index === 0 ? { ...line, lineNote: 'bez čilija' } : line,
+      ),
+    },
+  );
+
+  // Daily sequential numbers in creation order.
+  orders.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  let day = '';
+  let number = 0;
+  const rows = orders.map((order) => {
+    const orderDay = formatZonedDate(order.createdAt, TIMEZONE);
+    if (orderDay !== day) {
+      day = orderDay;
+      number = 0;
+    }
+    number += 1;
+    const totalCents = order.lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
+    const lastChange = order.closedAt ?? order.acceptedAt ?? order.createdAt;
+    return {
+      id: randomUUID(),
+      restaurantId: restaurant.id,
+      tableId: order.table.id,
+      tableNumber: order.table.number,
+      sessionId: randomUUID(),
+      status: order.status,
+      number,
+      guestName: order.guestName ?? null,
+      note: order.note ?? null,
+      totalCents,
+      locale: order.lines[0]?.name.en && !order.lines[0]?.name.sr ? 'en' : restaurant.defaultLocale,
+      rejectedReason: order.rejectedReason ?? null,
+      acceptedAt: order.acceptedAt ?? null,
+      deliveredAt: order.deliveredAt ?? null,
+      closedAt: order.closedAt ?? null,
+      createdAt: order.createdAt,
+      updatedAt: lastChange,
+      lines: order.lines,
+    };
+  });
+  await Order.bulkCreate(
+    rows.map(({ lines: _lines, ...row }) => row),
+    { transaction },
+  );
+  await OrderItem.bulkCreate(
+    rows.flatMap((row) => row.lines.map((line, index) => ({ orderId: row.id, ...line, sortOrder: index }))),
+    { transaction },
+  );
+
+  const requests: { table: RestaurantTable; type: ServiceRequestType; createdAt: Date }[] = [
+    { table: byNumber(4), type: 'call_waiter', createdAt: minutesAgo(1) },
+    { table: byNumber(8), type: 'bill', createdAt: minutesAgo(3) },
+  ];
+  await ServiceRequest.bulkCreate(
+    requests.map((request) => ({
+      restaurantId: restaurant.id,
+      tableId: request.table.id,
+      tableNumber: request.table.number,
+      type: request.type,
+      status: 'open' as const,
+      createdAt: request.createdAt,
+      updatedAt: request.createdAt,
+    })),
+    { transaction },
+  );
+  logger.info({ slug: restaurant.slug, orders: rows.length, requests: requests.length }, 'Seeded orders');
+}
+
 async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Promise<void> {
   const owner = await User.create(
     { email: def.owner.email, name: def.owner.name, passwordHash: await hashPassword(def.owner.password) },
@@ -328,12 +543,14 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
       plan: def.plan,
       trialEndsAt: def.trialEndsAt ?? null,
       publishedAt: def.publishedAt ?? null,
+      orderingMode: def.orderingMode ?? RESTAURANT_DEFAULTS.orderingMode,
     },
     { transaction },
   );
   await Membership.create({ userId: owner.id, restaurantId: restaurant.id, role: 'owner' }, { transaction });
 
   const viewableItems: { id: string; popularity: number }[] = [];
+  const orderableItems: OrderableItem[] = [];
   for (const [categoryIndex, category] of def.categories.entries()) {
     const created = await Category.create(
       { restaurantId: restaurant.id, name: category.name, sortOrder: categoryIndex, isHidden: category.isHidden ?? false },
@@ -354,18 +571,29 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
         },
         { transaction },
       );
+      let variants: ItemVariant[] = [];
       if (item.variants?.length) {
-        await ItemVariant.bulkCreate(
+        variants = await ItemVariant.bulkCreate(
           item.variants.map((variant, index) => ({
             menuItemId: record.id,
             name: variant.name,
             priceCents: variant.priceCents,
             sortOrder: index,
           })),
-          { transaction },
+          { transaction, returning: true },
         );
       }
-      if (!category.isHidden) viewableItems.push({ id: record.id, popularity: item.popularity });
+      if (!category.isHidden) {
+        viewableItems.push({ id: record.id, popularity: item.popularity });
+        if (item.isAvailable !== false) {
+          orderableItems.push({
+            id: record.id,
+            name: item.name,
+            priceCents: item.priceCents,
+            variants: variants.map((v) => ({ id: v.id, name: v.name, priceCents: v.priceCents })),
+          });
+        }
+      }
     }
   }
 
@@ -409,6 +637,7 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
   for (let i = 0; i < views.length; i += 1000) {
     await ItemView.bulkCreate(views.slice(i, i + 1000), { transaction });
   }
+  if (def.orderDays) await seedOrders(restaurant, tables, orderableItems, def.orderDays, transaction);
   logger.info(
     { slug: def.slug, categories: def.categories.length, tables: tables.length, scans: scans.length, itemViews: views.length },
     `Seeded ${def.name}`,

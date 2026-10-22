@@ -21,6 +21,8 @@ declare global {
       membership?: MembershipContext;
       /** Restaurant slug resolved from the Host header subdomain (public routes). */
       restaurantSlug?: string;
+      /** Guest session id from the X-Session-Id header (public ordering routes, see requireSession). */
+      sessionId?: string;
     }
   }
 }

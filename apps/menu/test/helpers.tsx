@@ -62,6 +62,9 @@ export const menuSr: PublicMenuDto = {
     supportedLocales: ['sr', 'en'],
     address: 'Cara Dušana 12',
     city: 'Beograd',
+    orderingMode: 'off',
+    orderingPaused: false,
+    pausedMessage: null,
   },
   locale: 'sr',
   categories: [

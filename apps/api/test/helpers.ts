@@ -16,7 +16,7 @@ export const api = supertest(app);
 
 export async function resetDatabase(): Promise<void> {
   await sequelize.query(
-    'TRUNCATE TABLE item_views, scan_events, tables, item_variants, menu_items, categories, auth_tokens, memberships, users, restaurants CASCADE',
+    'TRUNCATE TABLE order_items, orders, service_requests, item_views, scan_events, tables, item_variants, menu_items, categories, auth_tokens, memberships, users, restaurants CASCADE',
   );
   outbox.length = 0;
 }

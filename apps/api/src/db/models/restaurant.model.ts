@@ -1,10 +1,12 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, Column, DataType, Default, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
 import {
+  ORDERING_MODES,
   PLANS,
   RESTAURANT_DEFAULTS,
   RESTAURANT_STATUSES,
   THEMES,
+  type OrderingMode,
   type Plan,
   type RestaurantStatus,
   type Theme,
@@ -12,8 +14,10 @@ import {
 import { Category } from './category.model.js';
 import { Membership } from './membership.model.js';
 import { MenuItem } from './menu-item.model.js';
+import { Order } from './order.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
+import { ServiceRequest } from './service-request.model.js';
 
 @Table({ tableName: 'restaurants', timestamps: true, underscored: true })
 export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreationAttributes<Restaurant>> {
@@ -99,6 +103,22 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Column(DataType.DATE)
   publishedAt!: CreationOptional<Date | null>;
 
+  /** Table ordering: off (default, view-only menu), call_waiter or order. */
+  @AllowNull(false)
+  @Default(RESTAURANT_DEFAULTS.orderingMode)
+  @Column(DataType.ENUM(...ORDERING_MODES))
+  orderingMode!: CreationOptional<OrderingMode>;
+
+  /** Paused: the menu shows `pausedMessage` and hides "+" and the cart; calls keep working. */
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  orderingPaused!: CreationOptional<boolean>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  pausedMessage!: CreationOptional<string | null>;
+
   createdAt!: CreationOptional<Date>;
   updatedAt!: CreationOptional<Date>;
 
@@ -116,4 +136,10 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
 
   @HasMany(() => ScanEvent)
   scanEvents?: NonAttribute<ScanEvent[]>;
+
+  @HasMany(() => Order)
+  orders?: NonAttribute<Order[]>;
+
+  @HasMany(() => ServiceRequest)
+  serviceRequests?: NonAttribute<ServiceRequest[]>;
 }

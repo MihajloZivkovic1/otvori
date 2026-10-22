@@ -40,6 +40,11 @@ export class RestaurantTable extends Model<InferAttributes<RestaurantTable>, Inf
   @Column(DataType.INTEGER)
   sortOrder!: CreationOptional<number>;
 
+  /** Staff "Block 30 min": while this is in the future, orders and calls from the table get 423 TABLE_BLOCKED. */
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  blockedUntil!: CreationOptional<Date | null>;
+
   createdAt!: CreationOptional<Date>;
 
   @BelongsTo(() => Restaurant)

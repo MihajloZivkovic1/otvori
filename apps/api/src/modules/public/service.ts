@@ -81,6 +81,9 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       supportedLocales: restaurant.supportedLocales,
       address: restaurant.address,
       city: restaurant.city,
+      orderingMode: restaurant.orderingMode,
+      orderingPaused: restaurant.orderingPaused,
+      pausedMessage: restaurant.pausedMessage,
     },
     locale,
     categories: categories
