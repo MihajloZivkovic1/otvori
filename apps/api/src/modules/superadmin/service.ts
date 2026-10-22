@@ -1,9 +1,10 @@
 import { Op, literal, type FindAttributeOptions } from 'sequelize';
-import type {
-  PaginatedDto,
-  SuperadminListRestaurantsQuery,
-  SuperadminRestaurantDto,
-  SuperadminUpdateRestaurantInput,
+import {
+  DEFAULT_MODULES,
+  type PaginatedDto,
+  type SuperadminListRestaurantsQuery,
+  type SuperadminRestaurantDto,
+  type SuperadminUpdateRestaurantInput,
 } from '@qr-menu/shared';
 import { Membership, Restaurant, User } from '../../db/models/index.js';
 import { notFound } from '../../utils/errors.js';
@@ -34,6 +35,7 @@ function toDto(restaurant: Restaurant, owner: Owner): SuperadminRestaurantDto {
     publishedAt: toIso(restaurant.publishedAt),
     tableCount: Number(restaurant.get('tableCount') ?? 0),
     itemCount: Number(restaurant.get('itemCount') ?? 0),
+    modules: { ...DEFAULT_MODULES, ...restaurant.modules },
     owner,
     createdAt: restaurant.createdAt.toISOString(),
     updatedAt: restaurant.updatedAt.toISOString(),
@@ -95,6 +97,7 @@ export async function updateRestaurant(
       status: input.status,
       plan: input.plan,
       trialEndsAt: input.trialEndsAt === undefined ? undefined : input.trialEndsAt ? new Date(input.trialEndsAt) : null,
+      modules: input.modules ? { ...DEFAULT_MODULES, ...restaurant.modules, ...input.modules } : undefined,
     }),
   );
   const owners = await ownersFor([restaurant.id]);

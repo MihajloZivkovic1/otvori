@@ -1,5 +1,5 @@
 import { QueryTypes } from 'sequelize';
-import { ANALYTICS_RANGE_DAYS, type AnalyticsDto, type AnalyticsRange, type TranslatedText } from '@qr-menu/shared';
+import { ANALYTICS_RANGE_DAYS, hasModule, type AnalyticsDto, type AnalyticsRange, type TranslatedText } from '@qr-menu/shared';
 import { Restaurant } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import { notFound } from '../../utils/errors.js';
@@ -144,7 +144,7 @@ export function deltaPct(value: number, previous: number): number | null {
 const round = (value: number, decimals: number) => Math.round(value * 10 ** decimals) / 10 ** decimals;
 
 export async function getAnalytics(restaurantId: string, range: AnalyticsRange, now = new Date()): Promise<AnalyticsDto> {
-  const restaurant = await Restaurant.findByPk(restaurantId, { attributes: ['id', 'timezone'] });
+  const restaurant = await Restaurant.findByPk(restaurantId, { attributes: ['id', 'timezone', 'modules'] });
   if (!restaurant) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
   const timezone = restaurant.timezone;
   const days = ANALYTICS_RANGE_DAYS[range];
@@ -207,7 +207,8 @@ export async function getAnalytics(restaurantId: string, range: AnalyticsRange, 
         deltaPct: deltaPct(row.scans, previousScans),
       };
     }),
-    ordering: {
+    // Null without the ordering module: the CMS shows the pre-Phase-6 analytics screen.
+    ordering: !hasModule(restaurant, 'ordering') ? null : {
       orders: { value: ordering.orders, previous: prevOrdering.orders, deltaPct: deltaPct(ordering.orders, prevOrdering.orders) },
       acceptedRate: {
         value: ordering.acceptedRate,

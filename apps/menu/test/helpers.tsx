@@ -62,6 +62,7 @@ export const menuSr: PublicMenuDto = {
     supportedLocales: ['sr', 'en'],
     address: 'Cara Dušana 12',
     city: 'Beograd',
+    modules: { ordering: false, payments: false, pos: false },
     orderingMode: 'off',
     orderingPaused: false,
     pausedMessage: null,
@@ -153,15 +154,17 @@ export const menuEn: PublicMenuDto = {
 /** The same menu with table ordering switched on (and a paused variant). */
 export const menuOrdering: PublicMenuDto = {
   ...menuSr,
-  restaurant: { ...menuSr.restaurant, orderingMode: 'order' },
+  restaurant: { ...menuSr.restaurant, modules: { ...menuSr.restaurant.modules, ordering: true }, orderingMode: 'order' },
 };
+const withOrdering = { ...menuSr.restaurant.modules, ordering: true };
+
 export const menuPaused: PublicMenuDto = {
   ...menuSr,
-  restaurant: { ...menuSr.restaurant, orderingMode: 'order', orderingPaused: true, pausedMessage: 'Kuhinja je zatvorena do 17:00.' },
+  restaurant: { ...menuSr.restaurant, modules: withOrdering, orderingMode: 'order', orderingPaused: true, pausedMessage: 'Kuhinja je zatvorena do 17:00.' },
 };
 export const menuCallsOnly: PublicMenuDto = {
   ...menuSr,
-  restaurant: { ...menuSr.restaurant, orderingMode: 'call_waiter' },
+  restaurant: { ...menuSr.restaurant, modules: withOrdering, orderingMode: 'call_waiter' },
 };
 
 export type FetchReply = { status?: number; body: unknown } | Error;

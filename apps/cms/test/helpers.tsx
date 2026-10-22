@@ -105,6 +105,7 @@ export const restaurant: RestaurantDto = {
   trialEndsAt: null,
   publishedAt: '2026-09-01T10:00:00.000Z',
   publicUrl: 'http://kafeterija.localhost:5174',
+  modules: { ordering: false, payments: false, pos: false },
   orderingMode: 'off',
   orderingPaused: false,
   pausedMessage: null,
@@ -233,7 +234,7 @@ export const analytics: AnalyticsDto = {
 };
 
 /** The same venue with table ordering switched on. */
-export const restaurantOrdering: RestaurantDto = { ...restaurant, orderingMode: 'order' };
+export const restaurantOrdering: RestaurantDto = { ...restaurant, modules: { ...restaurant.modules, ordering: true }, orderingMode: 'order' };
 
 const orderStamps = { createdAt: '2026-10-22T11:42:00.000Z', updatedAt: '2026-10-22T11:42:00.000Z' };
 export const orders: OrderDto[] = [
@@ -333,10 +334,12 @@ export const serviceRequests: ServiceRequestDto[] = [
   { id: ids.bill8, restaurantId: ids.restaurant, tableId: ids.table7, tableNumber: 8, type: 'bill', status: 'done', createdAt: '2026-10-22T11:20:00.000Z', updatedAt: '2026-10-22T11:25:00.000Z', doneAt: '2026-10-22T11:25:00.000Z' },
 ];
 
-/** Override that answers GET /restaurant with the given ordering mode (everything else falls through). */
+/** Override that answers GET /restaurant with the ordering module on and the given mode (everything else falls through). */
 export function orderingMode(mode: OrderingMode): FetchHandler {
   return ({ url, method }) =>
-    url.pathname === `/api/admin/restaurants/${ids.restaurant}` && method === 'GET' ? { body: { ...restaurant, orderingMode: mode } } : undefined;
+    url.pathname === `/api/admin/restaurants/${ids.restaurant}` && method === 'GET'
+      ? { body: { ...restaurant, modules: { ...restaurant.modules, ordering: true }, orderingMode: mode } }
+      : undefined;
 }
 
 /**
@@ -347,7 +350,7 @@ export function liveOrdering(mode: OrderingMode = 'order'): { handler: FetchHand
   const live = { orders: orders.map((o) => ({ ...o })), requests: serviceRequests.map((r) => ({ ...r })) };
   const base = `/api/admin/restaurants/${ids.restaurant}`;
   const handler: FetchHandler = ({ url, method }) => {
-    if (url.pathname === base && method === 'GET') return { body: { ...restaurant, orderingMode: mode } };
+    if (url.pathname === base && method === 'GET') return { body: { ...restaurant, modules: { ...restaurant.modules, ordering: true }, orderingMode: mode } };
     if (url.pathname === `${base}/orders` && method === 'GET') return { body: live.orders };
     if (url.pathname === `${base}/requests` && method === 'GET') return { body: live.requests };
     return undefined;
@@ -409,6 +412,7 @@ export const superadminRows: SuperadminRestaurantDto[] = [
     publishedAt: restaurant.publishedAt,
     tableCount: 1,
     itemCount: 3,
+    modules: { ordering: true, payments: false, pos: false },
     owner: { id: user.id, name: user.name, email: user.email },
     ...stamps,
   },

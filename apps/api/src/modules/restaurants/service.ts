@@ -1,5 +1,6 @@
 import type { Transaction } from 'sequelize';
 import {
+  DEFAULT_MODULES,
   RESTAURANT_DEFAULTS,
   type CreateRestaurantInput,
   type RestaurantDto,
@@ -40,6 +41,7 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     trialEndsAt: toIso(r.trialEndsAt),
     publishedAt: toIso(r.publishedAt),
     publicUrl: buildMenuUrl(r.slug),
+    modules: { ...DEFAULT_MODULES, ...r.modules },
     orderingMode: r.orderingMode,
     orderingPaused: r.orderingPaused,
     pausedMessage: r.pausedMessage,
@@ -118,7 +120,10 @@ export async function updateRestaurant(restaurantId: string, input: UpdateRestau
   if (!supportedLocales.includes(defaultLocale)) {
     throw badRequest('supportedLocales must include defaultLocale');
   }
-  await restaurant.update(definedOnly(input));
+  const { modules, ...rest } = input;
+  await restaurant.update(
+    definedOnly({ ...rest, modules: modules ? { ...DEFAULT_MODULES, ...restaurant.modules, ...modules } : undefined }),
+  );
   return toRestaurantDto(restaurant);
 }
 

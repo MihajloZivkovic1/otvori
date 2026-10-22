@@ -107,6 +107,7 @@ export const RESTAURANT_DEFAULTS = {
 /** Error codes returned in `{ error: { code } }`. */
 export const ERROR_CODES = [
   'VALIDATION_ERROR',
+  'MODULE_DISABLED',
   'UNAUTHORIZED',
   'INVALID_CREDENTIALS',
   'TOKEN_EXPIRED',

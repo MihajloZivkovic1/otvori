@@ -1,4 +1,5 @@
 import { Op, Transaction, type Order as SequelizeOrder, type WhereOptions } from 'sequelize';
+import { effectiveOrderingMode, hasModule } from '@qr-menu/shared';
 import {
   OPEN_ORDER_STATUSES,
   ORDERING_LIMITS,
@@ -31,6 +32,7 @@ import {
   ServiceRequest,
 } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
+import { moduleDisabled } from '../../middleware/modules.js';
 import { AppError, badRequest, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import { toIso } from '../../utils/objects.js';
@@ -46,8 +48,10 @@ const ORDER_SORT: SequelizeOrder = [
 
 /* ------------------------------------------------------------------ errors */
 
-const orderingDisabled = () =>
-  new AppError(403, 'ORDERING_DISABLED', 'Ordering is not enabled for this restaurant');
+const orderingDisabled = (restaurant: Restaurant) =>
+  hasModule(restaurant, 'ordering')
+    ? new AppError(403, 'ORDERING_DISABLED', 'Ordering is not enabled for this restaurant')
+    : moduleDisabled('ordering');
 const orderingPaused = (restaurant: Restaurant) =>
   new AppError(409, 'ORDERING_PAUSED', restaurant.pausedMessage ?? 'Ordering is paused right now', {
     pausedMessage: restaurant.pausedMessage,
@@ -297,7 +301,7 @@ async function nextOrderNumber(restaurant: Restaurant, now: Date, transaction: T
 
 export async function createOrder(slug: string, sessionId: string, input: CreateOrderInput): Promise<PublicOrderDto> {
   const restaurant = await loadPublishedRestaurant(slug);
-  if (restaurant.orderingMode !== 'order') throw orderingDisabled();
+  if (effectiveOrderingMode(restaurant) !== 'order') throw orderingDisabled(restaurant);
   if (restaurant.orderingPaused) throw orderingPaused(restaurant);
   const now = new Date();
   const table = await loadOrderingTable(restaurant.id, input.tableNumber, now);
@@ -391,7 +395,7 @@ export async function createServiceRequest(
   input: CreateServiceRequestInput,
 ): Promise<{ request: PublicServiceRequestDto; created: boolean }> {
   const restaurant = await loadPublishedRestaurant(slug);
-  if (restaurant.orderingMode === 'off') throw orderingDisabled();
+  if (effectiveOrderingMode(restaurant) === 'off') throw orderingDisabled(restaurant);
   const now = new Date();
   const table = await loadOrderingTable(restaurant.id, input.tableNumber, now);
 

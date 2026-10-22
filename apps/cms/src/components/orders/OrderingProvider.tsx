@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { isOpenOrderStatus, type OrderDto, type OrderingEvent, type RestaurantDto, type ServiceRequestDto } from '@qr-menu/shared';
+import { effectiveOrderingMode, isOpenOrderStatus, type OrderDto, type OrderingEvent, type RestaurantDto, type ServiceRequestDto } from '@qr-menu/shared';
 import { apiUrl } from '../../lib/api';
 import { text } from '../../lib/format';
 import { notifyInBackground, playAlertSound, vibrate } from '../../lib/notify';
@@ -19,7 +19,7 @@ export interface OrderingCounts {
 }
 
 export interface OrderingContextValue {
-  /** False while the venue's orderingMode is `off` (nothing is fetched, no stream). */
+  /** False while the ordering module is off or the venue's orderingMode is `off` (nothing is fetched, no stream). */
   enabled: boolean;
   orders: OrderDto[];
   requests: ServiceRequestDto[];
@@ -61,7 +61,8 @@ const PING_TIMEOUT_MS = 60_000;
 const MAX_BACKOFF_MS = 30_000;
 
 export function OrderingProvider({ restaurant, children }: { restaurant: RestaurantDto; children: ReactNode }) {
-  if (restaurant.orderingMode === 'off') return <OrderingContext.Provider value={DISABLED}>{children}</OrderingContext.Provider>;
+  // Without the ordering module (or with the mode off) the whole ordering UI is absent: nav item, badge, cards, actions.
+  if (effectiveOrderingMode(restaurant) === 'off') return <OrderingContext.Provider value={DISABLED}>{children}</OrderingContext.Provider>;
   return <LiveOrdering restaurant={restaurant}>{children}</LiveOrdering>;
 }
 

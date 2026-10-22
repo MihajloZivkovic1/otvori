@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { restaurantModulesSchema } from '../modules.js';
 import { isoDateTimeSchema, paginationQuerySchema, planSchema, restaurantStatusSchema } from './common.js';
 
 export const superadminListRestaurantsQuerySchema = paginationQuerySchema.extend({
@@ -13,6 +14,8 @@ export const superadminUpdateRestaurantSchema = z
     status: restaurantStatusSchema,
     plan: planSchema,
     trialEndsAt: isoDateTimeSchema.nullable(),
+    /** Any module; partial = only the keys sent change. */
+    modules: restaurantModulesSchema.partial(),
   })
   .partial();
 export type SuperadminUpdateRestaurantInput = z.infer<typeof superadminUpdateRestaurantSchema>;

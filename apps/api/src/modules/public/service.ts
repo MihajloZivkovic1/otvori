@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { DEFAULT_MODULES, effectiveOrderingMode } from '@qr-menu/shared';
 import {
   isEffectivelyAvailable,
   pickLocale,
@@ -82,7 +83,8 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       supportedLocales: restaurant.supportedLocales,
       address: restaurant.address,
       city: restaurant.city,
-      orderingMode: restaurant.orderingMode,
+      modules: { ...DEFAULT_MODULES, ...restaurant.modules },
+      orderingMode: effectiveOrderingMode(restaurant),
       orderingPaused: restaurant.orderingPaused,
       pausedMessage: restaurant.pausedMessage,
     },

@@ -1,8 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
-import { LOCALES, updateRestaurantSchema, type RestaurantDto, type UpdateRestaurantInput } from '@qr-menu/shared';
+import {
+  LOCALES,
+  MODULES,
+  updateRestaurantSchema,
+  type ModuleKey,
+  type RestaurantDto,
+  type RestaurantModules,
+  type UpdateRestaurantInput,
+} from '@qr-menu/shared';
 import { DeleteVenueModal } from '../components/settings/DeleteVenueModal';
 import { OrderingCard } from '../components/settings/OrderingCard';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
@@ -30,8 +39,34 @@ function defaultsOf(restaurant: RestaurantDto): SettingsInput {
   };
 }
 
+const MODULE_LABELS: Record<ModuleKey, string> = { ordering: 'Ordering', payments: 'Online payment', pos: 'POS integration' };
+
+/** Settings → "Modules" entry: which modules are on, and the link to the page where they are switched. */
+function ModulesCard({ restaurantId, modules, isMobile }: { restaurantId: string; modules: RestaurantModules; isMobile: boolean }) {
+  const on = MODULES.filter((key) => modules[key]).map((key) => MODULE_LABELS[key]);
+  return (
+    <section
+      aria-labelledby="modules-title"
+      className={cn('flex items-center justify-between gap-4 bg-surface p-5', isMobile ? 'border-y border-line' : 'rounded-[10px] border border-line')}
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id="modules-title" className="text-base font-semibold">
+          Modules
+        </h2>
+        <p className="text-[13px] text-muted text-pretty">
+          {on.length === 0 ? 'Plain QR menu — no ordering, payment or POS. ' : `On: ${on.join(', ')}. `}
+          Switch on only what the venue uses.
+        </p>
+      </div>
+      <Link to={`/r/${restaurantId}/settings/modules`} className="shrink-0 text-sm font-medium text-accent no-underline">
+        Manage
+      </Link>
+    </section>
+  );
+}
+
 export function SettingsPage() {
-  const { restaurant, isOwner, isMobile } = useRestaurantContext();
+  const { restaurant, isOwner, isMobile, hasModule } = useRestaurantContext();
   const { refreshMe } = useAuth();
   const toast = useToast();
   const update = useUpdateRestaurant(restaurant.id);
@@ -137,7 +172,9 @@ export function SettingsPage() {
         </div>
       </section>
 
-      {isOwner ? <OrderingCard /> : null}
+      <ModulesCard restaurantId={restaurant.id} modules={restaurant.modules} isMobile={isMobile} />
+
+      {isOwner && hasModule('ordering') ? <OrderingCard /> : null}
 
       {isOwner ? (
         <div className={cn('flex items-center justify-between gap-4 rounded-[10px] border border-danger-line bg-surface p-5', isMobile && 'mx-4')}>

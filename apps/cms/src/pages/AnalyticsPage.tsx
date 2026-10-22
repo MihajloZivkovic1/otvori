@@ -24,7 +24,7 @@ function isRange(value: string | null): value is AnalyticsRange {
 }
 
 export function AnalyticsPage() {
-  const { restaurant, isMobile } = useRestaurantContext();
+  const { restaurant, isMobile, hasModule } = useRestaurantContext();
   const [params, setParams] = useSearchParams();
   const range: AnalyticsRange = isRange(params.get('range')) ? (params.get('range') as AnalyticsRange) : '7d';
   const query = useAnalytics(restaurant.id, range);
@@ -59,7 +59,9 @@ export function AnalyticsPage() {
             defaultLocale={restaurant.defaultLocale}
             currency={restaurant.currency}
             rangeDays={ANALYTICS_RANGE_DAYS[range]}
-            showOrdering={restaurant.orderingMode !== 'off' || query.data.ordering.orders.value > 0}
+            showOrdering={
+              query.data.ordering !== null && hasModule('ordering') && (restaurant.orderingMode !== 'off' || query.data.ordering.orders.value > 0)
+            }
           />
         )}
       </div>
@@ -159,6 +161,7 @@ function Report({ data, defaultLocale, currency, rangeDays, showOrdering }: Repo
 /** Orders, accepted rate, median time to accept, ordered revenue (design B8). */
 function OrderingStats({ data, currency, days }: { data: AnalyticsDto; currency: string; days: number }) {
   const { ordering } = data;
+  if (!ordering) return null;
   const stats = [
     { value: count.format(ordering.orders.value), label: ordering.orders.value === 1 ? 'order' : 'orders', delta: percent(ordering.orders.deltaPct) },
     { value: `${Math.round(ordering.acceptedRate.value)}%`, label: 'accepted', delta: percent(ordering.acceptedRate.deltaPct) },

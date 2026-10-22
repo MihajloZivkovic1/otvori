@@ -28,7 +28,7 @@ async function setupOrdering(mode: 'order' | 'call_waiter' | 'off' = 'order') {
   const seasonal = await createItem(owner, { categoryId: hidden.id, name: { sr: 'Bundeva' }, priceCents: 300 });
   const tableRes = await api.post(`${admin}/tables`).set(bearer(owner.accessToken)).send({ number: 7, label: 'Bašta 1' });
   const table = tableRes.body as TableDto;
-  await api.patch(admin).set(bearer(owner.accessToken)).send({ orderingMode: mode });
+  await api.patch(admin).set(bearer(owner.accessToken)).send({ orderingMode: mode, modules: { ordering: true } });
   await publish(owner);
   const double = espresso.variants.find((v) => v.name === 'Double')!;
   return { owner, slug, admin, espresso, double, cortado, gone, seasonal, table };

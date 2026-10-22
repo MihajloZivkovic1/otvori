@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
-import type { PublicMenuCategoryDto, PublicMenuItemDto, ServiceRequestType } from '@qr-menu/shared';
+import { effectiveOrderingMode, type PublicMenuCategoryDto, type PublicMenuItemDto, type ServiceRequestType } from '@qr-menu/shared';
 import { CartBar } from '../components/CartBar';
 import type { CartSubmission, SubmitResult } from '../components/CartSheet';
 import { CategoryBar } from '../components/CategoryBar';
@@ -91,7 +91,8 @@ export function MenuPage() {
 
   /* ------------------------------------------------------------------ ordering */
 
-  const orderingMode = restaurant?.orderingMode ?? 'off';
+  // The API already sends the effective mode; re-derived here so a payload without the module can never show ordering UI.
+  const orderingMode = restaurant ? effectiveOrderingMode(restaurant) : 'off';
   const paused = Boolean(restaurant?.orderingPaused);
   const canOrder = orderingMode === 'order' && !paused;
   const callsEnabled = orderingMode !== 'off';

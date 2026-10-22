@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { PLANS, RESTAURANT_STATUSES, superadminUpdateRestaurantSchema, type Plan, type RestaurantStatus, type SuperadminRestaurantDto } from '@qr-menu/shared';
+import {
+  MODULES,
+  PLANS,
+  RESTAURANT_STATUSES,
+  superadminUpdateRestaurantSchema,
+  type ModuleKey,
+  type Plan,
+  type RestaurantModules,
+  type RestaurantStatus,
+  type SuperadminRestaurantDto,
+} from '@qr-menu/shared';
 import { errorMessage } from '../../lib/api';
 import { useSuperadminUpdateRestaurant } from '../../lib/queries';
 import { Button } from '../ui/Button';
 import { Drawer } from '../ui/Drawer';
 import { Field, Input, Select } from '../ui/Field';
+import { Switch } from '../ui/Switch';
 import { useToast } from '../ui/Toast';
 
 function toLocalInput(iso: string | null): string {
@@ -14,13 +25,20 @@ function toLocalInput(iso: string | null): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** Superadmin support drawer: status, plan and trial end for one venue. */
+const MODULE_COPY: Record<ModuleKey, { label: string; hint: string }> = {
+  ordering: { label: 'Ordering', hint: 'Owners can switch this one themselves.' },
+  payments: { label: 'Online payment', hint: 'Needs the venue’s bank e-commerce contract (OTP / Monri).' },
+  pos: { label: 'POS integration', hint: 'Needs Octopos API access.' },
+};
+
+/** Superadmin support drawer: status, plan, trial end and the feature modules of one venue. */
 export function RestaurantDrawer({ restaurant, onClose }: { restaurant: SuperadminRestaurantDto; onClose: () => void }) {
   const toast = useToast();
   const update = useSuperadminUpdateRestaurant();
   const [status, setStatus] = useState<RestaurantStatus>(restaurant.status);
   const [plan, setPlan] = useState<Plan>(restaurant.plan);
   const [trialEndsAt, setTrialEndsAt] = useState(toLocalInput(restaurant.trialEndsAt));
+  const [modules, setModules] = useState<RestaurantModules>(restaurant.modules);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
@@ -28,6 +46,7 @@ export function RestaurantDrawer({ restaurant, onClose }: { restaurant: Superadm
       status,
       plan,
       trialEndsAt: trialEndsAt ? new Date(trialEndsAt).toISOString() : null,
+      modules,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Invalid values');
@@ -91,6 +110,18 @@ export function RestaurantDrawer({ restaurant, onClose }: { restaurant: Superadm
         <Field label="Trial ends at" htmlFor="sa-trial" hint="Leave empty for no trial end." error={error ?? undefined}>
           <Input id="sa-trial" type="datetime-local" value={trialEndsAt} onChange={(event) => setTrialEndsAt(event.target.value)} />
         </Field>
+        <fieldset className="flex flex-col gap-3 border-0 p-0">
+          <legend className="mb-1 text-[13px] font-medium">Modules</legend>
+          {MODULES.map((key) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <div className="flex flex-col">
+                <span className="text-sm">{MODULE_COPY[key].label}</span>
+                <span className="text-xs text-muted">{MODULE_COPY[key].hint}</span>
+              </div>
+              <Switch label={MODULE_COPY[key].label} checked={modules[key]} onChange={(checked) => setModules({ ...modules, [key]: checked })} />
+            </div>
+          ))}
+        </fieldset>
       </div>
     </Drawer>
   );

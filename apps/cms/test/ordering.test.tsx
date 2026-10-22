@@ -130,7 +130,7 @@ describe('waiter screen (mobile)', () => {
 
 describe('settings → Ordering card', () => {
   it('lets the owner pick a mode, pause with a message and save', async () => {
-    const spy = mockApi({ session: sessionFor(user) });
+    const spy = mockApi({ session: sessionFor(user) }, orderingMode('off'));
     renderApp(`/r/${ids.restaurant}/settings`);
     const typist = userEvent.setup();
     const card = await screen.findByRole('region', { name: 'Ordering' });
@@ -152,7 +152,7 @@ describe('settings → Ordering card', () => {
   it('is hidden from staff', async () => {
     const session = sessionFor(user);
     session.memberships = [{ ...session.memberships[0]!, role: 'staff' }];
-    mockApi({ session });
+    mockApi({ session }, orderingMode('off'));
     renderApp(`/r/${ids.restaurant}/settings`);
     await screen.findByRole('heading', { name: 'Settings' });
     expect(screen.queryByRole('region', { name: 'Ordering' })).toBeNull();

@@ -23,6 +23,7 @@ import {
   serviceRequestStatusSchema,
   serviceRequestTypeSchema,
 } from './schemas/ordering.js';
+import { restaurantModulesSchema } from './modules.js';
 
 const isoString = z.string();
 
@@ -102,6 +103,8 @@ export const restaurantDtoSchema = z.object({
   publishedAt: isoString.nullable(),
   /** Public menu URL for this restaurant (no table). */
   publicUrl: z.string(),
+  /** Feature modules (Phase 9b). `orderingMode` below is the setting; it only takes effect while `modules.ordering`. */
+  modules: restaurantModulesSchema,
   /** Table ordering: off (view-only), call_waiter (call/bill buttons) or order (guests send orders). */
   orderingMode: orderingModeSchema,
   /** When true the public menu hides "+"/cart and shows `pausedMessage`; calls still work. */
@@ -207,7 +210,8 @@ export const analyticsDtoSchema = z.object({
       deltaPct: z.number().nullable(),
     }),
   ),
-  /** Table ordering for the same two periods (guest-cancelled orders are left out of every number). */
+  /** Table ordering for the same two periods (guest-cancelled orders are left out of every number); null while the
+   *  ordering module is off. */
   ordering: z.object({
     /** Orders received. */
     orders: analyticsMetricSchema,
@@ -218,7 +222,7 @@ export const analyticsDtoSchema = z.object({
     previousMedianAcceptSeconds: z.number().nullable(),
     /** Sum of accepted + delivered orders — guests pay the waiter, so this is "ordered", not "paid". */
     orderedRevenueCents: analyticsMetricSchema,
-  }),
+  }).nullable(),
 });
 export type AnalyticsDto = z.infer<typeof analyticsDtoSchema>;
 
@@ -257,6 +261,9 @@ export const publicMenuDtoSchema = z.object({
     supportedLocales: z.array(z.string()),
     address: z.string().nullable(),
     city: z.string().nullable(),
+    /** Which modules the venue has; the guest app gates its features on these too. */
+    modules: restaurantModulesSchema,
+    /** Effective mode: already `off` while `modules.ordering` is false. */
     orderingMode: orderingModeSchema,
     orderingPaused: z.boolean(),
     pausedMessage: z.string().nullable(),
@@ -399,6 +406,7 @@ export const superadminRestaurantDtoSchema = z.object({
   publishedAt: isoString.nullable(),
   tableCount: z.number().int(),
   itemCount: z.number().int(),
+  modules: restaurantModulesSchema,
   owner: z.object({ id: uuidSchema, name: z.string(), email: z.string() }).nullable(),
   createdAt: isoString,
   updatedAt: isoString,

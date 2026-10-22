@@ -1,6 +1,7 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, Column, DataType, Default, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
 import {
+  DEFAULT_MODULES,
   ORDERING_MODES,
   PLANS,
   RESTAURANT_DEFAULTS,
@@ -8,6 +9,7 @@ import {
   THEMES,
   type OrderingMode,
   type Plan,
+  type RestaurantModules,
   type RestaurantStatus,
   type Theme,
 } from '@qr-menu/shared';
@@ -103,7 +105,13 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Column(DataType.DATE)
   publishedAt!: CreationOptional<Date | null>;
 
-  /** Table ordering: off (default, view-only menu), call_waiter or order. */
+  /** Feature modules (Phase 9b): { ordering, payments, pos }; all off = plain QR menu. */
+  @AllowNull(false)
+  @Default(() => ({ ...DEFAULT_MODULES }))
+  @Column(DataType.JSONB)
+  modules!: CreationOptional<RestaurantModules>;
+
+  /** Table ordering: off (default, view-only menu), call_waiter or order. Only effective while modules.ordering. */
   @AllowNull(false)
   @Default(RESTAURANT_DEFAULTS.orderingMode)
   @Column(DataType.ENUM(...ORDERING_MODES))

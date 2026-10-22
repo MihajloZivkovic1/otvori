@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requireMembership } from '../middleware/membership.js';
+import { requireModule } from '../middleware/modules.js';
 import { analyticsRouter } from './analytics/router.js';
 import { categoriesRouter } from './categories/router.js';
 import { itemsRouter } from './items/router.js';
@@ -19,16 +20,17 @@ adminRouter.post('/restaurants', requireAuth, restaurantsController.createRestau
 
 // Server-Sent Events for the waiter screen. EventSource cannot send a bearer header, so this route authenticates
 // with the short-lived token from POST /sse-token (which does go through requireAuth + requireMembership).
-adminRouter.get('/restaurants/:restaurantId/events', requireSseToken, streamEvents);
+adminRouter.get('/restaurants/:restaurantId/events', requireSseToken, requireModule('ordering'), streamEvents);
 
 const scoped = Router({ mergeParams: true });
 scoped.use('/categories', categoriesRouter);
 scoped.use('/items', itemsRouter);
 scoped.use('/tables', tablesRouter);
 scoped.use('/analytics', analyticsRouter);
-scoped.use('/orders', ordersRouter);
-scoped.use('/requests', requestsRouter);
-scoped.post('/sse-token', orderingController.sseToken);
+// Ordering module (Phase 9b): 403 MODULE_DISABLED for venues without it, whatever the UI shows.
+scoped.use('/orders', requireModule('ordering'), ordersRouter);
+scoped.use('/requests', requireModule('ordering'), requestsRouter);
+scoped.post('/sse-token', requireModule('ordering'), orderingController.sseToken);
 scoped.use('/', restaurantsRouter);
 
 adminRouter.use('/restaurants/:restaurantId', requireAuth, requireMembership(), scoped);

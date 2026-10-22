@@ -29,6 +29,8 @@ export const updateRestaurantSchema = z
     orderingMode: orderingModeSchema,
     orderingPaused: z.boolean(),
     pausedMessage: optionalTextSchema(ORDERING_LIMITS.pausedMessageMax),
+    /** Owners may only switch `ordering`; `payments` / `pos` need a contract and go through /api/superadmin (strict → 400). */
+    modules: z.object({ ordering: z.boolean() }).strict().partial(),
   })
   .partial()
   .refine(

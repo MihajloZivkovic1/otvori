@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'sequelize';
 import {
+  DEFAULT_MODULES,
   RESTAURANT_DEFAULTS,
   type OrderStatus,
   type OrderingMode,
+  type RestaurantModules,
   type Plan,
   type RestaurantStatus,
   type ServiceRequestType,
@@ -101,6 +103,8 @@ interface SeedRestaurant {
   /** Table ordering (Phase 6): off by default; `orderDays` adds a week of fake orders plus a few open ones. */
   orderingMode?: OrderingMode;
   orderDays?: number;
+  /** Feature modules (Phase 9b); default all off. */
+  modules?: Partial<RestaurantModules>;
 }
 
 const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
@@ -224,6 +228,8 @@ const kafeterija: SeedRestaurant = {
   dailyScans: [18, 55],
   orderingMode: 'order',
   orderDays: 7,
+  // Every module on: the demo venue shows ordering, the payment simulator and the mock POS (Phases 9c/9d).
+  modules: { ordering: true, payments: true, pos: true },
 };
 
 const smallMenu = (a: [string, string], b: [string, string], base: number): SeedCategory[] => [
@@ -262,6 +268,7 @@ const others: SeedRestaurant[] = [
     scanDays: 30,
     dailyScans: [6, 22],
     orderingMode: 'call_waiter',
+    modules: { ordering: true },
   },
   {
     slug: 'pekara-luna',
@@ -545,6 +552,7 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
       trialEndsAt: def.trialEndsAt ?? null,
       publishedAt: def.publishedAt ?? null,
       orderingMode: def.orderingMode ?? RESTAURANT_DEFAULTS.orderingMode,
+      modules: { ...DEFAULT_MODULES, ...def.modules },
     },
     { transaction },
   );

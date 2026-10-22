@@ -335,6 +335,18 @@ describe('paused and view-only menus', () => {
     expect(screen.getByRole('button', { name: 'Pozovi konobara' })).toBeEnabled();
   });
 
+  it('keeps the plain menu when the ordering module is off, whatever the mode says', async () => {
+    mockFetch((url) =>
+      url.pathname.endsWith('/events')
+        ? { status: 202, body: { ok: true } }
+        : { body: { ...menuOrdering, restaurant: { ...menuOrdering.restaurant, modules: { ...menuOrdering.restaurant.modules, ordering: false } } } },
+    );
+    renderMenu('/t/7');
+    await screen.findByRole('heading', { name: 'Kafa' });
+    expect(screen.queryByRole('button', { name: /Dodaj/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pozovi konobara' })).toBeNull();
+  });
+
   it('keeps the plain menu when ordering is off', async () => {
     mockFetch((url) => (url.pathname.endsWith('/events') ? { status: 202, body: { ok: true } } : { body: { ...menuOrdering, restaurant: { ...menuOrdering.restaurant, orderingMode: 'off' } } }));
     renderMenu('/r/kafeterija/t/7');

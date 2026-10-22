@@ -87,7 +87,7 @@ async function setup() {
   const coffee = await createCategory(owner, { name: { sr: 'Kafa' } });
   const item = await createItem(owner, { categoryId: coffee.id, name: { sr: 'Kortado' }, priceCents: 24000 });
   await api.post(`${admin}/tables`).set(bearer(owner.accessToken)).send({ number: 3 });
-  await api.patch(admin).set(bearer(owner.accessToken)).send({ orderingMode: 'order' });
+  await api.patch(admin).set(bearer(owner.accessToken)).send({ orderingMode: 'order', modules: { ordering: true } });
   await publish(owner);
   return { owner, slug, admin, item };
 }
@@ -140,6 +140,7 @@ describe('ordering events (SSE)', () => {
     const ctx = await setup();
     const other = await registerUser();
     const otherAdmin = `/api/admin/restaurants/${other.restaurantId}`;
+    await api.patch(otherAdmin).set(bearer(other.accessToken)).send({ modules: { ordering: true } });
 
     const none = await api.get(`${ctx.admin}/events`);
     expect(none.status).toBe(401);

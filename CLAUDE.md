@@ -145,6 +145,37 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   latest scan (one is created if missing). Table QR codes encode `PUBLIC_MENU_BASE_URL/t/<tableNumber>` (`utils/public-url.ts`;
   the menu app still accepts the older `?t=<tableNumber>`).
 
+## Restaurant modules (Phase 9b)
+
+Per-venue feature switches so the CMS stays a plain QR menu by default: `restaurants.modules` JSONB
+`{ ordering, payments, pos }` (all `false` for new venues; the migration switched `ordering` on for venues whose
+`ordering_mode` was not `off`). Shared: `packages/shared/src/modules.ts` — `MODULES`, `restaurantModulesSchema`,
+`DEFAULT_MODULES`, `hasModule(restaurant, key)`, `effectiveOrderingMode(restaurant)` (= `orderingMode` only while
+`modules.ordering`, else `off`), `OWNER_TOGGLABLE_MODULES` (= `['ordering']`).
+
+- **Who toggles what**: owners `PATCH /admin/restaurants/:id { modules: { ordering } }` (the schema is `strict`, so
+  `payments`/`pos` from an owner are a 400); superadmins `PATCH /superadmin/restaurants/:id { modules: {…} }` for any
+  module (they need contracts: bank e-commerce for payments, Octopos API access for POS). `modules` is in
+  `RestaurantDto`, `SuperadminRestaurantDto` and `PublicMenuDto.restaurant`; the public `orderingMode` is already the
+  effective one.
+- **API gating** (`middleware/modules.ts`): `requireModule('ordering')` on `/orders`, `/requests`, `/sse-token`,
+  `/events` (after the SSE token guard) and `/tables/:id/block` → 403 `MODULE_DISABLED` with `details.module`; guest
+  `POST /orders` and `POST /requests` answer 403 `MODULE_DISABLED` without the module (`ORDERING_DISABLED` only when the
+  module is on and the mode is off). `GET /analytics` returns `ordering: null` without the module. A venue with every
+  module off behaves exactly like the pre-Phase-6 app.
+- **CMS**: `useRestaurantContext().hasModule(key)`; `OrderingProvider` is idle unless `effectiveOrderingMode !== 'off'`,
+  which hides the Orders nav item / tab / badge, the Home card, the Tables block controls, the More → Analytics row and
+  the Analytics card in one place. Settings shows a "Modules" card linking to `settings/modules` (`pages/ModulesPage.tsx`:
+  one card per module with status pill, explanation, requirements, the owner's `Switch` for ordering or a
+  "Contact us to enable" mailto for payments/POS; staff see the switch disabled) and the Ordering card only with the
+  module on. The superadmin drawer has a switch per module. Switching the module on swaps the ordering provider to its
+  live tree, which remounts the page under it (tests re-query after the toggle).
+- **Menu app**: `MenuPage` derives the mode with `effectiveOrderingMode()` too, so a payload without the module never
+  shows "+", the cart or the call bar.
+- Tests: `apps/api/test/modules.test.ts`, `apps/cms/test/modules.test.tsx`, the module-off case in
+  `apps/menu/test/ordering.test.tsx`; fixtures carry `modules`, and the CMS helpers `orderingMode()` / `liveOrdering()`
+  switch the module on together with the mode.
+
 ## Table ordering (Phase 6)
 
 Guests send orders / call the waiter from the public menu; staff handle them on their phone in the CMS. No payment:
@@ -152,7 +183,7 @@ orders are messages to staff, not transactions. API code lives in `apps/api/src/
 `controller.ts` guest + staff handlers, `router.ts` staff routers, `events.ts` in-process bus, `sse.ts` stream + token
 guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/router.ts`, table blocking in `modules/tables`.
 
-- **Restaurant flags** (`PATCH /admin/restaurants/:id`, owner only): `orderingMode` = `off` (default, view-only) |
+- **Restaurant flags** (`PATCH /admin/restaurants/:id`, owner only; all of it only effective while `modules.ordering`): `orderingMode` = `off` (default, view-only) |
   `call_waiter` (call/bill buttons only) | `order` (guests order; calls included); `orderingPaused` + `pausedMessage`
   (≤ 120 chars). Paused = the menu shows the banner and hides "+" / cart, `POST /orders` → 409 `ORDERING_PAUSED`;
   calls keep working. Both flags are in `RestaurantDto` and in `PublicMenuDto.restaurant`; because the public menu is
@@ -204,7 +235,7 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
   IP per 10 min, `POST /requests` 8 per session and 60 per IP per 10 min, plus the 3-open-orders cap and the staff
   table block (423 "Ordering from this table is temporarily disabled. Please call the waiter."). All limits are in
   `ORDERING_LIMITS` (shared).
-- Seed: Kafeterija Dorćol runs in `order` mode with a week of orders (mostly delivered, some rejected/expired/
+- Seed: Kafeterija Dorćol has every module on and runs in `order` mode with a week of orders (mostly delivered, some rejected/expired/
   cancelled), two `new` + one `accepted` right now and two open requests; Bistro Zemun is `call_waiter`.
 
 ## Uploads / storage
@@ -338,7 +369,7 @@ same origin); `APP_VERSION` (build env, the git short SHA in Docker) versions th
   (superadmins) → `/no-venue`. `/r/:restaurantId/*` → `RestaurantLayout` checks the membership (superadmins pass as owners), loads
   `GET /admin/restaurants/:id`, stores it as last used and provides `useRestaurantContext()` = `{ restaurant, role, isOwner, isMobile }`.
 - Screens: `menu` (`?c=<categoryId>` selected category, `?item=<id>|new` opens the editor), `menu/unavailable`, `tables`,
-  `orders` (only while `orderingMode ≠ 'off'`), `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile),
+  `orders` (only while the ordering module is on and `orderingMode ≠ 'off'`), `settings/modules`, `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile),
   index = Home on phones / redirect to `menu` otherwise.
   `/superadmin` lists every venue (`SuperadminLayout` keeps the last venue in the switcher); clicking a row opens `/r/:id/menu`.
 - Venue switcher (`Sidebar` dropdown, `VenueSheet` on phones): tile in the venue's `primaryColor`/logo, city as secondary text,

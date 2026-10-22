@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect } from 'react';
 import { Navigate, Outlet, useParams } from 'react-router';
-import type { MembershipRole, RestaurantDto } from '@qr-menu/shared';
+import { hasModule, type MembershipRole, type ModuleKey, type RestaurantDto } from '@qr-menu/shared';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { ApiError, errorMessage } from '../../lib/api';
 import { useMe } from '../../lib/auth';
@@ -18,6 +18,8 @@ export interface RestaurantContextValue {
   /** Owners (and superadmins acting as owners) may change settings, branding, publish and delete. */
   isOwner: boolean;
   isMobile: boolean;
+  /** Feature modules (Phase 9b): every ordering/payment/POS screen, card and action is gated on these. */
+  hasModule: (module: ModuleKey) => boolean;
 }
 
 const RestaurantContext = createContext<RestaurantContextValue | null>(null);
@@ -62,7 +64,9 @@ export function RestaurantLayout() {
 
   const role: MembershipRole = me.user.isSuperadmin ? 'owner' : membership!.role;
   return (
-    <RestaurantContext.Provider value={{ restaurant: query.data, role, isOwner: role === 'owner', isMobile }}>
+    <RestaurantContext.Provider
+      value={{ restaurant: query.data, role, isOwner: role === 'owner', isMobile, hasModule: (module) => hasModule(query.data, module) }}
+    >
       {/* Live orders/calls (SSE + polling fallback) for the nav badge, the title and the waiter screen; idle when ordering is off. */}
       <OrderingProvider restaurant={query.data}>
         <AppShell restaurant={query.data} role={role}>
