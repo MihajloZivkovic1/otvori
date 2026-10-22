@@ -1,20 +1,18 @@
 ---
-import Glyph from './Glyph.astro';
+import Mark from './Mark.astro';
 
-/** Glyph + "salveta" in Libre Baskerville 700. `size` is the wordmark font size; the glyph matches it. */
+/** Mark + "otvori" in Libre Baskerville 400 (brand lockup). `size` is the wordmark font size; the mark is 1.125× it. */
 interface Props {
   size?: number;
-  gap?: number;
   color?: string;
-  fold?: string;
   class?: string;
 }
-const { size = 24, gap = 8, color = '#7A3E48', fold = '#C98391', class: className } = Astro.props;
+const { size = 24, color = '#7A3E48', class: className } = Astro.props;
 ---
 
-<span class:list={['inline-flex items-center', className]} style={`gap:${gap}px;color:${color}`}>
-  <Glyph size={size} fold={fold} />
-  <span class="font-serif font-bold leading-none tracking-[-.025em]" style={`font-size:${size}px`}>
-    salveta
+<span class:list={['inline-flex items-center', className]} style={`gap:${Math.round(size * 0.4)}px;color:${color}`}>
+  <Mark size={Math.round(size * 1.125)} />
+  <span class="font-serif leading-none tracking-[-.02em]" style={`font-size:${size}px`}>
+    otvori
   </span>
 </span>

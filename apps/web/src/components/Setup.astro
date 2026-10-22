@@ -1,8 +1,7 @@
 ---
 import { links } from '../config';
 import type { Dictionary } from '../i18n';
-import Glyph from './Glyph.astro';
-import QrMock from './QrMock.astro';
+import TableCard from './TableCard.astro';
 interface Props {
   t: Dictionary;
 }
@@ -15,28 +14,27 @@ const { t } = Astro.props;
       <p class="text-[11px] font-semibold tracking-[.08em] text-plum-light uppercase lg:text-xs">{t.setup.eyebrow}</p>
       <h2 class="text-[30px] leading-[1.12] tracking-[-.01em] lg:text-[44px]">{t.setup.h}</h2>
       <p class="text-base leading-[1.55] text-dark-text lg:text-lg">{t.setup.p}</p>
-      <!-- napkin stack: mobile position, between text and list -->
-      <div aria-hidden="true" class="relative my-2 h-[230px] lg:hidden">
-        <div class="absolute top-[22px] left-[92px] size-[200px] rotate-[7deg] bg-[#E9E1D4] shadow-[0_16px_40px_rgba(0,0,0,.4)]"></div>
-        <div class="napkin absolute top-2.5 left-[60px] flex size-[200px] rotate-[-5deg] flex-col items-center justify-between p-3.5 text-ink shadow-[0_24px_50px_rgba(0,0,0,.5)] [--napkin-bg:#18181B]">
-          <div class="flex w-full items-center justify-between">
-            <span class="inline-flex items-center gap-[3px] text-plum">
-              <Glyph size={10} />
-              <span class="font-serif text-[10px] leading-none font-bold">salveta</span>
-            </span>
-            <span class="size-[26px] rounded-full border border-dashed border-faint"></span>
-          </div>
-          <QrMock size="4.6px" />
-          <span class="font-serif text-sm font-bold">{t.guest.table} 7</span>
-        </div>
+      <!-- stack of printed table cards: mobile position, between text and list -->
+      <div aria-hidden="true" class="relative my-2 h-[240px] lg:hidden">
+        <TableCard
+          size={190}
+          table={`${t.guest.table} 8`}
+          tagline={t.tagline}
+          logo={t.setup.logo}
+          class="absolute top-6 left-[100px] rotate-[6deg] opacity-80 shadow-[0_16px_40px_rgba(0,0,0,.4)]"
+        />
+        <TableCard
+          size={190}
+          table={`${t.guest.table} 7`}
+          tagline={t.tagline}
+          logo={t.setup.logo}
+          class="absolute top-2.5 left-[60px] rotate-[-4deg] shadow-[0_24px_50px_rgba(0,0,0,.5)]"
+        />
       </div>
       <ol class="mt-0 flex flex-col border-t border-paper/15 lg:mt-2">
         {t.setup.list.map((label, i) => (
           <li class="flex items-center gap-3.5 border-b border-paper/15 py-3.5 lg:gap-4">
-            <span
-              class="w-[18px] font-serif text-[13px] font-bold text-plum-light lg:w-5 lg:text-sm"
-              aria-hidden="true"
-            >
+            <span class="w-[18px] font-serif text-[13px] text-plum-light tabular lg:w-5 lg:text-sm" aria-hidden="true">
               {i + 1}
             </span>
             <span class="text-[15px] font-medium lg:text-base">{label}</span>
@@ -50,26 +48,29 @@ const { t } = Astro.props;
         <p class="text-center text-[13px] text-faint lg:text-left lg:text-sm">{t.setup.price}</p>
       </div>
     </div>
-    <!-- napkin stack: desktop -->
+    <!-- stack of printed table cards: desktop -->
     <div aria-hidden="true" class="relative hidden h-[460px] lg:block">
-      <div class="absolute top-20 left-[150px] size-[300px] rotate-[7deg] bg-[#E9E1D4] shadow-[0_20px_50px_rgba(0,0,0,.4)]"></div>
-      <div class="absolute top-[60px] left-[120px] size-[300px] rotate-[-2deg] bg-[#F2EBE0] shadow-[0_20px_50px_rgba(0,0,0,.4)]"></div>
-      <div class="napkin absolute top-10 left-[90px] flex size-[300px] rotate-[-6deg] flex-col items-center justify-between p-[22px] text-ink shadow-[0_30px_60px_rgba(0,0,0,.5)] [--napkin-bg:#18181B] [--napkin-cut:40px]">
-        <div class="flex w-full items-center justify-between">
-          <span class="inline-flex items-center gap-[5px] text-plum">
-            <Glyph size={14} />
-            <span class="font-serif text-sm leading-none font-bold tracking-[-.02em]">salveta</span>
-          </span>
-          <span class="grid size-10 place-items-center rounded-full border-[1.5px] border-dashed border-faint text-[7px] font-semibold tracking-[.06em] text-muted">
-            {t.setup.logo}
-          </span>
-        </div>
-        <QrMock size="6.8px" />
-        <div class="flex flex-col items-center gap-1">
-          <span class="font-serif text-xl font-bold">{t.guest.table} 7</span>
-          <span class="font-serif text-[11px] text-muted italic">{t.hero.h}</span>
-        </div>
-      </div>
+      <TableCard
+        size={290}
+        table={`${t.guest.table} 9`}
+        tagline={t.tagline}
+        logo={t.setup.logo}
+        class="absolute top-[88px] left-[160px] rotate-[8deg] opacity-60 shadow-[0_20px_50px_rgba(0,0,0,.4)]"
+      />
+      <TableCard
+        size={290}
+        table={`${t.guest.table} 8`}
+        tagline={t.tagline}
+        logo={t.setup.logo}
+        class="absolute top-[64px] left-[125px] rotate-[3deg] opacity-85 shadow-[0_20px_50px_rgba(0,0,0,.4)]"
+      />
+      <TableCard
+        size={290}
+        table={`${t.guest.table} 7`}
+        tagline={t.tagline}
+        logo={t.setup.logo}
+        class="absolute top-10 left-[90px] rotate-[-4deg] shadow-[0_30px_60px_rgba(0,0,0,.5)]"
+      />
     </div>
   </div>
 </section>

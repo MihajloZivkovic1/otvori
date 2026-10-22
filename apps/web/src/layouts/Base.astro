@@ -15,7 +15,7 @@ interface Props {
 }
 const { locale, title, description, seo = true, noindex = false } = Astro.props;
 const dict = t(locale);
-const site = Astro.site ?? new URL('https://salveta.menu');
+const site = Astro.site ?? new URL('https://otvori.menu');
 const path = Astro.props.path ?? localePath(locale);
 const canonical = new URL(path, site).href;
 const pageTitle = title ?? dict.meta.title;
@@ -35,6 +35,7 @@ const organization = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: brand.name,
+  alternateName: brand.domain,
   url: site.href,
   logo: new URL('/icons/icon-512.png', site).href,
   email: contact.email,
@@ -44,6 +45,7 @@ const software = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: brand.name,
+  alternateName: brand.domain,
   url: site.href,
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
@@ -100,7 +102,7 @@ const software = {
         <meta property="og:image" content={ogImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content={`${brand.name} — ${dict.hero.h}`} />
+        <meta property="og:image:alt" content={`${brand.name} — ${dict.tagline}`} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />

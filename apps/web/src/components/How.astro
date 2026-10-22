@@ -4,7 +4,14 @@ interface Props {
   t: Dictionary;
 }
 const { t } = Astro.props;
-const rotations = ['-1.5deg', '1deg', '-.6deg'];
+const icons = [
+  // scan: viewfinder corners + a scan line
+  'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16',
+  // open: the mark's door
+  'M15 6H8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h7M16 6l4-3v18l-4-3M10 10h3v4h-3z',
+  // order: a tray / bell
+  'M4 17h16M6 17a6 6 0 0 1 12 0M12 11V9M3 20h18',
+];
 ---
 
 <section
@@ -15,23 +22,56 @@ const rotations = ['-1.5deg', '1deg', '-.6deg'];
     <p class="text-[11px] font-semibold tracking-[.08em] text-plum uppercase lg:text-xs">{t.nav.how}</p>
     <h2 class="text-[28px] leading-[1.15] tracking-[-.01em] lg:max-w-[640px] lg:text-[38px]">{t.how.h}</h2>
   </div>
-  <ol class="flex flex-col gap-5 px-1.5 lg:grid lg:grid-cols-3 lg:gap-9 lg:px-5">
+  <ol class="flex flex-col gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr_auto_1fr] lg:items-stretch lg:gap-4">
     {t.how.steps.map((step, i) => (
-      <li
-        class="napkin flex items-start gap-[18px] px-6 pt-6 pb-[22px] shadow-napkin-sm [--napkin-cut:28px] lg:aspect-square lg:flex-col lg:justify-between lg:gap-0 lg:px-9 lg:pt-9 lg:pb-8 lg:shadow-napkin lg:[--napkin-cut:40px]"
-        style={`transform:rotate(${rotations[i]})`}
-      >
-        <span
-          class="flex-none font-serif text-[40px] leading-none font-bold tracking-[-.03em] text-plum lg:text-[64px]"
-          aria-hidden="true"
-        >
-          {i + 1}
-        </span>
-        <div class="flex flex-col gap-1.5 lg:gap-2.5">
-          <h3 class="text-lg leading-[1.25] font-semibold tracking-[-.01em] lg:text-[21px]">{step.title}</h3>
-          <p class="text-sm text-muted lg:text-base">{step.text}</p>
-        </div>
-      </li>
+      <>
+        {i > 0 ? (
+          <li aria-hidden="true" class="hidden place-items-center text-plum-light lg:grid">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </li>
+        ) : null}
+        <li class="hinge-card flex items-start gap-[18px] px-5 py-5 lg:flex-col lg:gap-7 lg:px-8 lg:pt-8 lg:pb-7">
+          <span
+            class="grid size-11 flex-none place-items-center rounded-xl bg-plum-soft text-plum lg:size-12"
+            aria-hidden="true"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lg:size-6"
+            >
+              <path d={icons[i]} />
+            </svg>
+          </span>
+          <div class="flex flex-col gap-1.5 lg:gap-2.5">
+            <h3 class="flex items-baseline gap-2.5 font-serif text-[22px] leading-none tracking-[-.01em] lg:text-[28px]">
+              <span class="text-[13px] font-sans font-semibold text-plum-light tabular lg:text-sm" aria-hidden="true">
+                0{i + 1}
+              </span>
+              {step.title}
+            </h3>
+            <p class="text-sm text-muted lg:text-base">{step.text}</p>
+            {step.sub ? <p class="text-[13px] text-muted lg:text-sm">{step.sub}</p> : null}
+          </div>
+        </li>
+      </>
     ))}
   </ol>
 </section>

@@ -61,14 +61,6 @@
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
     U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-/* Caveat, subset to the napkin caption glyphs only. */
-@font-face {
-  font-family: 'Caveat';
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('/fonts/caveat-subset.woff2') format('woff2');
-}
 /* Metric-matched fallbacks so the swap from the system font does not shift the layout. */
 @font-face {
   font-family: 'Figtree Fallback';
@@ -90,7 +82,6 @@
 @theme {
   --font-sans: 'Figtree', 'Figtree Fallback', system-ui, sans-serif;
   --font-serif: 'Libre Baskerville', 'Libre Baskerville Fallback', Georgia, serif;
-  --font-hand: 'Caveat', 'Segoe Script', cursive;
 
   --color-paper: #f7f2eb;
   --color-paper-2: #ede6da;
@@ -113,8 +104,8 @@
   --color-dark-text: #d4d4d8;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(30, 20, 10, 0.14);
-  --shadow-napkin: 0 10px 30px rgba(60, 40, 20, 0.12);
-  --shadow-napkin-sm: 0 8px 24px rgba(60, 40, 20, 0.12);
+  --shadow-door: 0 24px 60px rgba(40, 20, 15, 0.28), 0 4px 12px rgba(40, 20, 15, 0.12);
+  --shadow-sheet: 0 10px 30px rgba(60, 40, 20, 0.12);
 }
 
 @layer base {
@@ -166,69 +157,45 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Paper / napkin texture: the design's feTurbulence filter, rasterised once as a seamless tile ── */
-@utility tex-dark {
-  position: relative;
-  isolation: isolate;
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.16;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-}
-@utility tex-light {
-  position: relative;
-  isolation: isolate;
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.14;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-}
-
-/* ── Folded-corner card (top-right corner turned over). --fold-bg = the surface behind the card. ── */
-@utility fold-card {
+/* ── Opening motif: a card with a plum "hinge" on its left edge, like a door or a menu cover seen from the side ── */
+@utility hinge-card {
   position: relative;
   background: #fff;
   border: 1px solid var(--color-line);
-  border-radius: 12px 0 12px 12px;
-  --fold-bg: var(--color-paper);
-  --fold-shade: var(--color-paper-2);
-  --fold-size: 22px;
-  &::after {
+  border-left: 3px solid var(--color-plum);
+  border-radius: 12px;
+  &::before {
     content: '';
     position: absolute;
-    top: -1px;
-    right: -1px;
-    width: var(--fold-size);
-    height: var(--fold-size);
-    background: linear-gradient(225deg, var(--fold-bg) 0 50%, var(--fold-shade) 50% 100%);
+    inset: 0 auto 0 0;
+    width: 22px;
+    pointer-events: none;
+    border-radius: 10px 0 0 10px;
+    background: linear-gradient(90deg, rgba(122, 62, 72, 0.09), rgba(122, 62, 72, 0));
   }
 }
 
-/* ── Napkin: paper gradient with the bottom-right corner cut. --napkin-bg = the surface behind it. ── */
-@utility napkin {
-  position: relative;
-  background: linear-gradient(135deg, #fcf9f3 0 50%, #f1eadf 50% 100%);
-  --napkin-bg: #fff;
-  --napkin-shade: #e4dacb;
-  --napkin-cut: 28px;
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: var(--napkin-cut);
-    height: var(--napkin-cut);
-    background: linear-gradient(315deg, var(--napkin-bg) 0 50%, var(--napkin-shade) 50% 100%);
+/* ── Hero: the QR table card swings open on its left edge (a door) and reveals the menu behind it ── */
+.door-scene {
+  perspective: 1400px;
+}
+.door {
+  transform-origin: left center;
+  transform: rotateY(-44deg);
+  box-shadow: var(--shadow-door);
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .door {
+    animation: door-open 1.5s cubic-bezier(0.2, 0.7, 0.15, 1) 0.35s both;
+  }
+  @keyframes door-open {
+    from {
+      transform: rotateY(-4deg);
+    }
+    to {
+      transform: rotateY(-44deg);
+    }
   }
 }
 
@@ -277,12 +244,6 @@
   &:hover {
     background: var(--color-plum-pale);
   }
-}
-
-/* A 2px-bordered fold card (featured pricing plan) needs its fold moved out by the extra pixel. */
-.fold-card.border-2::after {
-  top: -2px;
-  right: -2px;
 }
 
 /* ── FAQ ── */

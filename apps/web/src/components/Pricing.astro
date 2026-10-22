@@ -57,10 +57,8 @@ const plans = [
     {plans.map((plan) => (
       <li
         class:list={[
-          'fold-card flex flex-col gap-[18px] p-6 [--fold-bg:#fff] lg:gap-6 lg:rounded-[16px_0_16px_16px] lg:p-8',
-          plan.featured
-            ? 'order-first border-2 border-plum [--fold-shade:#EDE3E5] [--fold-size:26px] lg:order-none lg:[--fold-size:30px]'
-            : '[--fold-shade:#EFE9DF] [--fold-size:24px] lg:[--fold-size:28px]',
+          'hinge-card flex flex-col gap-[18px] p-6 lg:gap-6 lg:rounded-2xl lg:p-8',
+          plan.featured && 'order-first border-plum shadow-card lg:order-none',
         ]}
       >
         {plan.featured ? (

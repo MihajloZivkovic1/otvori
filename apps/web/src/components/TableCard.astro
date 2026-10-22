@@ -1,0 +1,42 @@
+---
+import Mark from './Mark.astro';
+import QrMock from './QrMock.astro';
+
+/**
+ * Decorative 1:1 table card (the printed /print/qr-card layout at any size): wordmark, logo slot, QR, table label,
+ * brand line. Everything is sized in em from `size`, so the same markup serves the hero door and the Setup stack.
+ */
+interface Props {
+  /** Card edge in px. */
+  size: number;
+  table: string;
+  tagline: string;
+  logo: string;
+  class?: string;
+}
+const { size, table, tagline, logo, class: className } = Astro.props;
+---
+
+<div
+  aria-hidden="true"
+  class:list={[
+    'flex aspect-square flex-col items-center justify-between rounded-[.9em] bg-white p-[.75em] text-ink',
+    className,
+  ]}
+  style={`width:${size}px;font-size:${size / 10}px`}
+>
+  <div class="flex w-full items-center justify-between">
+    <span class="inline-flex items-center gap-[.3em] text-plum">
+      <Mark size={size * 0.09} />
+      <span class="font-serif text-[.8em] leading-none tracking-[-.02em]">otvori</span>
+    </span>
+    <span class="grid size-[1.4em] place-items-center rounded-full border-[.08em] border-dashed border-faint text-[.34em] font-semibold tracking-[.06em] text-ink-2">
+      {logo}
+    </span>
+  </div>
+  <QrMock size=".27em" />
+  <div class="flex flex-col items-center gap-[.25em]">
+    <span class="font-serif text-[1.15em] leading-none">{table}</span>
+    <span class="text-[.5em] font-medium tracking-[.02em] text-muted">{tagline}</span>
+  </div>
+</div>

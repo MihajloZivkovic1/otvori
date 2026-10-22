@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
-const site = process.env.SITE_URL ?? 'https://salveta.menu';
+const site = process.env.SITE_URL ?? 'https://otvori.menu';
 
 export default defineConfig({
   site,

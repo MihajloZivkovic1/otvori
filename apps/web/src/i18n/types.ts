@@ -3,6 +3,8 @@ export type Locale = 'sr' | 'en';
 export interface Step {
   title: string;
   text: string;
+  /** Optional second line under the text (step 3: "or just browse"). */
+  sub?: string;
 }
 
 export interface Feature {
@@ -19,6 +21,8 @@ export interface Dictionary {
   /** <html lang> and Open Graph locale. */
   htmlLang: string;
   ogLocale: string;
+  /** "Skeniraj. Otvori. Naruči." — the brand line used on the QR card, the OG image and the hero scene. */
+  tagline: string;
   meta: { title: string; description: string };
   nav: {
     how: string;
@@ -30,17 +34,37 @@ export interface Dictionary {
     menu: string;
     close: string;
   };
-  hero: { h: string; sub: string; cta: string; demo: string; note: string; napkinCaption: string };
-  guest: { tagline: string; table: string; hours: string; cat1: string; cat2: string; cat3: string; items: string };
+  hero: { h: string; sub: string; cta: string; demo: string; note: string; cardCaption: string };
+  guest: {
+    tagline: string;
+    table: string;
+    hours: string;
+    cat1: string;
+    cat2: string;
+    cat3: string;
+    items: string;
+    cartItems: string;
+    send: string;
+  };
   proof: string;
   how: { h: string; steps: [Step, Step, Step] };
   features: {
     h: string;
-    editor: { item: string; price: string; available: string; publish: string };
-    unavailable: { title: string; done: string; back: string; until: string };
+    /** Waiter-screen mock in the "orders" card. */
+    order: {
+      table: string;
+      status: string;
+      time: string;
+      lines: [string, string];
+      note: string;
+      accept: string;
+      reject: string;
+    };
+    /** Guest call bar mock in the "call waiter" card. */
+    call: { call: string; bill: string; notified: string };
     f1: Feature;
     f2: Feature;
-    rest: [Feature, Feature, Feature, Feature];
+    rest: [Feature, Feature, Feature, Feature, Feature, Feature];
   };
   setup: {
     eyebrow: string;
@@ -70,7 +94,6 @@ export interface Dictionary {
   faq: { h: string; sub: string; items: Faq[] };
   cta: { h: string };
   footer: { desc: string; contact: string; links: { label: string; href: string }[]; copyright: string };
-  og: { sub: string };
-  card: { logo: string; note: string; tagline: string };
+  card: { logo: string; note: string };
   langSwitch: { label: string; sr: string; en: string };
 }

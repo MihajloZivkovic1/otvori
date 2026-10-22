@@ -1,24 +1,26 @@
 /** Every outbound link and contact on the marketing site. Change them here. */
 export const links = {
-  signIn: 'https://app.salveta.menu/login',
-  register: 'https://app.salveta.menu/register',
-  demoMenu: 'https://kafeterija.salveta.menu/t/1',
+  signIn: 'https://app.otvori.menu/login',
+  register: 'https://app.otvori.menu/register',
+  demoMenu: 'https://kafeterija.otvori.menu/t/1',
   /** "Zatraži ponudu" — a mailto until there is a form. */
-  quote: 'mailto:zdravo@salveta.menu?subject=Ponuda%20za%20unos%20menija',
+  quote: 'mailto:zdravo@otvori.menu?subject=Ponuda%20za%20unos%20menija',
   terms: '#',
   privacy: '#',
 } as const;
 
 export const contact = {
-  email: 'zdravo@salveta.menu',
+  email: 'zdravo@otvori.menu',
   city: 'Beograd',
 } as const;
 
 export const brand = {
-  name: 'salveta',
-  domain: 'salveta.menu',
+  /** Lowercase in running text and in the wordmark; "otvori.menu" when the service or the domain is meant. */
+  name: 'otvori',
+  domain: 'otvori.menu',
   plum: '#7A3E48',
   paper: '#F7F2EB',
+  ink: '#1F1A17',
   foundingYear: 2026,
 } as const;
 

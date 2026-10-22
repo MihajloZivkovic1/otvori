@@ -398,9 +398,10 @@ sets the session flag and lets the app restore through the mocked `POST /api/aut
 
 Stack: Astro 7 (`output: 'static'`, `trailingSlash: 'always'`, `compressHTML`, stylesheet inlined), TypeScript strict, Tailwind v4
 via `@tailwindcss/vite`, `@astrojs/sitemap`. **No React**: the only interactivity (SR/EN switch, monthly/yearly pricing, FAQ accordion,
-phone nav) is plain TypeScript in `src/scripts/*.ts` (`init*(root)` functions, < 1 KB gzipped, inlined by Astro). Design source:
-`design/otvori-brand.html` for the brand and the Phase 5 export `design/salveta.menu website.html` for the page structure
-(Claude Design exports: markup in the `__bundler/template` script tag, fonts base64 in `__bundler/manifest`). Lighthouse mobile on the seeded preview: 100/100/100/100 (sr), 99/100/100/100 (en).
+phone nav) is plain TypeScript in `src/scripts/*.ts` (`init*(root)` functions, < 1 KB gzipped, inlined by Astro). Design sources:
+`design/otvori-brand.html` for the brand (Phase 7) and the Phase 5 export `design/salveta.menu website.html` for the page structure,
+spacing and type scale only — its napkin motif is gone (Claude Design exports: markup in the `__bundler/template` script tag, fonts
+base64 in `__bundler/manifest`). Lighthouse mobile on the preview: 100/100/100/100 (sr), 99/100/100/100 (en).
 
 ```bash
 npm run dev -w @qr-menu/web          # http://localhost:4321  ·  /en/  ·  /print/qr-card/?venue=…&table=7&qr=https://…
@@ -409,28 +410,39 @@ npm run icons -w @qr-menu/web        # regenerates public/favicon.* + icons/ fro
 npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with headless Chrome (CHROME_PATH)
 ```
 
-- `src/config.ts` holds **every outbound link** (sign in, register, demo menu, quote mailto, terms/privacy), contact, brand constants and
-  the RSD prices (`pricing.starter|pro.monthly|yearly`). Change links there only.
+- `src/config.ts` holds **every outbound link** (sign in, register, demo menu `kafeterija.otvori.menu/t/1`, quote mailto
+  `zdravo@otvori.menu`, terms/privacy), contact, brand constants and the RSD prices (`pricing.starter|pro.monthly|yearly`).
+  Change links there only.
+- **Concept: opening.** Copy (`i18n/sr.ts` is the source of truth, `en.ts` the translation; `tagline` = "Skeniraj. Otvori. Naruči.")
+  follows the guest's three steps Skeniraj → Otvori → Naruči (`How.astro`, step 3 has a `sub` line "or just browse"); the hero
+  (`HeroVisual.astro`) is a `TableCard` hinged on its left edge (`.door-scene` / `.door`, CSS-only `door-open` animation, static when
+  `prefers-reduced-motion`) swung open in front of the phone mock, which runs in order mode (+ badges, cart bar). `Features.astro`
+  leads with ordering (waiter-card mock) and call-waiter (guest bar mock), then six icon cards. Every card is a `hinge-card`
+  (white, 3 px plum left edge + a faint inner gradient); `Cta.astro` is the plum block with a plum-light hinge and the mark oversized
+  at 7 % opacity. `Setup.astro` stacks three `TableCard`s. No textures, folded corners or napkins anywhere.
 - Routes: `/` (Serbian, default, `sr-Latn`) and `/en/` (`src/pages/en/index.astro`), both render `components/Landing.astro`; `/404.html`;
   `/print/qr-card/` (noindex, excluded from the sitemap). Astro `i18n` config: `defaultLocale: 'sr'`, `prefixDefaultLocale: false`.
-- Copy lives in `src/i18n/sr.ts` (verbatim from the design, source of truth) and `src/i18n/en.ts`, typed by `Dictionary` in
-  `i18n/types.ts`; `t(locale)`, `localePath()`, `otherLocale()`, `formatRsd()` (sr-RS grouping in both locales, "1.490").
+- Copy lives in `src/i18n/sr.ts` (source of truth) and `src/i18n/en.ts`, typed by `Dictionary` in `i18n/types.ts`; `t(locale)`,
+  `localePath()`, `otherLocale()`, `formatRsd()` (sr-RS grouping in both locales, "1.490").
 - `layouts/Base.astro`: title/description per locale, canonical, `hreflang` sr/en/x-default, Open Graph + Twitter (`/og-{locale}.png`,
-  1200×630), JSON-LD `Organization` + `SoftwareApplication` with the two RSD offers, font preloads (latin + latin-ext on sr), optional
+  1200×630: plum field, lockup, localized tagline, domain — `scripts/og.mjs`), JSON-LD `Organization` + `SoftwareApplication`
+  (`name` otvori, `alternateName` otvori.menu) with the two RSD offers, font preloads (latin + latin-ext on sr), optional
   analytics tag (`PUBLIC_ANALYTICS_SRC` + `PUBLIC_ANALYTICS_DOMAIN`, cookieless → no cookie banner). `SITE_URL` (build env) sets `site`.
 - Language switch: `<a data-lang-switch href="/en/">`; on click `scripts/locale.ts` appends the hash of the section currently in view
   (`#kako #dobijas #cene #pitanja`) so the other locale opens at the same section. Works without JS as a plain link.
-- Styling (`src/styles/global.css`): self-hosted variable woff2 fonts from the design in `public/fonts` (Figtree, Libre Baskerville
-  regular/italic, Caveat subset to the napkin caption) with `font-display: swap` and metric-matched fallbacks (`size-adjust` etc. → CLS 0).
-  `@theme` tokens: `paper #F7F2EB`, `ink`, `muted #71717A` (white cards) / `muted-paper #66666F` (≥ 4.5:1 on paper), `plum #7A3E48`,
-  `plum-light/pale/soft`, `dark`. Utilities: `tex-dark` / `tex-light` (the design's feTurbulence grain as a tiled data-URI SVG, opacity
-  .16/.14), `fold-card` (top-right folded corner; `--fold-bg` = surface behind the card), `napkin` (paper gradient with the bottom-right
-  cut; `--napkin-bg`), `btn btn-plum|outline|paper|white`. Mobile = design frame 390 (default classes), desktop = frame 1440 (`lg:`).
-- Decorative scenes (hero table, editor mocks, napkin stack) are HTML/CSS/SVG exactly like the design; `QrMock.astro` is the fake QR
-  pattern. There are no raster images apart from the OG PNGs, so `astro:assets` is not used.
-- `/print/qr-card/`: 90×90 mm napkin card (`@page { size: 90mm 90mm; margin: 0 }`), params `venue`, `logo` (image URL), `table`,
-  `qr` (URL to encode, rendered client-side with `qrcode-generator` as SVG) or `qrImage` (ready image URL), `url` (short link text),
-  `lang`. Headless Chrome `--print-to-pdf` yields a single 255.12 × 255.12 pt page.
+- Styling (`src/styles/global.css`): self-hosted variable woff2 fonts in `public/fonts` (Figtree, Libre Baskerville regular/italic)
+  with `font-display: swap` and metric-matched fallbacks (`size-adjust` etc. → CLS 0). `@theme` tokens: `paper #F7F2EB`, `ink`,
+  `muted #71717A` (white cards) / `muted-paper #66666F` (≥ 4.5:1 on paper), `plum #7A3E48`, `plum-light/pale/soft`, `dark`,
+  `shadow-door`. Utilities: `hinge-card`, `btn btn-plum|outline|paper|white`; `.door-scene` / `.door` for the hero. Mobile = design
+  frame 390 (default classes), desktop = frame 1440 (`lg:`). Text inside decorative scenes still has to pass 4.5:1 (Lighthouse audits
+  `aria-hidden` nodes too), so labels there use `text-ink-2`.
+- Brand components: `Mark.astro` (the mark, `currentColor`), `Wordmark.astro` (mark 1.125× the font size + "otvori" serif 400),
+  `TableCard.astro` (the printed card at any size, em-scaled), `QrMock.astro` (fake QR pattern). There are no raster images apart
+  from the OG PNGs and icons, so `astro:assets` is not used.
+- `/print/qr-card/`: plain 90×90 mm card (`@page { size: 90mm 90mm; margin: 0 }`, plum left edge): wordmark, logo slot, QR, table
+  number, the tagline and the short link. Params `venue`, `logo` (image URL), `table`, `qr` (URL to encode, rendered client-side with
+  `qrcode-generator` as SVG) or `qrImage` (ready image URL), `url` (short link text), `lang`. Headless Chrome `--print-to-pdf` yields
+  a single 255.12 × 255.12 pt page.
 - Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav.
   `typecheck` = `astro check`; `lint` = prettier check.
 - Deploy: `deploy/Dockerfile.caddy` builds it with `SITE_URL=https://$DOMAIN` into `/srv/web`, served at the apex; `www.` redirects to the apex.

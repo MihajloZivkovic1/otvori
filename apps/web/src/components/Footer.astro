@@ -10,8 +10,8 @@ const { t } = Astro.props;
 
 <footer class="flex flex-col gap-6 border-t border-ink/8 px-5 pt-9 pb-10 lg:grid lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-12 lg:px-20 lg:pt-12 xl:px-[120px]">
   <div class="flex flex-col gap-3 lg:gap-3.5">
-    <Wordmark size={19} gap={6} class="lg:hidden" />
-    <Wordmark size={20} gap={7} class="max-lg:hidden" />
+    <Wordmark size={19} class="lg:hidden" />
+    <Wordmark size={20} class="max-lg:hidden" />
     <p class="text-sm text-muted-paper lg:max-w-[320px]">{t.footer.desc}</p>
   </div>
   <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-2.5 lg:flex-col lg:gap-2.5">

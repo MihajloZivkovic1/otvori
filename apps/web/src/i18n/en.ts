@@ -4,10 +4,11 @@ import type { Dictionary } from './types';
 export const en: Dictionary = {
   htmlLang: 'en',
   ogLocale: 'en_US',
+  tagline: 'Scan. Open. Order.',
   meta: {
-    title: 'salveta — a digital menu for cafés, kafanas and restaurants',
+    title: 'otvori — a digital menu and table ordering for cafés, kafanas and restaurants',
     description:
-      'Guests scan the QR code on the table and see your menu in two seconds. Change prices from your phone, no reprinting. 30 days free, no card needed.',
+      'Guests scan the code on the table, open the menu and order. You change prices from your phone, orders reach the waiter. 30 days free, no card needed.',
   },
   nav: {
     how: 'How it works',
@@ -20,12 +21,12 @@ export const en: Dictionary = {
     close: 'Close',
   },
   hero: {
-    h: 'Everything good is written on a napkin.',
-    sub: 'Guests scan the code on the table and see your menu in two seconds. You change prices from your phone, with nothing to reprint.',
+    h: 'Scan the code. Open the menu. Order.',
+    sub: 'Guests scan the code on the table and see your menu in two seconds. You change prices from your phone, and orders reach the waiter.',
     cta: 'Try it free for 30 days',
     demo: 'See the demo menu',
     note: 'No card needed. Cancel whenever you like.',
-    napkinCaption: 'scan for the menu',
+    cardCaption: 'Scan for the menu',
   },
   guest: {
     tagline: 'Specialty coffee & breakfast',
@@ -35,36 +36,64 @@ export const en: Dictionary = {
     cat2: 'Breakfast',
     cat3: 'Pastries',
     items: 'items',
+    cartItems: '2 items',
+    send: 'Send to the waiter',
   },
   proof: 'On tables in Belgrade, Novi Sad and Niš',
   how: {
-    h: 'Three steps. Done in an afternoon.',
+    h: 'Three steps for the guest. No app.',
     steps: [
       {
-        title: 'Enter your menu (or let us do it)',
-        text: 'Categories, dishes, prices. Send us your old menu and we take care of the rest.',
+        title: 'Scan',
+        text: 'Guests point their camera at the code on the table. Nothing to install, no sign-up, no need for your Wi-Fi.',
       },
-      { title: 'Put the code on the table', text: 'Print it yourself or let us bring ready-made cards.' },
-      { title: 'Guests scan and read', text: 'No app to install. It opens in the browser in two seconds.' },
+      {
+        title: 'Open',
+        text: 'The menu opens in the browser in two seconds, in Serbian or English, with today’s prices.',
+      },
+      {
+        title: 'Order',
+        text: 'Guests pick their dishes, add a note and send. The order lands on the waiter’s phone with the table number.',
+        sub: 'Or they just browse — you switch ordering on whenever you like.',
+      },
     ],
   },
   features: {
     h: 'What you need during a shift. Nothing more.',
-    editor: { item: 'Item', price: 'Price', available: 'Available', publish: 'Publish' },
-    unavailable: { title: 'Not today', done: 'Done', back: 'Everything comes back at 06:00.', until: 'until 06:00' },
+    order: {
+      table: 'Table 7',
+      status: 'New',
+      time: '1 min ago',
+      lines: ['2 × Flat white', '1 × Avocado toast'],
+      note: '“No sugar, please.”',
+      accept: 'Accept',
+      reject: 'Reject',
+    },
+    call: { call: 'Call the waiter', bill: 'Bill', notified: 'The waiter has been notified' },
     f1: {
-      title: 'Change a price in 10 seconds',
-      text: 'Change the number, press Publish. Guests see the new price right away.',
+      title: 'Orders land on the waiter’s phone',
+      text: 'Guests choose from the menu and send. The waiter sees the table, the items and the note, accepts with one tap and brings it over.',
     },
     f2: {
-      title: 'A “not today” switch that resets itself at 06:00',
-      text: 'Ran out of a dish? Switch it off with one tap. In the morning it is back on the menu without you lifting a finger.',
+      title: 'Call the waiter or ask for the bill with one tap',
+      text: 'Two buttons at the bottom of the menu. The waiter gets a notification with the table number, the guest sees it arrived.',
     },
     rest: [
+      {
+        title: 'Change a price in 10 seconds',
+        text: 'Change the number, press Publish. Guests see the new price right away.',
+      },
+      {
+        title: 'A “not today” switch that resets itself at 06:00',
+        text: 'Ran out of a dish? Switch it off with one tap. In the morning it is back on the menu without you lifting a finger.',
+      },
       { title: 'Serbian and English from one code', text: 'Guests pick the language. Same code, same prices.' },
       { title: 'Allergens and labels (vegan, spicy, new)', text: 'Per item, so nobody has to ask the waiter.' },
       { title: 'Your logo and colours', text: 'The menu looks like your place, not like our software.' },
-      { title: 'Who looks at what, per table', text: 'See which tables scan and when it gets busy.' },
+      {
+        title: 'Who looks and who orders, per table',
+        text: 'See which tables scan, what gets ordered and when it gets busy.',
+      },
     ],
   },
   setup: {
@@ -94,6 +123,7 @@ export const en: Dictionary = {
     starterList: [
       'One venue',
       'Unlimited menu items',
+      'Table ordering and call-the-waiter',
       'QR codes for every table',
       'Serbian + English',
       'Basic statistics',
@@ -118,6 +148,10 @@ export const en: Dictionary = {
         a: 'No. They point the camera at the code and the menu opens in the browser. No download, no sign-up.',
       },
       {
+        q: 'Do I have to turn ordering on?',
+        a: 'No. You choose: menu only, menu with call-the-waiter, or full ordering. When it gets busy you pause it with one switch and the menu keeps working.',
+      },
+      {
         q: 'What if the internet at my venue is weak?',
         a: 'Guests use their own mobile data, not your Wi-Fi. The menu is light and opens even on a weak signal. Keep a couple of printed menus around just in case.',
       },
@@ -127,7 +161,7 @@ export const en: Dictionary = {
       },
       {
         q: 'How do I change prices, and what happens when something runs out?',
-        a: 'Open salveta on your phone, change the price, press Publish. When something runs out, flip “Not today”. The dish comes back on the menu by itself at 06:00.',
+        a: 'Open otvori.menu on your phone, change the price, press Publish. When something runs out, flip “Not today”. The dish comes back on the menu by itself at 06:00.',
       },
       {
         q: 'Does it work on older phones?',
@@ -139,9 +173,9 @@ export const en: Dictionary = {
       },
     ],
   },
-  cta: { h: 'Put a napkin on the table.' },
+  cta: { h: 'Open the menu on every table.' },
   footer: {
-    desc: 'A digital menu for cafés, kafanas and restaurants. Guests scan, you change prices from your phone.',
+    desc: 'A digital menu and table ordering for cafés, kafanas and restaurants. Guests scan, open and order.',
     contact: 'Contact',
     links: [
       { label: 'Pricing', href: '#cene' },
@@ -150,13 +184,11 @@ export const en: Dictionary = {
       { label: 'Terms', href: links.terms },
       { label: 'Privacy', href: links.privacy },
     ],
-    copyright: `© ${brand.foundingYear} salveta.menu · Belgrade`,
+    copyright: `© ${brand.foundingYear} ${brand.domain} · Belgrade`,
   },
-  og: { sub: 'A digital menu for cafés and kafanas. Guests scan, you change prices from your phone.' },
   card: {
     logo: 'YOUR LOGO',
-    note: 'Print on 300 g matte stock, single-sided. The cut corner at the bottom right is part of the napkin shape. The link under the code is for phones without a reader.',
-    tagline: 'Everything good is written on a napkin.',
+    note: 'Print on 300 g matte stock, 90 × 90 mm, single-sided. The link under the code is for phones without a reader.',
   },
   langSwitch: { label: 'Language', sr: 'Srpski', en: 'English' },
 };
