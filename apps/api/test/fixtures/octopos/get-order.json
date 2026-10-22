@@ -1,0 +1,16 @@
+{
+  "Success": true,
+  "Errors": [],
+  "Data": {
+    "Id": 159851,
+    "BillCumulativeId": 148327,
+    "TableId": 1,
+    "TableName": "001",
+    "TimeCreated": "2019-04-18T14:47:34.803Z",
+    "Amount": 390,
+    "BillItems": [
+      { "Id": 162051, "ProductId": 12268, "ProductName": "Espreso", "Quantity": 1, "Price": 150, "Info": "Mala šolja", "BillItemModifiers": [] },
+      { "Id": 162052, "ProductId": 3, "ProductName": "Sprajt 0. 25l", "Quantity": 2, "Price": 120, "Info": null, "BillItemModifiers": [] }
+    ]
+  }
+}

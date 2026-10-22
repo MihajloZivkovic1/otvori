@@ -359,6 +359,80 @@ export async function runDuePosJobs(now = new Date(), limit = 20): Promise<{ ran
   return { ran: claimed.length, failed };
 }
 
+/* ------------------------------------------------------------------ mixed orders: the register must agree before online payment */
+
+export interface RegisterMismatch {
+  extra: { productCode: string | null; productName: string; quantity: number; unitPriceCents: number }[];
+  missing: { productCode: string; productName: string; quantity: number }[];
+}
+
+/**
+ * Compares what the register holds on the opened order with the app's lines (by product code and quantity). A
+ * round the waiter typed at the register would otherwise be left out of the online payment and the receipt; while
+ * the two differ the guest pays the whole table at the waiter. An unreachable register does not block (logged).
+ */
+export async function registerMismatch(restaurant: Restaurant, order: Order): Promise<RegisterMismatch | null> {
+  if (!hasModule(restaurant, 'pos')) return null;
+  const config = storedPosConfig(restaurant);
+  if (!config.provider || !config.sendOrdersToPos || !order.posRef) return null;
+  let registerLines;
+  try {
+    registerLines = await posProvider(config.provider).getOrder(order.posRef, posCredentialsOf(restaurant));
+  } catch (error) {
+    logger.warn({ err: error, orderId: order.id }, 'Could not read the order back from the register; allowing payment');
+    return null;
+  }
+  if (!registerLines) return null;
+  const items = new Map(
+    (await MenuItem.findAll({ where: { id: (order.items ?? []).map((l) => l.menuItemId).filter((id): id is string => Boolean(id)), restaurantId: restaurant.id } })).map((i) => [i.id, i]),
+  );
+  const ours = new Map<string, number>();
+  for (const line of order.items ?? []) {
+    const code = line.menuItemId ? items.get(line.menuItemId)?.posProductCode : null;
+    if (code) ours.set(code, (ours.get(code) ?? 0) + line.quantity);
+  }
+  const theirs = new Map<string, number>();
+  const extra: RegisterMismatch['extra'] = [];
+  for (const line of registerLines) {
+    if (!line.productCode) {
+      extra.push(line);
+      continue;
+    }
+    theirs.set(line.productCode, (theirs.get(line.productCode) ?? 0) + line.quantity);
+  }
+  for (const line of registerLines) {
+    if (!line.productCode) continue;
+    const over = (theirs.get(line.productCode) ?? 0) - (ours.get(line.productCode) ?? 0);
+    if (over > 0) {
+      extra.push({ ...line, quantity: over });
+      theirs.set(line.productCode, ours.get(line.productCode) ?? 0);
+    }
+  }
+  const missing: RegisterMismatch['missing'] = [];
+  for (const [code, quantity] of ours) {
+    const short = quantity - (theirs.get(code) ?? 0);
+    if (short > 0) {
+      const name = (order.items ?? []).find((l) => l.menuItemId && items.get(l.menuItemId)?.posProductCode === code);
+      missing.push({ productCode: code, productName: name ? resolveText(name.name, restaurant.defaultLocale, restaurant.defaultLocale) : code, quantity: short });
+    }
+  }
+  return extra.length === 0 && missing.length === 0 ? null : { extra, missing };
+}
+
+/** Staff issued the receipt at the register by hand: no retry, no duplicate, nothing more for the guest. */
+export async function markFiscalManual(restaurantId: string, orderId: string): Promise<OrderDto> {
+  const restaurant = await loadRestaurant(restaurantId);
+  assertPosEnabled(restaurant);
+  const order = await Order.findOne({ where: { id: orderId, restaurantId }, include: [ITEMS_INCLUDE] });
+  if (!order) throw notFound('Order not found');
+  if (order.fiscalStatus === 'issued') throw new AppError(409, 'INVALID_TRANSITION', 'The register already issued this receipt through the app');
+  await PosJob.update({ status: 'done', lastError: null }, { where: { orderId: order.id, type: 'close_order', status: ['queued', 'failed'] } });
+  await order.update({ fiscalStatus: 'manual', fiscalError: null });
+  const fresh = (await Order.findByPk(order.id, { include: [ITEMS_INCLUDE] }))!;
+  publishOrder('order.updated', fresh);
+  return toOrderDto(fresh);
+}
+
 /* ------------------------------------------------------------------ guest: receipt by e-mail */
 
 export async function emailReceipt(slug: string, sessionId: string, orderId: string, email: string): Promise<void> {

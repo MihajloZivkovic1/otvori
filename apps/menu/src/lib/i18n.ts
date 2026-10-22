@@ -135,6 +135,7 @@ export interface PaymentCopy {
   done: string;
   preparing: string;
   notAllowed: string;
+  posMismatch: string;
   // fiscal receipt (Phase 9d)
   receiptTitle: string;
   receiptPending: string;
@@ -266,6 +267,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       done: 'Done',
       preparing: 'Preparing the payment…',
       notAllowed: 'This order cannot be paid right now.',
+      posMismatch: 'The waiter added items at the register that are not in this order. Please pay the whole bill at the waiter.',
       receiptTitle: 'Fiscal receipt',
       receiptPending: 'The fiscal receipt is being issued at the register…',
       receiptNumber: 'Receipt no.',
@@ -409,6 +411,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       done: 'Gotovo',
       preparing: 'Pripremamo plaćanje…',
       notAllowed: 'Ova narudžbina trenutno ne može da se plati.',
+      posMismatch: 'Konobar je na kasi dodao stavke koje nisu u ovoj narudžbini. Molimo te, plati ceo račun kod konobara.',
       receiptTitle: 'Fiskalni račun',
       receiptPending: 'Fiskalni račun se izdaje na kasi…',
       receiptNumber: 'Broj računa',

@@ -486,6 +486,10 @@ export async function setOrderStatus(
 ): Promise<OrderDto> {
   const order = await loadOrder(restaurantId, orderId);
   if (!canTransitionOrder(order.status, input.status)) throw invalidTransition(order.status, input.status);
+  // Money already moved: the refund happens at the register, never by rejecting in the app.
+  if (input.status === 'rejected' && order.paymentStatus === 'paid') {
+    throw new AppError(409, 'PAYMENT_NOT_ALLOWED', 'This order was paid online; deliver it, or refund at the register');
+  }
 
   const patch =
     input.status === 'accepted'

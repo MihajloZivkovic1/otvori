@@ -34,6 +34,10 @@ export async function retryFiscal(req: Request, res: Response): Promise<void> {
   res.json(await service.retryPosJobs(restaurantIdOf(req), uuidParam(req.params.id)));
 }
 
+export async function fiscalManual(req: Request, res: Response): Promise<void> {
+  res.json(await service.markFiscalManual(restaurantIdOf(req), uuidParam(req.params.id)));
+}
+
 /* ------------------------------------------------------------------ guest */
 
 export async function emailReceipt(req: Request, res: Response): Promise<void> {

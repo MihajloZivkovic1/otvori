@@ -54,6 +54,14 @@ export interface PosRef {
   posRef: string;
 }
 
+/** What the register currently has on an order it opened for us (to spot items added live by the waiter). */
+export interface PosOrderLine {
+  productCode: string | null;
+  productName: string;
+  quantity: number;
+  unitPriceCents: number;
+}
+
 export interface PosProvider {
   readonly key: PosProviderKey;
   testConnection(credentials: PosCredentials): Promise<{ ok: boolean; message: string }>;
@@ -63,4 +71,6 @@ export interface PosProvider {
   /** Closes the order with a payment and asks for the fiscal receipt text. */
   closeOrder(params: CloseOrderParams, credentials: PosCredentials): Promise<PosRef & { receipt: FiscalReceipt | null }>;
   getFiscalReceipt(posRef: string, credentials: PosCredentials): Promise<FiscalReceipt | null>;
+  /** The register's current lines for an opened order; null when it no longer exists there. */
+  getOrder(posRef: string, credentials: PosCredentials): Promise<PosOrderLine[] | null>;
 }

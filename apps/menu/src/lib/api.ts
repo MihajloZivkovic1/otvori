@@ -191,6 +191,8 @@ export function orderingErrorMessage(error: unknown, t: Dictionary): string {
         return t.errors.rateLimited;
       case 'PAYMENT_NOT_ALLOWED':
         return t.pay.notAllowed;
+      case 'POS_MISMATCH':
+        return t.pay.posMismatch;
       default:
         return t.errors.generic;
     }

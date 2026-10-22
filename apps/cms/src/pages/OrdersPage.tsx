@@ -18,7 +18,7 @@ import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
 import { formatPrice, plural } from '../lib/format';
 import { primeAlertSound, requestNotificationPermission } from '../lib/notify';
-import { useCompleteRequest, useMarkOrderCash, useRetryFiscal, useUpdateOrderStatus } from '../lib/queries';
+import { useCompleteRequest, useMarkFiscalManual, useMarkOrderCash, useRetryFiscal, useUpdateOrderStatus } from '../lib/queries';
 
 /** Waiter screen (design B1–B3, B7): calls, new and in-progress orders, live over SSE with a polling fallback. */
 export function OrdersPage() {
@@ -54,6 +54,7 @@ function useBoard() {
   const update = useUpdateOrderStatus(restaurant.id);
   const markCash = useMarkOrderCash(restaurant.id);
   const retryFiscal = useRetryFiscal(restaurant.id);
+  const fiscalManual = useMarkFiscalManual(restaurant.id);
   const payments = hasModule('payments');
   const pos = hasModule('pos');
   const complete = useCompleteRequest(restaurant.id);
@@ -122,6 +123,10 @@ function useBoard() {
       setBusyId(order.id);
       retryFiscal.mutate(order.id, { onError, onSettled: () => setBusyId(null) });
     },
+    fiscalManual: (order: OrderDto) => {
+      setBusyId(order.id);
+      fiscalManual.mutate(order.id, { onError, onSettled: () => setBusyId(null) });
+    },
   };
 }
 type Board = ReturnType<typeof useBoard>;
@@ -162,6 +167,7 @@ function Cards({ board, group, compact }: { board: Board; group: 'calls' | 'new'
       onCash={() => board.cash(order)}
       pos={board.pos}
       onRetryFiscal={() => board.retryFiscal(order)}
+      onFiscalManual={() => board.fiscalManual(order)}
     />
   ));
 }
@@ -268,7 +274,7 @@ function MobileOrders() {
               </section>
             ) : null,
           )}
-          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} pos={board.pos} onRetryFiscal={board.retryFiscal} />
+          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} pos={board.pos} onRetryFiscal={board.retryFiscal} onFiscalManual={board.fiscalManual} />
         </div>
       )}
 
@@ -334,7 +340,7 @@ function DesktopOrders() {
               </Column>
             ))}
           </div>
-          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} pos={board.pos} onRetryFiscal={board.retryFiscal} />
+          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} pos={board.pos} onRetryFiscal={board.retryFiscal} onFiscalManual={board.fiscalManual} />
         </>
       )}
       {board.rejecting ? (

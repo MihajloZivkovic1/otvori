@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { POS_LIMITS, type PosProduct } from '@qr-menu/shared';
 import { AppError } from '../../../utils/errors.js';
 import { logger } from '../../../utils/logger.js';
-import type { FiscalReceipt, PosCredentials, PosLine, PosProvider, PosRef } from './types.js';
+import type { FiscalReceipt, PosCredentials, PosLine, PosOrderLine, PosProvider, PosRef } from './types.js';
 
 /*
  * Octopos API (https://octopos.rs/en/octopos-api/, notes in docs/octopos.md).
@@ -47,6 +47,15 @@ export const octoposFiscalReceiptSchema = z.object({
   TextBottom: z.string().default(''),
   VerificationUrl: z.string().default(''),
   InvoiceNumber: z.string().default(''),
+});
+
+/** GET /weborder/{id}: BillItems carry ProductId, not the code; codes are resolved through the product list. */
+const orderSchema = z.object({
+  Id: z.coerce.number(),
+  TableName: z.string().nullable().optional(),
+  BillItems: z
+    .array(z.object({ ProductId: z.coerce.number().nullable().optional(), ProductName: z.string().default(''), Quantity: z.coerce.number(), Price: z.coerce.number() }).passthrough())
+    .default([]),
 });
 
 /** POST /weborder answers with the order id as a number, or with { Value, FiscalReceipt } when a receipt was asked for. */
@@ -207,6 +216,29 @@ export const octoposProvider: PosProvider = {
     }
     const id = result.Data.Value ?? result.Data.Id ?? result.Data.FiscalReceipt?.Id;
     return { posRef: String(id ?? params.openRef ?? externalId), receipt: receiptOf(result.Data.FiscalReceipt) };
+  },
+
+  async getOrder(posRef, credentials): Promise<PosOrderLine[] | null> {
+    let result;
+    try {
+      result = await call(credentials, 'GET', `/weborder/${encodeURIComponent(posRef)}`, envelope(orderSchema.nullable()));
+    } catch (error) {
+      if (error instanceof AppError && /refused the request/.test(error.message)) return null;
+      throw error;
+    }
+    if (!result.Data) return null;
+    const products = await call(credentials, 'GET', '/product', envelope(z.array(z.unknown())));
+    const codeById = new Map<number, string>();
+    for (const raw of products.Data) {
+      const parsed = octoposProductSchema.safeParse(raw);
+      if (parsed.success && parsed.data.Code) codeById.set(parsed.data.Id, parsed.data.Code.trim());
+    }
+    return result.Data.BillItems.map((item) => ({
+      productCode: item.ProductId === null || item.ProductId === undefined ? null : (codeById.get(item.ProductId) ?? null),
+      productName: item.ProductName,
+      quantity: item.Quantity,
+      unitPriceCents: toCents(item.Price),
+    }));
   },
 
   async getFiscalReceipt(posRef, credentials) {

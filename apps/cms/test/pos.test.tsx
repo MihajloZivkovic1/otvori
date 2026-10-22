@@ -27,6 +27,10 @@ function posVenue(fiscal: Partial<OrderDto> = {}, config: Partial<RestaurantDto[
     const path = request.url.pathname;
     if (path === `/api/admin/restaurants/${ids.restaurant}` && request.method === 'GET') return { body: venue };
     if (path === `/api/admin/restaurants/${ids.restaurant}/pos-config` && request.method === 'GET') return { body: venue.posConfig };
+    if (path === `/api/admin/restaurants/${ids.restaurant}/orders/${ids.order141}/fiscal/manual` && request.method === 'POST') {
+      Object.assign(paid, { fiscalStatus: 'manual', fiscalError: null, updatedAt: '2026-10-22T11:52:00.000Z' });
+      return { body: { ...paid } };
+    }
     // Retry answers with the live (paid) order, re-queued.
     if (path === `/api/admin/restaurants/${ids.restaurant}/orders/${ids.order141}/fiscal/retry` && request.method === 'POST') {
       Object.assign(paid, { fiscalStatus: 'pending', fiscalError: null, updatedAt: '2026-10-22T11:51:00.000Z' });
@@ -69,6 +73,22 @@ describe('waiter screen → fiscal receipt', () => {
       order: { ...paid, fiscalStatus: 'issued', fiscalInvoiceNumber: 'MOCKPFR0-MOCKPFR0-008', fiscalVerificationUrl: 'https://x/y', updatedAt: '2026-10-22T11:55:00.000Z' },
     });
     expect(await within(order141).findByText('Fiscal receipt · PFR0-008')).toBeInTheDocument();
+  });
+});
+
+describe('waiter screen → receipt issued by hand', () => {
+  it('lets the waiter mark a failed fiscalisation as issued at the register (no retry, no duplicate)', async () => {
+    const venue = posVenue({ fiscalStatus: 'failed', fiscalError: 'Mock register unreachable', fiscalInvoiceNumber: null, fiscalVerificationUrl: null });
+    const spy = mockApi({ session: sessionFor(user) }, venue.handler);
+    renderApp(`/r/${ids.restaurant}/orders`, { viewport: 'mobile' });
+    const typist = userEvent.setup();
+    const progress = await screen.findByRole('region', { name: /In progress/ });
+    const order141 = within(progress).getByRole('article', { name: 'Order #141, table 11' });
+    await typist.click(within(order141).getByRole('button', { name: 'Receipt issued at the register for #141' }));
+    await waitFor(() => expect(requests(spy).some((r) => r.method === 'POST' && r.url.pathname.endsWith(`/orders/${ids.order141}/fiscal/manual`))).toBe(true));
+    expect(await within(order141).findByText('Receipt issued at the register')).toHaveAttribute('data-fiscal', 'manual');
+    expect(within(order141).queryByRole('button', { name: /Retry/ })).toBeNull();
+    expect(within(order141).getByText('Paid · IPS')).toBeInTheDocument();
   });
 });
 

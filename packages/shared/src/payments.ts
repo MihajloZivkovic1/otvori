@@ -17,7 +17,8 @@ export const PAYMENT_ATTEMPT_STATUSES = ['pending', 'paid', 'failed', 'expired']
 export type PaymentAttemptStatus = (typeof PAYMENT_ATTEMPT_STATUSES)[number];
 
 /** Fiscal receipt state of a paid order (Phase 9d, POS integration). */
-export const FISCAL_STATUSES = ['none', 'pending', 'issued', 'failed'] as const;
+/** `manual` = staff issued the receipt at the register themselves (no retry, nothing for the guest). */
+export const FISCAL_STATUSES = ['none', 'pending', 'issued', 'failed', 'manual'] as const;
 export type FiscalStatus = (typeof FISCAL_STATUSES)[number];
 
 export const PAYMENT_LIMITS = {

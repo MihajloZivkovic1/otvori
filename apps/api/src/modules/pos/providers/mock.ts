@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { PosProduct } from '@qr-menu/shared';
 import { logger } from '../../../utils/logger.js';
-import type { CloseOrderParams, FiscalReceipt, PosLine, PosProvider, SendOrderParams } from './types.js';
+import type { CloseOrderParams, FiscalReceipt, PosLine, PosOrderLine, PosProvider, SendOrderParams } from './types.js';
 
 /** What the mock register "received" (tests and the demo read it back). */
 export interface MockPosCall {
@@ -25,6 +25,8 @@ const catalogue: PosProduct[] = [
 ];
 let failNext = 0;
 let receiptCounter = 0;
+/** What the mock register holds per opened order (posRef → lines); `addLiveLines` simulates the waiter typing more. */
+const openOrders = new Map<string, PosOrderLine[]>();
 
 export const mockPos = {
   calls(): readonly MockPosCall[] {
@@ -34,6 +36,11 @@ export const mockPos = {
     calls.length = 0;
     failNext = 0;
     receiptCounter = 0;
+    openOrders.clear();
+  },
+  /** Simulates items the waiter added at the register after the app opened the order. */
+  addLiveLines(posRef: string, lines: PosOrderLine[]): void {
+    openOrders.set(posRef, [...(openOrders.get(posRef) ?? []), ...lines]);
   },
   /** Make the next N register calls fail (tests the retry queue). */
   failNextCalls(count: number): void {
@@ -105,7 +112,9 @@ export const mockPosProvider: PosProvider = {
     const entry: MockPosCall = { type: 'send_order', externalId: params.externalId, tableName: params.tableName, lines: params.lines, at: new Date().toISOString() };
     calls.push(entry);
     logger.info({ pos: 'mock', ...entry }, `[pos] would open order ${params.externalId} on table ${params.tableName}`);
-    return { posRef: `mock-order-${calls.length}` };
+    const posRef = `mock-order-${calls.length}`;
+    openOrders.set(posRef, params.lines.map((l) => ({ productCode: l.productCode, productName: l.productName, quantity: l.quantity, unitPriceCents: l.unitPriceCents })));
+    return { posRef };
   },
 
   async closeOrder(params: CloseOrderParams) {
@@ -125,5 +134,9 @@ export const mockPosProvider: PosProvider = {
 
   async getFiscalReceipt() {
     return null;
+  },
+
+  async getOrder(posRef) {
+    return openOrders.get(posRef) ?? null;
   },
 };

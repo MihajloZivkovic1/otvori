@@ -282,6 +282,14 @@ API does (and what it leaves open) is in `docs/octopos.md`; the end-to-end demo 
   at the register" + Retry) on in-progress cards and Today rows; Settings → `components/settings/IntegrationsCard.tsx`
   (provider, base URL, write-only API key, close mode, three switches, table mapping editor, Test connection, Sync
   products → `PosSyncModal.tsx` review with checkboxes), MOCK REGISTER badge when `posConfig.simulator`.
+- **Mixed orders** (first round by phone, second typed at the register): the integration is one-way, so before a
+  payment attempt `registerMismatch()` (`modules/pos/service.ts`) reads the opened order back
+  (`PosProvider.getOrder()` = Octopos `GET /weborder/{id}`, BillItems resolved to codes through the product list; the
+  mock keeps what it received plus `mockPos.addLiveLines()`) and compares codes and quantities; any difference → 409
+  `POS_MISMATCH` with `details { extra, missing }` and the guest copy "plati ceo račun kod konobara". An unreachable
+  register does not block. A paid order can no longer be `rejected` (409 `PAYMENT_NOT_ALLOWED`; refunds happen at the
+  register). Staff `POST …/orders/:id/fiscal/manual` = "Receipt issued at the register": `fiscal_status = manual`,
+  the close job is marked done (no retry, no duplicate receipt), the guest sees no receipt block.
 - **Sandbox & tests**: the public sandbox token (`.env` `OCTOPOS_SANDBOX_AUTH`, base `https://sandbox.octopos.rs/api`)
   can read `GET /product` but every `POST /weborder` answers 401, so `apps/api/test/pos.test.ts` runs `fetchProducts`
   live when the auth is set and the write path only against the recorded samples in `test/fixtures/octopos/`

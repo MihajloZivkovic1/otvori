@@ -42,6 +42,7 @@ scoped.use('/payment-config', paymentConfigRouter);
 scoped.use('/pos-config', posConfigRouter);
 scoped.use('/pos', posRouter);
 scoped.post('/orders/:id/fiscal/retry', requireModule('ordering'), requireModule('pos'), posController.retryFiscal);
+scoped.post('/orders/:id/fiscal/manual', requireModule('ordering'), requireModule('pos'), posController.fiscalManual);
 scoped.use('/', restaurantsRouter);
 
 adminRouter.use('/restaurants/:restaurantId', requireAuth, requireMembership(), scoped);

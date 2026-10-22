@@ -604,6 +604,12 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
     const input = body as { createCodes: string[]; updateCodes: string[] };
     return { body: { created: input.createCodes.length, updated: input.updateCodes.length, categoryId: ids.coffee } };
   }
+  const fiscalManual = new RegExp(`^${base}/orders/([^/]+)/fiscal/manual$`).exec(path);
+  if (fiscalManual && method === 'POST') {
+    const order = orders.find((o) => o.id === fiscalManual[1]);
+    if (!order) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Order not found' } } };
+    return { body: { ...order, fiscalStatus: 'manual', fiscalError: null, updatedAt: '2026-10-22T11:52:00.000Z' } };
+  }
   const fiscalRetry = new RegExp(`^${base}/orders/([^/]+)/fiscal/retry$`).exec(path);
   if (fiscalRetry && method === 'POST') {
     const order = orders.find((o) => o.id === fiscalRetry[1]);

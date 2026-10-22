@@ -22,6 +22,7 @@ import { AppError, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import { toIso } from '../../utils/objects.js';
 import { publishOrder, toOrderDto } from '../ordering/service.js';
+import { registerMismatch } from '../pos/service.js';
 import { loadPublishedRestaurant } from '../public/service.js';
 import { credentialsOf, storedConfig, toPaymentConfigDto } from './config.js';
 import { runPaidOrderHooks } from './hooks.js';
@@ -115,6 +116,12 @@ export async function createPayment(slug: string, sessionId: string, orderId: st
         ? 'This order is already paid'
         : 'An order can be paid once the waiter has accepted it',
     );
+  }
+
+  // Mixed orders: what the waiter typed at the register is not in this order — the guest pays the whole table there.
+  const mismatch = await registerMismatch(restaurant, order);
+  if (mismatch) {
+    throw new AppError(409, 'POS_MISMATCH', 'The register has items that are not in this order; please pay the whole bill at the waiter', mismatch);
   }
 
   const tipCents = tipCentsFor(order.totalCents, input.tipPercent);

@@ -495,6 +495,16 @@ export function useRetryFiscal(rid: string) {
   });
 }
 
+/** POST /orders/:id/fiscal/manual — the waiter issued the receipt at the register. */
+export function useMarkFiscalManual(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<OrderDto>(`${base(rid)}/orders/${id}/fiscal/manual`, { method: 'POST', body: {} }),
+    onSuccess: (order) => upsertOrder(client, rid, order),
+    onError: () => void client.invalidateQueries({ queryKey: keys.orders(rid) }),
+  });
+}
+
 export function useCompleteRequest(rid: string) {
   const client = useQueryClient();
   return useMutation({

@@ -3,11 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MenuItemDto, OrderDto, PosSyncPreviewDto, PublicOrderDto, PublicPaymentDto, TableDto } from '@qr-menu/shared';
 import { env } from '../src/config/env.js';
-import { Order, PosJob, User } from '../src/db/models/index.js';
+import { Order, Payment, PosJob, User } from '../src/db/models/index.js';
 import { orderingBus } from '../src/modules/ordering/events.js';
 import { MOCK_SIGNATURE_HEADER, signMockWebhook } from '../src/modules/payments/providers/mock.js';
 import { settleBackgroundWork } from '../src/modules/payments/service.js';
 import { mockPos } from '../src/modules/pos/providers/mock.js';
+import { applyPaymentResult } from '../src/modules/payments/service.js';
 import { authorizationHeader, octoposProvider } from '../src/modules/pos/providers/octopos.js';
 import { runDuePosJobs } from '../src/modules/pos/service.js';
 import { outbox } from '../src/utils/mailer.js';
@@ -100,6 +101,18 @@ describe('OctoposProvider (fixture-only: the public sandbox token cannot create 
     expect(body2.Payments).toEqual([{ FiscalPaymentTypeId: 1, Amount: 300 }]);
     expect(calls[2]!.url).toBe('https://sandbox.octopos.rs/api/weborder/159851/fiscalreceipt?lineWidth=40');
     expect(cash.receipt?.invoiceNumber).toBe('4RPVBTRZ-Dt1Ov1o0-87');
+  });
+
+  it('reads an opened order back and resolves BillItems to product codes through the product list', async () => {
+    stubFetch([answer(fixture('get-order')), answer(fixture('products'))]);
+    const lines = await octoposProvider.getOrder('159851', credentials);
+    expect(calls[0]!.url).toBe('https://sandbox.octopos.rs/api/weborder/159851');
+    expect(lines).toEqual([
+      { productCode: 'ESP', productName: 'Espreso', quantity: 1, unitPriceCents: 15000 },
+      { productCode: null, productName: 'Sprajt 0. 25l', quantity: 2, unitPriceCents: 12000 },
+    ]);
+    stubFetch([answer(fixture('error'), 400)]);
+    expect(await octoposProvider.getOrder('nope', credentials)).toBeNull();
   });
 
   it('turns the register’s error envelope and auth failures into POS_UNAVAILABLE', async () => {
@@ -302,6 +315,51 @@ describe('POS integration (mock register)', () => {
     expect((await api.get(`${v.admin}/pos-config`).set(bearer(staff.accessToken))).status).toBe(200);
     const plain = await registerUser();
     expect((await api.get(`/api/admin/restaurants/${plain.restaurantId}/pos-config`).set(bearer(plain.accessToken))).body.error.code).toBe('MODULE_DISABLED');
+  });
+
+  it('blocks online payment while the register holds items the app does not know (mixed orders), never a paid order\'s rejection, and accepts "issued at the register"', async () => {
+    const v = await venue();
+    const order = (await api.post(`/api/public/${v.slug}/orders`).set(v.guest).send({ tableNumber: 7, items: [{ itemId: v.espresso.id, quantity: 2 }] })).body as PublicOrderDto;
+    await api.patch(`${v.admin}/orders/${order.id}`).set(v.auth).send({ status: 'accepted' });
+    await runDuePosJobs();
+    // Same lines on the register: payment allowed.
+    const ok = await api.post(`/api/public/${v.slug}/orders/${order.id}/payments`).set(v.guest).send({ tipPercent: 0 });
+    expect(ok.status).toBe(201);
+    // The waiter types a second round at the register.
+    mockPos.addLiveLines('mock-order-1', [{ productCode: 'LIM', productName: 'Limunada', quantity: 1, unitPriceCents: 30000 }]);
+    const blocked = await api.post(`/api/public/${v.slug}/orders/${order.id}/payments`).set(v.guest).send({ tipPercent: 5 });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.code).toBe('POS_MISMATCH');
+    expect(blocked.body.error.details).toEqual({ extra: [{ productCode: 'LIM', productName: 'Limunada', quantity: 1, unitPriceCents: 30000 }], missing: [] });
+    // Extra quantity of a known item counts too; an unreachable register does not block.
+    mockPos.reset();
+    const v2 = await venue();
+    const o2 = (await api.post(`/api/public/${v2.slug}/orders`).set(v2.guest).send({ tableNumber: 7, items: [{ itemId: v2.espresso.id, quantity: 1 }] })).body as PublicOrderDto;
+    await api.patch(`${v2.admin}/orders/${o2.id}`).set(v2.auth).send({ status: 'accepted' });
+    await runDuePosJobs();
+    mockPos.addLiveLines('mock-order-1', [{ productCode: 'ESP', productName: 'Espreso', quantity: 2, unitPriceCents: 18000 }]);
+    const more = await api.post(`/api/public/${v2.slug}/orders/${o2.id}/payments`).set(v2.guest).send({});
+    expect(more.body.error.details.extra).toEqual([{ productCode: 'ESP', productName: 'Espreso', quantity: 2, unitPriceCents: 18000 }]);
+
+    // A paid order cannot be rejected; the refund happens at the register.
+    const paidAttempt = (await api.post(`/api/public/${v.slug}/orders/${order.id}/payments`).set(session()).send({})).status; // foreign session: 404, unaffected
+    expect(paidAttempt).toBe(404);
+    await applyPaymentResult((await Payment.findOne({ where: { providerRef: ok.body.ref } }))!.id, { status: 'paid', amountCents: ok.body.amountCents, paidAt: new Date(), raw: null });
+    const reject = await api.patch(`${v.admin}/orders/${order.id}`).set(v.auth).send({ status: 'rejected', rejectedReason: 'x' });
+    expect(reject.status).toBe(409);
+    expect(reject.body.error.code).toBe('PAYMENT_NOT_ALLOWED');
+
+    // The close job fails for good → the waiter issues the receipt by hand.
+    await PosJob.update({ status: 'failed', lastError: 'boom' }, { where: { orderId: order.id, type: 'close_order' } });
+    await Order.update({ fiscalStatus: 'failed', fiscalError: 'boom' }, { where: { id: order.id } });
+    const manual = await api.post(`${v.admin}/orders/${order.id}/fiscal/manual`).set(v.auth).send({});
+    expect(manual.status).toBe(200);
+    expect((manual.body as OrderDto).fiscalStatus).toBe('manual');
+    expect(await PosJob.count({ where: { orderId: order.id, type: 'close_order', status: 'done' } })).toBe(1);
+    expect(await runDuePosJobs()).toEqual({ ran: 0, failed: 0 });
+    const guest = (await api.get(`/api/public/${v.slug}/orders/${order.id}`).set(v.guest)).body as PublicOrderDto;
+    expect(guest.fiscalStatus).toBe('manual');
+    expect(guest.fiscalInvoiceNumber).toBeNull();
   });
 
   it('never leaks the API key and reports the mock connection', async () => {
