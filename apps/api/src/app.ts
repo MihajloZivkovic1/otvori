@@ -26,6 +26,13 @@ function isAllowedOrigin(origin: string): boolean {
   }
 }
 
+/** `/api/auth/magic-link/<token>` and `…/events?token=…` carry secrets in the URL; keep them out of the logs. */
+export function stripTokenParam(url: string): string {
+  return url
+    .replace(/([?&]token=)[^&]*/g, '$1[redacted]')
+    .replace(/(\/api\/auth\/magic-link\/)[^/?#]+/, '$1[redacted]');
+}
+
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
@@ -35,7 +42,18 @@ export function createApp(): express.Express {
     pinoHttp({
       logger,
       autoLogging: env.isTest ? false : { ignore: (req) => req.url === '/api/health' },
-      redact: ['req.headers.authorization', 'req.headers.cookie'],
+      // Never log credentials: no request/response headers (Authorization, Cookie, Set-Cookie with the refresh
+      // token) and no `?token=` query values (SSE stream token, magic link).
+      serializers: {
+        req: (req: { id?: unknown; method?: string; url?: string; remoteAddress?: string }) => ({
+          id: req.id,
+          method: req.method,
+          url: stripTokenParam(req.url ?? ''),
+          remoteAddress: req.remoteAddress,
+        }),
+        res: (res: { statusCode?: number }) => ({ statusCode: res.statusCode }),
+      },
+      redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
       customLogLevel: (_req, res, error) => {
         if (error || res.statusCode >= 500) return 'error';
         if (res.statusCode >= 400) return 'warn';

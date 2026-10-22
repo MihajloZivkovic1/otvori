@@ -7,6 +7,7 @@ const ISSUER = 'tabla';
 
 export function signAccessToken(userId: string): { token: string; expiresIn: number } {
   const token = jwt.sign({ type: 'access' }, env.JWT_ACCESS_SECRET, {
+    algorithm: 'HS256',
     subject: userId,
     issuer: ISSUER,
     expiresIn: env.JWT_ACCESS_TTL_SECONDS,
@@ -17,7 +18,7 @@ export function signAccessToken(userId: string): { token: string; expiresIn: num
 export function verifyAccessToken(token: string): { userId: string } {
   let payload: jwt.JwtPayload | string;
   try {
-    payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER });
+    payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER, algorithms: ['HS256'] });
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw unauthorized('Access token expired', 'TOKEN_EXPIRED');
@@ -37,6 +38,7 @@ export function verifyAccessToken(token: string): { userId: string } {
 export function signSseToken(userId: string, restaurantId: string): { token: string; expiresIn: number } {
   const expiresIn = ORDERING_LIMITS.sseTokenSeconds;
   const token = jwt.sign({ type: 'sse', rid: restaurantId }, env.JWT_ACCESS_SECRET, {
+    algorithm: 'HS256',
     subject: userId,
     issuer: ISSUER,
     expiresIn,
@@ -47,7 +49,7 @@ export function signSseToken(userId: string, restaurantId: string): { token: str
 export function verifySseToken(token: string): { userId: string; restaurantId: string } {
   let payload: jwt.JwtPayload | string;
   try {
-    payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER });
+    payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER, algorithms: ['HS256'] });
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) throw unauthorized('Stream token expired', 'TOKEN_EXPIRED');
     throw unauthorized('Invalid stream token');

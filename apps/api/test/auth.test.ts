@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { stripTokenParam } from '../src/app.js';
 import { outbox } from '../src/utils/mailer.js';
 import { api, bearer, refreshCookie, registerUser, setCookies } from './helpers.js';
 
@@ -32,6 +33,24 @@ describe('auth', () => {
     expect(cookie).toBeDefined();
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/Path=\/api\/auth/);
+  });
+
+  it('never hands out a reserved subdomain as a slug', async () => {
+    const session = await registerUser({ restaurantName: 'App' });
+    expect(session.memberships[0]!.restaurant.slug).toBe('app-2');
+    const res = await api
+      .patch(`/api/admin/restaurants/${session.memberships[0]!.restaurant.id}`)
+      .set(bearer(session.accessToken))
+      .send({ slug: 'api' });
+    expect(res.status).toBe(400);
+  });
+
+  it('keeps credentials out of the request log', () => {
+    expect(stripTokenParam('/api/admin/restaurants/x/events?token=abc.def.ghi&x=1')).toBe(
+      '/api/admin/restaurants/x/events?token=[redacted]&x=1',
+    );
+    expect(stripTokenParam('/api/auth/magic-link/abcdef?lang=sr')).toBe('/api/auth/magic-link/[redacted]?lang=sr');
+    expect(stripTokenParam('/api/public/kafeterija/menu?locale=sr')).toBe('/api/public/kafeterija/menu?locale=sr');
   });
 
   it('generates a unique slug when the restaurant name repeats', async () => {

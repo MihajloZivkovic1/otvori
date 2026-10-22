@@ -20,7 +20,7 @@ services:
       - -c
       - shared_buffers=128MB
       - -c
-      - effective_cache_size=384MB
+      - effective_cache_size=192MB
       - -c
       - work_mem=4MB
       - -c
@@ -74,7 +74,7 @@ services:
       PUBLIC_MENU_BASE_URL: https://{slug}.${DOMAIN}
       # app.DOMAIN (APP_URL) and every {slug}.DOMAIN (PUBLIC_MENU_BASE_URL) are allowed implicitly; add the apex + www here.
       CORS_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
-      MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-resend}
       MAIL_FROM: ${MAIL_FROM:-otvori <zdravo@otvori.menu>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
@@ -87,6 +87,8 @@ services:
       UPLOADS_DIR: /app/apps/api/uploads
     volumes:
       - uploads:/app/apps/api/uploads
+    # The API drains for up to 10 s on SIGTERM (index.ts); give Docker more than that before it SIGKILLs.
+    stop_grace_period: 20s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 30s

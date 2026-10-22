@@ -31,6 +31,7 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 | `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
 | `deploy/` | Production stack for one 1 GB droplet: compose file, two Dockerfiles, Caddyfile, deploy/backup/restore scripts, README | Phase 4 (done) |
+| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a: findings, what was fixed, the open TODO list) | Phase 9a (done) |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
@@ -77,7 +78,9 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   Route params that are ids go through `uuidParam()`. `ZodError` → 400.
 - Error shape is always `{ error: { code, message, details? } }` (`utils/errors.ts`, `middleware/error.ts`).
   400 validation, 401 auth, 403 membership/role, 404 not found, 409 conflict (`EMAIL_TAKEN`, `SLUG_TAKEN`, `TABLE_NUMBER_TAKEN`), 413/415 uploads, 429 rate limit.
-- Logging: pino (`utils/logger.ts`), pino-http per request. Never `console.log` in app code.
+- Logging: pino (`utils/logger.ts`), pino-http per request with custom serializers: only `id`, `method`, `url` (with
+  `?token=` and `/magic-link/<token>` redacted by `stripTokenParam()`) and `remoteAddress` for the request, only `statusCode`
+  for the response — never headers (Authorization, Cookie, Set-Cookie). Never `console.log` in app code.
 - `GET /api/health` → `{ ok, db, version }`; `ok:false` + 503 when the 2 s Postgres ping fails. `version` = `APP_VERSION` env
   (the git short SHA baked into the Docker image; `dev` when unset).
 - Migrations only (umzug + Sequelize QueryInterface, `src/db/migrations/*.ts`); **never** `sequelize.sync()`.
@@ -126,6 +129,10 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   `MAIL_PROVIDER`: `log` (dev/test; messages are also collected in `outbox`) or `resend` (Resend REST API with `RESEND_API_KEY`,
   no SDK). Links point at `APP_URL/auth/magic?token=` and `APP_URL/auth/reset?token=`.
 - `POST /register` creates user + restaurant (slug from the name, made unique with `-2`, `-3`, …) + owner membership; 14-day trial.
+- `/forgot-password` and `/magic-link` answer 200 immediately; the mail is sent detached (`void …catch`) so neither the
+  response time nor a provider failure reveals whether the account exists.
+- Production refuses to start with `MAIL_PROVIDER=log` unless `ALLOW_LOG_MAIL=1`, and with a `JWT_ACCESS_SECRET` shorter
+  than 32 characters or containing a placeholder word. The seed refuses to run in production unless `ALLOW_SEED=1`.
 
 ## Public menu
 
@@ -202,7 +209,12 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
 
 ## Uploads / storage
 
-- multer (memory) → sharp. Logo: 512×512 PNG (`fit: contain`, transparent). Item image: 800×800 WebP (`fit: cover`).
+- multer (memory, 8 MB, JPEG/PNG/WebP/GIF/AVIF/HEIC/TIFF — no SVG) → sharp (`limitInputPixels` 40 MP against decompression
+  bombs). Logo: 256×256 palette PNG (`fit: contain`, transparent; PNG because pdfkit cannot embed WebP). Item image: 800×800
+  WebP (`fit: cover`) **plus** a 160×160 WebP thumbnail (`…-thumb.webp`, `thumbnailUrl`, null for photos uploaded before
+  Phase 9a) that list rows use; the CMS table and the menu rows fall back to `imageUrl`.
+- Slugs: `slugSchema` (shared) rejects `RESERVED_SLUGS` (`app`, `api`, `www`, `mail`, …) and `uniqueSlug()` skips them, so a
+  venue can never shadow a service subdomain.
 - `utils/storage.ts`: S3-compatible driver (DigitalOcean Spaces) when `S3_BUCKET` + keys are set, otherwise local
   `UPLOADS_DIR` served at `API_URL/uploads`. Keys: `restaurants/<id>/logo-<ts>.png`, `restaurants/<id>/items/<itemId>-<ts>.webp`.
 - QR: `qrcode` (PNG/SVG); A4 QR sheet via pdfkit with DejaVu Sans (needed for č/ć/đ/š/ž).
@@ -213,7 +225,8 @@ Stack: React 19, Vite 8, TypeScript strict, Tailwind v4 via `@tailwindcss/vite`,
 `useSearchParams`), TanStack Query 5. No UI kit, icon or animation library; the few SVGs are inlined in `components/icons.tsx`.
 Budget: initial JS ≈ 108 KB gzipped (react-dom alone is 64 KB); the item sheet, the cart sheet and the order status page
 are lazy chunks (the sheets are prefetched when idle).
-Lighthouse mobile on the seeded menu: 100/100/100/100.
+Lighthouse mobile on the seeded menu with real photos and a logo uploaded: 97/100/100/100 (the row thumbnails and the
+256 px logo are what keep LCP under 3 s on simulated 4G).
 
 ### Running it on this machine
 ```bash
@@ -250,6 +263,10 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   never for body text. Light/dark palettes, type sizes and spacing come from `design/Tabla Guest Menu.html`.
 - **Fonts**: Google Fonts (Figtree 400/500/600, Libre Baskerville 400/700, `display=swap`) via preconnect + a non-blocking stylesheet
   in `index.html`. Serif = restaurant name, category headings, item names (400 in rows, 700 in the sheet) and the "otvori" wordmark in the footer (400).
+- **Error boundary**: `components/ErrorBoundary.tsx` + `lib/stale-chunk.ts` wrap the app; a lazy chunk that vanished after a
+  deploy triggers one `location.reload()` (flag `sessionStorage['tabla.chunkReload']`), anything else shows a bilingual reload
+  screen instead of a blank page; `main.tsx` also listens to `vite:preloadError`. The CMS has the same pair
+  (`components/shell/RouteError.tsx` as the root route `ErrorBoundary`, `lib/stale-chunk.ts`, key `tabla.cms.chunkReload`).
 - **index.html** carries a static copy of `MenuSkeleton` inside `#root` (first paint without JS; React replaces it) and the build
   inlines the stylesheet (`inlineCss` plugin in `vite.config.ts`). Keep the static skeleton in sync when `MenuSkeleton` changes.
 - **i18n** (`lib/i18n.ts`): UI strings for `sr`/`en` only; menu content arrives resolved from the API. UI locale =
@@ -301,7 +318,7 @@ npm run dev -w @qr-menu/api            # PORT=3100 (apps/api/.env); APP_URL=http
 npm run dev -w @qr-menu/cms            # http://localhost:5173 — Vite proxies /api to VITE_API_URL (apps/cms/.env, gitignored)
 ```
 `apps/cms/.env.example`: `VITE_API_URL=http://localhost:3100` (dev proxy target; production builds call it directly, empty =
-same origin), optional `VITE_PUBLIC_MENU_BASE_URL`. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@otvori.menu` /
+same origin); `APP_VERSION` (build env, the git short SHA in Docker) versions the service-worker cache. Seed logins: `ana@kafeterija.rs` / `tabla1234` (owner), `admin@otvori.menu` /
 `admin1234` (superadmin, no memberships → lands on `/superadmin`).
 
 ### Auth flow (`lib/api.ts`, `lib/auth.tsx`)
@@ -386,7 +403,7 @@ the switch was touched so a "back at 06:00" state survives an unrelated edit. Cl
 `UnavailablePage` (one switch per item: off → `{available:false, until:'tomorrow-06:00'}`, on → `{available:true}`, "Turn all on"),
 Tables rows expand with Share (`navigator.share`, clipboard fallback), Download and the ordering block, `VenueSheet` switcher,
 `InstallHint` (`beforeinstallprompt`, iOS Share hint; dismissal in localStorage). PWA: `public/manifest.webmanifest`, `public/icons/*`,
-`public/sw.js` (app shell + the alert sound, never `/api`), registered in production builds only.
+`src/sw.js` (app shell + the alert sound, never `/api`; emitted as `/sw.js` with the cache name stamped per build by `vite.config.ts`), registered in production builds only.
 
 ### Tests (`apps/cms/test`)
 vitest + Testing Library in jsdom. `helpers.tsx` has DTO fixtures, `mockApi(state, override?)` (default answers for every
@@ -455,9 +472,14 @@ the three static builds inside). **Images are built by `.github/workflows/deploy
 `ghcr.io/<owner>/otvori-api|otvori-caddy:<git short sha>` + `latest`; the droplet only runs `deploy/deploy.sh <tag>`
 (`compose pull && up -d`, waits for the API health check, `image prune`). Rollback = `deploy.sh <older tag>`.
 
+- Validate routing changes with `docker run --rm -v $PWD/deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro -e DOMAIN=localhost
+  -e ACME_EMAIL=x@y.z caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile` (the production file needs the
+  Cloudflare module, so it only validates inside the built image). CI builds both images without pushing.
 - Runtime config is `deploy/.env.prod` (gitignored; `.env.prod.example` documents every variable; secrets from
   `openssl rand -base64 48`, the Postgres password `openssl rand -hex 32` because it is embedded in `DATABASE_URL`).
-- Caddy (`deploy/Caddyfile`): apex = marketing site, `www` → apex, `app.` = CMS SPA + `/api` proxy, `api.` = API, `*.` = menu SPA +
+- Caddy (`deploy/Caddyfile`): minimal CSP (`frame-ancestors 'none'; object-src 'none'; base-uri 'self'`) + HSTS on every host,
+  `request_body max_size 10MB` and upstream `keepalive 50s` (shorter than Node's 65 s) in front of the API; `app`, `api` and `*`
+  must stay DNS-only in Cloudflare (`TRUST_PROXY=1` trusts exactly one hop). Apex = marketing site, `www` → apex, `app.` = CMS SPA + `/api` proxy, `api.` = API, `*.` = menu SPA +
   `/api` proxy; every certificate (incl. the wildcard) via Cloudflare DNS-01 (`CF_API_TOKEN`); zstd/gzip, HSTS and friends,
   `/assets` + `/_astro` immutable, `index.html`/`sw.js` `no-cache`. `Caddyfile.local` = same routes with `local_certs` for the laptop
   stack (`docker-compose.local.yml`, `DOMAIN=localhost`).

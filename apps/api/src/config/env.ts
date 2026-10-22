@@ -38,6 +38,8 @@ const envSchema = z.object({
   /** `log` writes mails to the log (dev/test), `resend` sends them through https://resend.com. */
   MAIL_PROVIDER: z.enum(['log', 'resend']).default('log'),
   RESEND_API_KEY: z.string().optional(),
+  /** Escape hatch: run production with MAIL_PROVIDER=log (links end up in the logs). Never set it on a real deployment. */
+  ALLOW_LOG_MAIL: boolFlag,
 
   /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
   APP_VERSION: z.string().optional(),
@@ -46,6 +48,18 @@ const envSchema = z.object({
 }).superRefine((value, ctx) => {
   if (value.MAIL_PROVIDER === 'resend' && !value.RESEND_API_KEY) {
     ctx.addIssue({ code: 'custom', path: ['RESEND_API_KEY'], message: 'RESEND_API_KEY is required when MAIL_PROVIDER=resend' });
+  }
+  if (value.NODE_ENV === 'production') {
+    if (value.MAIL_PROVIDER === 'log' && !value.ALLOW_LOG_MAIL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MAIL_PROVIDER'],
+        message: 'MAIL_PROVIDER=log would write magic links and password resets to the logs; set resend (or ALLOW_LOG_MAIL=1 knowingly)',
+      });
+    }
+    if (value.JWT_ACCESS_SECRET.length < 32 || /change-me|replace-me|example|secret/i.test(value.JWT_ACCESS_SECRET)) {
+      ctx.addIssue({ code: 'custom', path: ['JWT_ACCESS_SECRET'], message: 'JWT_ACCESS_SECRET must be a random value of at least 32 characters in production' });
+    }
   }
 });
 

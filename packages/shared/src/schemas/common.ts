@@ -36,6 +36,17 @@ export const hexColorSchema = z
   .trim()
   .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a hex color like #7A3E48');
 
+/** Subdomains that are not venues (app, api, marketing, mail, …): a venue must never take one of these as its slug. */
+export const RESERVED_SLUGS = new Set([
+  'www', 'app', 'api', 'admin', 'mail', 'smtp', 'imap', 'pop', 'ftp', 'cdn', 'static', 'assets', 'status', 'docs',
+  'help', 'support', 'blog', 'dev', 'staging', 'test', 'demo', 'otvori', 'menu', 'login', 'register', 'ns1', 'ns2',
+  'mx', 'autoconfig', 'autodiscover', 'localhost',
+]);
+
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SLUGS.has(slug);
+}
+
 /** DNS-safe label used as the public subdomain, e.g. `kafeterija` in kafeterija.otvori.menu. */
 export const slugSchema = z
   .string()
@@ -43,7 +54,8 @@ export const slugSchema = z
   .toLowerCase()
   .min(3, 'Slug must be at least 3 characters')
   .max(63, 'Slug must be at most 63 characters')
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Slug may contain lowercase letters, digits and hyphens');
+  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Slug may contain lowercase letters, digits and hyphens')
+  .refine((slug) => !isReservedSlug(slug), 'This slug is reserved');
 
 function isValidTimeZone(tz: string): boolean {
   try {

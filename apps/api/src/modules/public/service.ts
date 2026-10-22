@@ -59,6 +59,7 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       description: item.description ? resolveText(item.description, locale, fallback) || null : null,
       priceCents: item.priceCents,
       imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl,
       allergens: item.allergens,
       tags: item.tags,
       isAvailable: isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now),

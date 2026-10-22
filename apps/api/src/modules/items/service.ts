@@ -11,7 +11,7 @@ import {
 import { Category, ItemVariant, MenuItem, Restaurant } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import { notFound } from '../../utils/errors.js';
-import { processItemImage } from '../../utils/images.js';
+import { processItemImage, processItemThumbnail } from '../../utils/images.js';
 import { definedOnly, toIso } from '../../utils/objects.js';
 import { deleteStoredUrl, storage } from '../../utils/storage.js';
 import { nextOccurrenceOfTime } from '../../utils/time.js';
@@ -35,6 +35,7 @@ export function toItemDto(item: MenuItem, now = new Date()): MenuItemDto {
     description: item.description,
     priceCents: item.priceCents,
     imageUrl: item.imageUrl,
+    thumbnailUrl: item.thumbnailUrl,
     allergens: item.allergens,
     tags: item.tags,
     isAvailable: item.isAvailable,
@@ -159,6 +160,7 @@ export async function deleteItem(restaurantId: string, itemId: string): Promise<
     await touchRestaurant(restaurantId, transaction);
   });
   await deleteStoredUrl(item.imageUrl);
+  await deleteStoredUrl(item.thumbnailUrl);
 }
 
 export async function reorderItems(restaurantId: string, ids: string[]): Promise<MenuItemDto[]> {
@@ -200,14 +202,17 @@ export async function setAvailability(
 
 export async function uploadItemImage(restaurantId: string, itemId: string, file: Buffer): Promise<MenuItemDto> {
   const item = await loadItem(restaurantId, itemId);
-  const webp = await processItemImage(file);
-  const key = `restaurants/${restaurantId}/items/${item.id}-${Date.now()}.webp`;
-  const url = await storage.put(key, webp, 'image/webp');
-  const previous = item.imageUrl;
+  const [webp, thumb] = await Promise.all([processItemImage(file), processItemThumbnail(file)]);
+  const stamp = Date.now();
+  const key = `restaurants/${restaurantId}/items/${item.id}-${stamp}.webp`;
+  const thumbKey = `restaurants/${restaurantId}/items/${item.id}-${stamp}-thumb.webp`;
+  const [url, thumbnailUrl] = await Promise.all([storage.put(key, webp, 'image/webp'), storage.put(thumbKey, thumb, 'image/webp')]);
+  const previous = { imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl };
   await sequelize.transaction(async (transaction) => {
-    await item.update({ imageUrl: url }, { transaction });
+    await item.update({ imageUrl: url, thumbnailUrl }, { transaction });
     await touchRestaurant(restaurantId, transaction);
   });
-  await deleteStoredUrl(previous);
+  await deleteStoredUrl(previous.imageUrl);
+  await deleteStoredUrl(previous.thumbnailUrl);
   return getItem(restaurantId, itemId);
 }

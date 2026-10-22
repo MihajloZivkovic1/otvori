@@ -3,6 +3,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { clearStaleChunkFlag, reloadOnceForStaleChunk } from './lib/stale-chunk';
 import { ApiError } from './lib/api';
 import { pathSlugFromLocation, readCachedTenant, resolveTenant, tenantKeyFor } from './lib/tenant';
 import { applyTheme } from './lib/theme';
@@ -24,12 +26,20 @@ const queryClient = new QueryClient({
   },
 });
 
+// A menu left open across a deploy would otherwise fail on the first lazy chunk (item sheet, cart) of the old build.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForStaleChunk()) event.preventDefault();
+});
+clearStaleChunkFlag();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

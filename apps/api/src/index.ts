@@ -21,7 +21,8 @@ async function main(): Promise<void> {
   const server = app.listen(env.PORT, () => {
     logger.info({ version: env.APP_VERSION }, `API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
   });
-  // Longer than the reverse proxy's idle timeout, so a keep-alive socket is never closed underneath Caddy.
+  // Caddy drops idle upstream connections after 50 s (deploy/Caddyfile `keepalive`); Node must outlive that so a
+  // request is never written to a socket the API is closing (a non-replayable POST would get a 502).
   server.keepAliveTimeout = 65_000;
   server.headersTimeout = 66_000;
 

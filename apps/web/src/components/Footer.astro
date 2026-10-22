@@ -15,11 +15,16 @@ const { t } = Astro.props;
     <p class="text-sm text-muted-paper lg:max-w-[320px]">{t.footer.desc}</p>
   </div>
   <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-2.5 lg:flex-col lg:gap-2.5">
-    {t.footer.links.map((l) => (
-      <a href={l.href} class="text-sm font-medium text-ink no-underline hover:text-plum">
-        {l.label}
-      </a>
-    ))}
+    {
+      // Rows whose target does not exist yet (terms / privacy until the legal pages are written) are not rendered.
+      t.footer.links
+        .filter((l) => l.href !== '#')
+        .map((l) => (
+          <a href={l.href} class="text-sm font-medium text-ink no-underline hover:text-plum">
+            {l.label}
+          </a>
+        ))
+    }
   </nav>
   <div class="flex flex-col gap-1.5 text-[13px] lg:gap-2.5 lg:text-sm">
     <span class="hidden text-muted-paper lg:block">{t.footer.contact}</span>

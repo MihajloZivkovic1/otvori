@@ -140,6 +140,8 @@ export const menuItemDtoSchema = z.object({
   description: translatedTextOrEmptySchema.nullable(),
   priceCents: z.number().int(),
   imageUrl: z.string().nullable(),
+  /** 160×160 WebP for rows; null for photos uploaded before thumbnails existed. */
+  thumbnailUrl: z.string().nullable(),
   allergens: z.array(allergenSchema.or(z.string())),
   tags: z.array(tagSchema.or(z.string())),
   isAvailable: z.boolean(),
@@ -226,6 +228,7 @@ export const publicMenuItemDtoSchema = z.object({
   description: z.string().nullable(),
   priceCents: z.number().int(),
   imageUrl: z.string().nullable(),
+  thumbnailUrl: z.string().nullable(),
   allergens: z.array(z.string()),
   tags: z.array(z.string()),
   isAvailable: z.boolean(),

@@ -119,7 +119,7 @@ function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, 
       >
         <Icon name="grip" size={16} />
       </button>
-      <ItemThumb src={item.imageUrl} />
+      <ItemThumb src={item.thumbnailUrl ?? item.imageUrl} />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{name}</span>

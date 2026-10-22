@@ -144,7 +144,7 @@ permissions → **Read and write**. Afterwards `rm ~/gha_otvori ~/gha_otvori.pub
 
 ## 8. First deploy — unblocks 9, 10, 11
 
-Push `main` (the Phase 4 commits) — or Actions → **CI** → *Run workflow*. When CI is green, **Deploy** starts by itself,
+Push `main` — or Actions → **CI** → *Run workflow*. When CI is green, **Deploy** starts by itself,
 builds both images (6–10 min the first time), pushes them to GHCR and runs `deploy/deploy.sh <sha>` on the droplet.
 Watch Actions → Deploy → the *Deploy to the droplet* job for `deploy: tag … is live`.
 
@@ -184,7 +184,7 @@ crontab -e      # add:
 
 ## 11. Optional, later
 
-- Turn the Cloudflare proxy on for `@`, `www`, `app` after setting SSL/TLS to Full (strict). Leave `api` and `*` DNS only.
+- Turn the Cloudflare proxy on for `@` and `www` after setting SSL/TLS to Full (strict). Leave `app`, `api` and `*` DNS only (README section 1).
 - Add a Spaces lifecycle rule for `backups/` (README section 2) as a second safety net.
 - Set `vars.PUBLIC_ANALYTICS_SRC` / `PUBLIC_ANALYTICS_DOMAIN` and re-run Deploy to enable the cookieless analytics tag.
 - Rollback at any time: `./deploy/deploy.sh <previous short sha>` on the droplet, or Actions → Deploy → Run workflow → tag.

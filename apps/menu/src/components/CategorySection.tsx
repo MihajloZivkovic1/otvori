@@ -11,9 +11,11 @@ interface Props {
   onOpenItem: (itemId: string) => void;
   /** Ordering enabled: rows get a "+" button. */
   onAddItem?: ((item: PublicMenuItemDto) => void) | null;
+  /** The first section on the page: its first rows are above the fold. */
+  first?: boolean;
 }
 
-export function CategorySection({ category, currency, locale, t, onOpenItem, onAddItem = null }: Props) {
+export function CategorySection({ category, currency, locale, t, onOpenItem, onAddItem = null, first = false }: Props) {
   const domId = sectionDomId(category.id);
   return (
     <section
@@ -29,8 +31,17 @@ export function CategorySection({ category, currency, locale, t, onOpenItem, onA
         <span className="text-xs text-muted">{t.itemCount(category.items.length)}</span>
       </div>
       <ul>
-        {category.items.map((item) => (
-          <ItemRow key={item.id} item={item} currency={currency} locale={locale} t={t} onOpen={onOpenItem} onAdd={onAddItem} />
+        {category.items.map((item, index) => (
+          <ItemRow
+            key={item.id}
+            item={item}
+            currency={currency}
+            locale={locale}
+            t={t}
+            onOpen={onOpenItem}
+            onAdd={onAddItem}
+            eager={first && index < 3}
+          />
         ))}
       </ul>
     </section>

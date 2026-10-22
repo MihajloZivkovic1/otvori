@@ -302,9 +302,6 @@ export async function createOrder(slug: string, sessionId: string, input: Create
   const now = new Date();
   const table = await loadOrderingTable(restaurant.id, input.tableNumber, now);
 
-  const open = await Order.count({ where: { restaurantId: restaurant.id, sessionId, status: [...OPEN_ORDER_STATUSES] } });
-  if (open >= ORDERING_LIMITS.maxOpenOrdersPerSession) throw tooManyOpenOrders();
-
   const locale = pickLocale(input.locale, restaurant.supportedLocales, restaurant.defaultLocale);
   const lines = await buildLines(restaurant, input.items, locale);
   const totalCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
@@ -312,6 +309,12 @@ export async function createOrder(slug: string, sessionId: string, input: Create
   const orderId = await sequelize.transaction(async (transaction) => {
     // Serialises order creation per restaurant so the daily number is unique.
     await Restaurant.findByPk(restaurant.id, { attributes: ['id'], transaction, lock: Transaction.LOCK.UPDATE });
+    // Counted under the lock so parallel requests from one session cannot exceed the cap.
+    const open = await Order.count({
+      where: { restaurantId: restaurant.id, sessionId, status: [...OPEN_ORDER_STATUSES] },
+      transaction,
+    });
+    if (open >= ORDERING_LIMITS.maxOpenOrdersPerSession) throw tooManyOpenOrders();
     const number = await nextOrderNumber(restaurant, now, transaction);
     const order = await Order.create(
       {

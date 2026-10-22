@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router';
 import { ToastProvider } from './components/ui/Toast';
 import { ApiError } from './lib/api';
 import { AuthProvider } from './lib/auth';
+import { clearStaleChunkFlag, reloadOnceForStaleChunk } from './lib/stale-chunk';
 import { createAppRouter } from './router';
 import './styles.css';
 
@@ -18,6 +19,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// A tab left open across a deploy (the waiter's phone) would otherwise fail on the first lazy chunk of the old build.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForStaleChunk()) event.preventDefault();
+});
+clearStaleChunkFlag();
 
 const router = createAppRouter();
 

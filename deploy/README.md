@@ -35,12 +35,14 @@ Records, all pointing at the droplet's IPv4 (add AAAA records too if the droplet
 | --- | --- | --- | --- |
 | A | `@` | droplet IP | OFF (DNS only) to start; may be turned ON later |
 | A | `www` | droplet IP | same as `@` |
-| A | `app` | droplet IP | OFF to start; may be turned ON later |
+| A | `app` | droplet IP | **OFF** (keep DNS only: the CMS calls `/api` and the SSE stream on this host) |
 | A | `api` | droplet IP | **OFF** (keep DNS only) |
 | A | `*` | droplet IP | **OFF** (keep DNS only) |
 
-Before turning any proxy ON: Cloudflare → SSL/TLS → set the mode to **Full (strict)** (Caddy has real certificates), and
-know that proxied hosts show Cloudflare IPs to the API's rate limiter.
+Before turning the proxy ON for `@`/`www`: Cloudflare → SSL/TLS → set the mode to **Full (strict)** (Caddy has real
+certificates). Never proxy `app`, `api` or `*`: the API trusts exactly one hop (`TRUST_PROXY=1`), so behind Cloudflare
+every admin and guest would share the rate-limit buckets of a few Cloudflare edge IPs (false 429s on login), and the
+SSE stream would run through Cloudflare's buffers. Proxying them needs `trusted_proxies` + `CF-Connecting-IP` first.
 
 API token (for the DNS-01 challenge): Cloudflare → My Profile → API Tokens → Create Token → template **Edit zone DNS** →
 Zone Resources: *Include → Specific zone → otvori.menu* → Continue → Create → copy it into `CF_API_TOKEN`.

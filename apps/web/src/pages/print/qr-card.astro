@@ -36,7 +36,7 @@ import Base from '../../layouts/Base.astro';
   </style>
   <div class="screen-only flex flex-col items-center gap-4 p-6 text-center text-sm text-muted print:hidden">
     <p id="card-note"></p>
-    <button type="button" class="btn btn-plum h-10 px-4" onclick="window.print()">
+    <button type="button" id="print" class="btn btn-plum h-10 px-4">
       Print
     </button>
   </div>
@@ -68,50 +68,7 @@ import Base from '../../layouts/Base.astro';
   </div>
 
   <script>
-    import qrcode from 'qrcode-generator';
-    import { t } from '../../i18n';
-
-    const params = new URLSearchParams(location.search);
-    const lang = params.get('lang') === 'en' ? 'en' : 'sr';
-    const dict = t(lang);
-    const venue = params.get('venue') ?? '';
-    const table = params.get('table') ?? '';
-    const qrUrl = params.get('qr') ?? '';
-    const qrImage = params.get('qrImage');
-    const logo = params.get('logo');
-    const shortUrl = params.get('url') ?? qrUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    document.title = `${venue ? venue + ' — ' : ''}${dict.guest.table} ${table}`.trim();
-    document.documentElement.lang = dict.htmlLang;
-    document.getElementById('table')!.textContent = table ? `${dict.guest.table} ${table}` : venue;
-    document.getElementById('tagline')!.textContent = dict.tagline;
-    document.getElementById('url')!.textContent = shortUrl;
-    document.getElementById('card-note')!.textContent = dict.card.note;
-    document.getElementById('logo-placeholder')!.textContent = dict.card.logo;
-
-    if (logo) {
-      const img = document.getElementById('logo') as HTMLImageElement;
-      img.src = logo;
-      img.classList.remove('hidden');
-      document.getElementById('logo-placeholder')!.classList.add('hidden');
-      document.getElementById('logo-slot')!.classList.remove('border-dashed', 'border-[1.5px]');
-    }
-
-    const holder = document.getElementById('qr')!;
-    if (qrImage) {
-      const img = new Image();
-      img.src = qrImage;
-      img.alt = 'QR';
-      img.className = 'size-full';
-      holder.replaceChildren(img);
-    } else if (qrUrl) {
-      const qr = qrcode(0, 'M');
-      qr.addData(qrUrl);
-      qr.make();
-      const n = qr.getModuleCount();
-      let path = '';
-      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) path += `M${c} ${r}h1v1h-1z`;
-      holder.innerHTML = `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges" role="img" aria-label="QR: ${qrUrl}"><path d="${path}" fill="#1F1A17"/></svg>`;
-    }
+    import { initQrCard } from '../../scripts/qr-card';
+    initQrCard(document, new URLSearchParams(location.search));
   </script>
 </Base>

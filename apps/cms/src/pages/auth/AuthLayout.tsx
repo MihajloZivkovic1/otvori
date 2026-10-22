@@ -13,7 +13,7 @@ interface AuthLayoutProps {
 export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
-      <div className="flex flex-1 flex-col justify-center px-6 py-10 tab:items-center">
+      <main className="flex flex-1 flex-col justify-center px-6 py-10 tab:items-center">
         <div className="flex w-full flex-col gap-6 tab:w-[360px] tab:gap-7">
           <Link to="/login" className="flex items-center no-underline" aria-label="otvori">
             <Wordmark size={26} />
@@ -24,7 +24,7 @@ export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProp
           </div>
           {children}
         </div>
-      </div>
+      </main>
       {footer ? <div className="px-6 pb-10 text-center text-[13px] text-muted tab:pb-12">{footer}</div> : null}
     </div>
   );

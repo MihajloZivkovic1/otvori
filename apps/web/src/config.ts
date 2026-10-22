@@ -5,6 +5,7 @@ export const links = {
   demoMenu: 'https://kafeterija.otvori.menu/t/1',
   /** "Zatraži ponudu" — a mailto until there is a form. */
   quote: 'mailto:zdravo@otvori.menu?subject=Ponuda%20za%20unos%20menija',
+  /** '#' = page not written yet; the footer hides the row until a real URL is set here. */
   terms: '#',
   privacy: '#',
 } as const;

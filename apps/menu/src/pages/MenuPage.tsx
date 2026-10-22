@@ -283,9 +283,10 @@ export function MenuPage() {
         {visibleCategories.length === 0 ? (
           <p className="px-5 py-12 text-center text-[15px] text-muted text-pretty">{query ? t.noResults : t.emptyMenu}</p>
         ) : (
-          visibleCategories.map((category) => (
+          visibleCategories.map((category, index) => (
             <CategorySection
               key={category.id}
+              first={index === 0}
               category={category}
               currency={current.currency}
               locale={locale}

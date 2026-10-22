@@ -50,6 +50,11 @@ export class MenuItem extends Model<InferAttributes<MenuItem>, InferCreationAttr
   @Column(DataType.TEXT)
   imageUrl!: CreationOptional<string | null>;
 
+  /** 160×160 WebP for list rows; null for photos uploaded before thumbnails existed (the menu falls back to imageUrl). */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  thumbnailUrl!: CreationOptional<string | null>;
+
   @AllowNull(false)
   @Default([])
   @Column(DataType.ARRAY(DataType.TEXT))

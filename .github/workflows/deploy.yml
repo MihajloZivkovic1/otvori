@@ -40,12 +40,15 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Image names and tag
         id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          if [ -n "${{ inputs.tag }}" ]; then tag='${{ inputs.tag }}'; else tag="$(git rev-parse --short=7 HEAD)"; fi
+          owner="$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')"
+          if [ -n "$INPUT_TAG" ]; then tag="$INPUT_TAG"; else tag="$(git rev-parse --short=7 HEAD)"; fi
           echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "build=$([ -n '${{ inputs.tag }}' ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          echo "build=$([ -n "$INPUT_TAG" ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
         if: steps.meta.outputs.build == 'true'
       - uses: docker/login-action@v3
@@ -81,6 +84,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/otvori-caddy:latest
           build-args: |
             DOMAIN=${{ env.DOMAIN }}
+            APP_VERSION=${{ steps.meta.outputs.tag }}
             PUBLIC_ANALYTICS_SRC=${{ vars.PUBLIC_ANALYTICS_SRC }}
             PUBLIC_ANALYTICS_DOMAIN=${{ vars.PUBLIC_ANALYTICS_DOMAIN }}
             SOURCE_URL=${{ github.server_url }}/${{ github.repository }}

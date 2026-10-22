@@ -10,6 +10,7 @@ import {
   type ServiceRequestType,
   type TranslatedText,
 } from '@qr-menu/shared';
+import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
 import { hashPassword } from '../../utils/password.js';
 import { formatZonedDate, startOfDayInZone, zonedParts } from '../../utils/time.js';
@@ -645,6 +646,10 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
 }
 
 async function main(): Promise<void> {
+  if (env.isProduction && process.env.ALLOW_SEED !== '1') {
+    logger.fatal('Refusing to seed demo data in production (it deletes venues with the demo slugs and creates well-known logins). Set ALLOW_SEED=1 to override.');
+    process.exit(2);
+  }
   await runMigrations();
   const all = [kafeterija, ...others];
   await sequelize.transaction(async (transaction) => {

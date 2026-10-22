@@ -2,6 +2,8 @@
 # Bundles the three static builds (menu, cms, web) and serves them with Caddy (TLS via Cloudflare DNS, wildcard included).
 FROM node:22-alpine AS build
 ARG DOMAIN=otvori.menu
+# Git short SHA of the release: versions the CMS service-worker cache so every deploy evicts the previous shell.
+ARG APP_VERSION=dev
 WORKDIR /app
 COPY package.json package-lock.json turbo.json ./
 COPY packages/shared/package.json packages/shared/
@@ -17,7 +19,7 @@ COPY apps/web apps/web
 RUN npm run build -w @qr-menu/shared
 # Both apps call /api on their own origin; Caddy proxies it to the API container.
 RUN VITE_API_URL= VITE_DEFAULT_SLUG= npm run build -w @qr-menu/menu
-RUN VITE_API_URL= VITE_PUBLIC_MENU_BASE_URL="https://{slug}.${DOMAIN}" npm run build -w @qr-menu/cms
+RUN VITE_API_URL= APP_VERSION="${APP_VERSION}" npm run build -w @qr-menu/cms
 # Marketing site; SITE_URL feeds canonical/hreflang/sitemap, PUBLIC_ANALYTICS_* the optional analytics tag.
 ARG PUBLIC_ANALYTICS_SRC=
 ARG PUBLIC_ANALYTICS_DOMAIN=

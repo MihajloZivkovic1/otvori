@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 import { HomeRedirect } from './components/shell/HomeRedirect';
 import { FullPageLoading, RequireAuth } from './components/shell/RequireAuth';
 import { RestaurantIndex, RestaurantLayout } from './components/shell/RestaurantLayout';
+import { RouteError } from './components/shell/RouteError';
 import { SuperadminLayout } from './components/shell/SuperadminLayout';
 import { HomePage } from './pages/HomePage';
 
@@ -10,6 +11,7 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     HydrateFallback: FullPageLoading,
+    ErrorBoundary: RouteError,
     children: [
       { path: 'login', lazy: () => import('./pages/auth/LoginPage').then((m) => ({ Component: m.LoginPage })) },
       { path: 'register', lazy: () => import('./pages/auth/RegisterPage').then((m) => ({ Component: m.RegisterPage })) },

@@ -10,25 +10,45 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Minimal CSP that every app already satisfies (no framing, no plugins, no <base> hijack). A full
+		# script-src/style-src policy needs the inline handlers/styles hashed first — see docs/PRE-DEPLOY-AUDIT.md.
+		Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
 		-Server
 	}
 }
 
 # /api and locally stored uploads go to the API container (CORS is decided by the API's allowlist).
+# Node closes idle keep-alive sockets after 65 s (apps/api/src/index.ts); Caddy must give up on an idle upstream
+# connection first, otherwise a request can land on a socket the API is closing and 502.
+(upstream) {
+	transport http {
+		keepalive 50s
+	}
+}
+
 (api_proxy) {
+	# Uploads are capped at 8 MB by the API; stop larger bodies at the edge.
+	request_body {
+		max_size 10MB
+	}
 	# Server-Sent Events for the waiter screen (GET …/events?token=): streamed, never buffered. Caddy already
 	# flushes text/event-stream responses immediately; flush_interval -1 makes that explicit. `encode` skips the
 	# stream because the API sends `Cache-Control: no-transform` (Caddy honours it), so nothing re-buffers it.
 	handle /api/admin/restaurants/*/events {
 		reverse_proxy api:3000 {
 			flush_interval -1
+			import upstream
 		}
 	}
 	handle /api/* {
-		reverse_proxy api:3000
+		reverse_proxy api:3000 {
+			import upstream
+		}
 	}
 	handle /uploads/* {
-		reverse_proxy api:3000
+		reverse_proxy api:3000 {
+			import upstream
+		}
 	}
 }
 
@@ -86,18 +106,24 @@ app.{$DOMAIN} {
 api.{$DOMAIN} {
 	import security
 	encode zstd gzip
+	request_body {
+		max_size 10MB
+	}
 	# SSE stream (see api_proxy): explicit low-latency mode; `no-transform` from the API keeps `encode` away.
 	@sse path /api/admin/restaurants/*/events
 	reverse_proxy @sse api:3000 {
 		flush_interval -1
+		import upstream
 	}
-	reverse_proxy api:3000
+	reverse_proxy api:3000 {
+		import upstream
+	}
 }
 
 # Public menus: {slug}.DOMAIN (wildcard certificate). The menu app preloads /api/public/menu on its own origin.
 *.{$DOMAIN} {
 	import security
-	header X-Frame-Options SAMEORIGIN
+	header X-Frame-Options DENY
 	encode zstd gzip
 	import api_proxy
 	root * /srv/menu

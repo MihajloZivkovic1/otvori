@@ -27,7 +27,7 @@
   --color-on-accent: var(--on-accent);
   --color-accent-soft: var(--accent-soft);
   --color-bar-muted: var(--bar-muted);
-  --color-success: #16a34a;
+  --color-success: #15803d; /* 4.5:1+ on white at the 12 px analytics delta */
   --color-warning: #ca8a04;
   --color-danger: #dc2626;
   --color-danger-text: #b91c1c;
@@ -42,7 +42,7 @@
   --ink-2: #52525b;
   --ink-3: #3f3f46;
   --muted: #71717a;
-  --faint: #a1a1aa;
+  --faint: #73737d; /* ≥ 4.5:1 on white and #fafafa — it is used as real text (hints, counts) */
   --line: #e4e4e7;
   --line2: #f4f4f5;
   --line-strong: #d4d4d8;
@@ -64,7 +64,7 @@
     --ink-2: #d4d4d8;
     --ink-3: #e4e4e7;
     --muted: #a1a1aa;
-    --faint: #71717a;
+    --faint: #8a8a93;
     --line: #2c2c33;
     --line2: #222228;
     --line-strong: #3f3f46;

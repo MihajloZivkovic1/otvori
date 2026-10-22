@@ -5,6 +5,8 @@ import { AllergenGlyph, TagChip } from './Chips';
 import { PlusIcon } from './icons';
 
 interface Props {
+  /** First rows of the first section: above the fold, so the image is fetched eagerly with high priority (LCP). */
+  eager?: boolean;
   item: PublicMenuItemDto;
   currency: string;
   locale: UiLocale;
@@ -16,7 +18,7 @@ interface Props {
 
 const ROW = 'flex w-full items-start gap-3.5 py-4 text-left text-ink';
 
-export function ItemRow({ item, currency, locale, t, onOpen, onAdd = null }: Props) {
+export function ItemRow({ item, currency, locale, t, onOpen, onAdd = null, eager = false }: Props) {
   const showMeta = item.tags.length > 0 || item.allergens.length > 0 || !item.isAvailable;
   const canAdd = Boolean(onAdd) && item.isAvailable;
   const text = (
@@ -41,11 +43,12 @@ export function ItemRow({ item, currency, locale, t, onOpen, onAdd = null }: Pro
   );
   const image = item.imageUrl && (
     <img
-      src={item.imageUrl}
+      src={item.thumbnailUrl ?? item.imageUrl}
       alt=""
       width={76}
       height={76}
-      loading="lazy"
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : undefined}
       decoding="async"
       className="size-[76px] flex-none rounded-xl bg-placeholder object-cover max-[359px]:size-14"
     />

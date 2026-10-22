@@ -8,6 +8,7 @@ import {
   type UserDto,
 } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
+import { logger } from '../../utils/logger.js';
 import { AuthToken, Membership, Restaurant, User } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import { conflict, unauthorized } from '../../utils/errors.js';
@@ -178,7 +179,10 @@ export async function requestMagicLink(email: string): Promise<void> {
   const user = await User.findOne({ where: { email }, attributes: ['id', 'email'] });
   if (!user) return;
   const raw = await issueOneTimeToken(user.id, 'magic_link', MAGIC_LINK_TTL_MS);
-  await sendMagicLink(user.email, `${env.APP_URL}/auth/magic?token=${encodeURIComponent(raw)}`);
+  // Detached: the response time and failure mode must not reveal whether the account exists.
+  void sendMagicLink(user.email, `${env.APP_URL}/auth/magic?token=${encodeURIComponent(raw)}`).catch((err: unknown) =>
+    logger.error({ err }, 'Magic link mail failed'),
+  );
 }
 
 export async function consumeMagicLink(raw: string): Promise<Session> {
@@ -190,7 +194,9 @@ export async function forgotPassword(email: string): Promise<void> {
   const user = await User.findOne({ where: { email }, attributes: ['id', 'email'] });
   if (!user) return;
   const raw = await issueOneTimeToken(user.id, 'password_reset', PASSWORD_RESET_TTL_MS);
-  await sendPasswordReset(user.email, `${env.APP_URL}/auth/reset?token=${encodeURIComponent(raw)}`);
+  void sendPasswordReset(user.email, `${env.APP_URL}/auth/reset?token=${encodeURIComponent(raw)}`).catch((err: unknown) =>
+    logger.error({ err }, 'Password reset mail failed'),
+  );
 }
 
 export async function resetPassword(raw: string, password: string): Promise<Session> {

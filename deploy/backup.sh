@@ -38,9 +38,10 @@ echo "backup: uploaded s3://$BUCKET/$PREFIX/$FILE ($(du -h "$TMP/$FILE" | cut -f
 CUTOFF="$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%dT%H:%M:%SZ)"
 aws s3api list-objects-v2 --bucket "$BUCKET" --prefix "$PREFIX/" --endpoint-url "$ENDPOINT" \
   --query "Contents[?LastModified<'${CUTOFF}'].Key" --output text 2>/dev/null \
-  | tr '\t' '\n' | grep -v '^None$' | grep -v '^$' \
+  | tr '\t' '\n' | { grep -v '^None$' || true; } | { grep -v '^$' || true; } \
   | while read -r key; do
       aws s3 rm "s3://$BUCKET/$key" --endpoint-url "$ENDPOINT" --only-show-errors
       echo "backup: removed $key (older than $KEEP_DAYS days)"
     done
+# (`grep -v` exits 1 when nothing passes — e.g. the first KEEP_DAYS days — which pipefail would turn into a failed run.)
 echo "backup: done"

@@ -4,6 +4,7 @@ import {
   type CreateRestaurantInput,
   type RestaurantDto,
   type UpdateRestaurantInput,
+  isReservedSlug,
 } from '@qr-menu/shared';
 import { Membership, MenuItem, Restaurant } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
@@ -60,6 +61,7 @@ export async function getRestaurant(restaurantId: string): Promise<RestaurantDto
 async function uniqueSlug(base: string, transaction: Transaction): Promise<string> {
   for (let attempt = 0; attempt < 50; attempt++) {
     const candidate = attempt === 0 ? base : `${base.slice(0, 55)}-${attempt + 1}`;
+    if (isReservedSlug(candidate)) continue;
     const taken = await Restaurant.count({ where: { slug: candidate }, transaction });
     if (!taken) return candidate;
   }

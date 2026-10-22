@@ -86,13 +86,6 @@ export function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-/** Public menu URL from the API template when the restaurant has not loaded yet. */
-export function publicMenuUrlFromTemplate(slug: string): string | null {
-  const template = (import.meta.env.VITE_PUBLIC_MENU_BASE_URL ?? '').trim();
-  if (!template) return null;
-  return template.replaceAll('{slug}', slug).replace(/\/+$/, '');
-}
-
 export function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 }
