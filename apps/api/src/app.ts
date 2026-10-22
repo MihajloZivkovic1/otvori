@@ -9,6 +9,8 @@ import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { adminRouter } from './modules/admin.router.js';
 import { authRouter } from './modules/auth/router.js';
 import { healthRouter } from './modules/health/router.js';
+import { paymentSimulatorRouter } from './modules/payments/simulator.js';
+import { paymentWebhookRouter } from './modules/payments/router.js';
 import { publicRouter } from './modules/public/router.js';
 import { superadminRouter } from './modules/superadmin/router.js';
 import { logger } from './utils/logger.js';
@@ -67,8 +69,17 @@ export function createApp(): express.Express {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '1mb' }));
+  app.use(
+    express.json({
+      limit: '1mb',
+      // Webhook signatures are computed over the exact bytes the provider sent.
+      verify: (req, _res, buf) => {
+        (req as express.Request).rawBody = buf;
+      },
+    }),
+  );
   app.use(cookieParser());
+  if (env.PAYMENTS_MOCK) app.use('/dev/pay', express.urlencoded({ extended: false, limit: '10kb' }));
 
   const uploadsDir = localUploadsDir();
   if (uploadsDir) {
@@ -80,6 +91,9 @@ export function createApp(): express.Express {
   app.use('/api/admin', adminRouter);
   app.use('/api/superadmin', superadminRouter);
   app.use('/api/public', publicRouter);
+  // Bank callbacks (no auth: each provider verifies its own signature) and, in development, the payment simulator.
+  app.use('/api/webhooks/payments', paymentWebhookRouter);
+  if (env.PAYMENTS_MOCK) app.use('/dev/pay', paymentSimulatorRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

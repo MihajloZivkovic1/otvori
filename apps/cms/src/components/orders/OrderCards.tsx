@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn';
 import { clock, formatPrice, minutesUntil, relativeTime, text } from '../../lib/format';
 import { Icon } from '../icons';
 import { Button } from '../ui/Button';
+import { PaymentChip } from './PaymentChip';
 
 export type GroupTone = 'amber' | 'accent' | 'green';
 const BADGE: Record<GroupTone, string> = {
@@ -76,11 +77,12 @@ function Lines({ order, currency, defaultLocale }: { order: OrderDto; currency: 
   );
 }
 
-function OrderHeader({ order, right }: { order: OrderDto; right: ReactNode }) {
+function OrderHeader({ order, right, currency, payments }: { order: OrderDto; right: ReactNode; currency: string; payments: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-base font-semibold">#{order.number}</span>
       <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-line-2 px-2.5 text-xs font-semibold">Table {order.tableNumber}</span>
+      {payments ? <PaymentChip order={order} currency={currency} /> : null}
       {order.guestName ? <span className="truncate text-[13px] text-muted">{order.guestName}</span> : null}
       <span className="ml-auto shrink-0 text-xs tabular-nums">{right}</span>
     </div>
@@ -94,19 +96,21 @@ interface NewOrderCardProps {
   now: Date;
   busy: boolean;
   compact: boolean;
+  /** Payments module on: show the payment chip. */
+  payments?: boolean;
   onAccept: () => void;
   onReject: () => void;
 }
 
 /** A `new` order waiting for a waiter: accent edge, expiry countdown, Reject / Accept. */
-export function NewOrderCard({ order, currency, defaultLocale, now, busy, compact, onAccept, onReject }: NewOrderCardProps) {
+export function NewOrderCard({ order, currency, defaultLocale, now, busy, compact, payments = false, onAccept, onReject }: NewOrderCardProps) {
   const minutes = order.expiresAt ? minutesUntil(order.expiresAt, now) : null;
   return (
     <article
       aria-label={`Order #${order.number}, table ${order.tableNumber}`}
       className="flex flex-col gap-3 rounded-[14px] border border-line border-l-[3px] border-l-accent bg-surface px-3.5 pb-3 pt-3.5"
     >
-      <OrderHeader order={order} right={<span className="text-muted">{relativeTime(order.createdAt, now)}</span>} />
+      <OrderHeader order={order} currency={currency} payments={payments} right={<span className="text-muted">{relativeTime(order.createdAt, now)}</span>} />
       <Lines order={order} currency={currency} defaultLocale={defaultLocale} />
       {order.note ? <div className="rounded-lg border border-line-2 bg-canvas px-3 py-2 text-[13px] italic text-ink-2">“{order.note}”</div> : null}
       <div className="flex items-center justify-between border-t border-line-2 pt-2.5">
@@ -133,20 +137,30 @@ interface InProgressCardProps {
   defaultLocale: string;
   busy: boolean;
   compact: boolean;
+  /** Payments module on: show the chip and, while unpaid, the "Cash" button. */
+  payments?: boolean;
   onDeliver: () => void;
+  onCash?: () => void;
 }
 
 /** An accepted order being prepared: one button, Delivered. */
-export function InProgressCard({ order, currency, defaultLocale, busy, compact, onDeliver }: InProgressCardProps) {
+export function InProgressCard({ order, currency, defaultLocale, busy, compact, payments = false, onDeliver, onCash }: InProgressCardProps) {
   return (
     <article aria-label={`Order #${order.number}, table ${order.tableNumber}`} className="flex flex-col gap-3 rounded-[14px] border border-line bg-surface px-3.5 pb-3 pt-3.5">
-      <OrderHeader order={order} right={<span className="text-[#166534]">accepted {order.acceptedAt ? clock(order.acceptedAt) : ''}</span>} />
+      <OrderHeader order={order} currency={currency} payments={payments} right={<span className="text-[#166534]">accepted {order.acceptedAt ? clock(order.acceptedAt) : ''}</span>} />
       <Lines order={order} currency={currency} defaultLocale={defaultLocale} />
       <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-2.5">
         <span className="text-base font-semibold tabular-nums">{formatPrice(order.totalCents, currency)}</span>
-        <Button variant="primary" size={compact ? 'md' : 'xl'} icon={<Icon name="check" size={16} strokeWidth={2} />} onClick={onDeliver} loading={busy}>
-          Delivered
-        </Button>
+        <span className="flex items-center gap-2">
+          {payments && onCash && (order.paymentStatus === 'unpaid' || order.paymentStatus === 'failed' || order.paymentStatus === 'pending') ? (
+            <Button size={compact ? 'md' : 'xl'} onClick={onCash} disabled={busy} aria-label={`Cash for #${order.number}`}>
+              Cash
+            </Button>
+          ) : null}
+          <Button variant="primary" size={compact ? 'md' : 'xl'} icon={<Icon name="check" size={16} strokeWidth={2} />} onClick={onDeliver} loading={busy}>
+            Delivered
+          </Button>
+        </span>
       </div>
     </article>
   );

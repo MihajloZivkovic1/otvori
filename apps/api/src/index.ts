@@ -5,6 +5,8 @@ import { runMigrations } from './db/migrate.js';
 import { sequelize } from './db/sequelize.js';
 import { startOrderExpiryJob } from './modules/ordering/expiry.js';
 import { closeAllStreams } from './modules/ordering/sse.js';
+import { startPaymentReconcileJob } from './modules/payments/reconcile.js';
+import { settleBackgroundWork } from './modules/payments/service.js';
 import { logger } from './utils/logger.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
@@ -28,6 +30,8 @@ async function main(): Promise<void> {
 
   // Stale `new` orders expire after 20 minutes (in-process job; one instance only, see modules/ordering/expiry.ts).
   const stopExpiryJob = startOrderExpiryJob();
+  // Pending payments older than 2 minutes are checked against the provider (missed webhooks) and expired.
+  const stopReconcileJob = startPaymentReconcileJob();
 
   let shuttingDown = false;
   const shutdown = (signal: string) => {
@@ -35,8 +39,11 @@ async function main(): Promise<void> {
     shuttingDown = true;
     logger.info({ signal }, 'Shutting down: finishing in-flight requests');
     stopExpiryJob();
+    stopReconcileJob();
     // SSE streams never end on their own; close them so server.close() can finish (clients reconnect).
     closeAllStreams();
+    // Webhook results still being applied finish before the pool closes.
+    void settleBackgroundWork();
     server.close((error) => {
       if (error) logger.warn({ err: error }, 'HTTP server did not close cleanly');
       sequelize

@@ -6,6 +6,7 @@ import { Membership } from './membership.model.js';
 import { MenuItem } from './menu-item.model.js';
 import { Order } from './order.model.js';
 import { OrderItem } from './order-item.model.js';
+import { Payment } from './payment.model.js';
 import { Restaurant } from './restaurant.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
@@ -21,6 +22,7 @@ export {
   MenuItem,
   Order,
   OrderItem,
+  Payment,
   Restaurant,
   RestaurantTable,
   ScanEvent,
@@ -42,4 +44,5 @@ export const allModels = [
   Order,
   OrderItem,
   ServiceRequest,
+  Payment,
 ];

@@ -7,6 +7,8 @@ import { categoriesRouter } from './categories/router.js';
 import { itemsRouter } from './items/router.js';
 import * as orderingController from './ordering/controller.js';
 import { ordersRouter, requestsRouter } from './ordering/router.js';
+import * as paymentsController from './payments/controller.js';
+import { paymentConfigRouter } from './payments/router.js';
 import { requireSseToken, streamEvents } from './ordering/sse.js';
 import * as restaurantsController from './restaurants/controller.js';
 import { restaurantsRouter } from './restaurants/router.js';
@@ -31,6 +33,9 @@ scoped.use('/analytics', analyticsRouter);
 scoped.use('/orders', requireModule('ordering'), ordersRouter);
 scoped.use('/requests', requireModule('ordering'), requestsRouter);
 scoped.post('/sse-token', requireModule('ordering'), orderingController.sseToken);
+// Online payment (Phase 9c): the waiter marks cash; owners configure the provider.
+scoped.patch('/orders/:id/payment', requireModule('ordering'), requireModule('payments'), paymentsController.markOrderPayment);
+scoped.use('/payment-config', paymentConfigRouter);
 scoped.use('/', restaurantsRouter);
 
 adminRouter.use('/restaurants/:restaurantId', requireAuth, requireMembership(), scoped);

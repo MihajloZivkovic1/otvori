@@ -10,6 +10,7 @@ import type {
   CreateTableInput,
   MenuItemDto,
   OrderDto,
+  PaymentConfigDto,
   PaginatedDto,
   RestaurantDto,
   ServiceRequestDto,
@@ -21,6 +22,7 @@ import type {
   UpdateCategoryInput,
   UpdateItemInput,
   UpdateOrderStatusInput,
+  UpdatePaymentConfigInput,
   UpdateRestaurantInput,
   UpdateTableInput,
 } from '@qr-menu/shared';
@@ -33,6 +35,7 @@ export const keys = {
   tables: (rid: string) => ['tables', rid] as const,
   analytics: (rid: string, range: AnalyticsRange) => ['analytics', rid, range] as const,
   orders: (rid: string) => ['orders', rid] as const,
+  paymentConfig: (rid: string) => ['paymentConfig', rid] as const,
   requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
   superadminRestaurants: (query: Partial<SuperadminListRestaurantsQuery>) => ['superadmin', 'restaurants', query] as const,
@@ -404,6 +407,39 @@ export function useUpdateOrderStatus(rid: string) {
     onSuccess: (order) => upsertOrder(client, rid, order),
     // A 409 means another phone got there first: reload the board.
     onError: () => void client.invalidateQueries({ queryKey: keys.orders(rid) }),
+  });
+}
+
+/** PATCH /orders/:id/payment { paymentStatus: 'cash' } — the waiter took cash (Phase 9c). */
+export function useMarkOrderCash(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<OrderDto>(`${base(rid)}/orders/${id}/payment`, { method: 'PATCH', body: { paymentStatus: 'cash' } }),
+    onSuccess: (order) => upsertOrder(client, rid, order),
+    onError: () => void client.invalidateQueries({ queryKey: keys.orders(rid) }),
+  });
+}
+
+/* ------------------------------------------------------------------ payment configuration (owner) */
+
+export function usePaymentConfig(rid: string) {
+  return useQuery({ queryKey: keys.paymentConfig(rid), queryFn: () => api<PaymentConfigDto>(`${base(rid)}/payment-config`) });
+}
+
+export function useUpdatePaymentConfig(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdatePaymentConfigInput) => api<PaymentConfigDto>(`${base(rid)}/payment-config`, { method: 'PATCH', body: input }),
+    onSuccess: (config) => {
+      client.setQueryData(keys.paymentConfig(rid), config);
+      void client.invalidateQueries({ queryKey: keys.restaurant(rid) });
+    },
+  });
+}
+
+export function useTestPaymentConnection(rid: string) {
+  return useMutation({
+    mutationFn: () => api<{ ok: boolean; message: string }>(`${base(rid)}/payment-config/test`, { method: 'POST', body: {} }),
   });
 }
 

@@ -108,6 +108,33 @@ export interface Dictionary {
   steps: readonly [string, string, string];
   status: Record<OrderStatus, OrderStatusCopy>;
   errors: OrderingErrors;
+  // online payment (Phase 9c)
+  pay: PaymentCopy;
+}
+
+export interface PaymentCopy {
+  payByPhone: string;
+  paid: string;
+  paidCash: string;
+  paidWithTip: (tip: string) => string;
+  sheetTitle: string;
+  tip: string;
+  noTip: string;
+  toPay: string;
+  scanHint: string;
+  openBankApp: string;
+  expiresIn: string;
+  waiting: string;
+  success: string;
+  successBody: string;
+  failed: string;
+  failedBody: string;
+  expired: string;
+  expiredBody: string;
+  tryAgain: string;
+  done: string;
+  preparing: string;
+  notAllowed: string;
 }
 
 const srPlural = new Intl.PluralRules('sr');
@@ -205,6 +232,30 @@ export const dict: Record<UiLocale, Dictionary> = {
         body: 'You cancelled it before a waiter picked it up. Nothing was charged.',
         short: 'Cancelled',
       },
+    },
+    pay: {
+      payByPhone: 'Pay by phone',
+      paid: 'Paid ✓',
+      paidCash: 'Paid in cash',
+      paidWithTip: (tip) => `incl. ${tip} tip`,
+      sheetTitle: 'Pay by phone',
+      tip: 'Tip for the staff',
+      noTip: 'No tip',
+      toPay: 'To pay',
+      scanHint: 'Scan the code with your banking app (IPS), or open the app directly.',
+      openBankApp: 'Open the banking app',
+      expiresIn: 'Code valid for',
+      waiting: 'Waiting for the bank to confirm…',
+      success: 'Paid ✓',
+      successBody: 'Thank you! The waiter has been notified; no need to ask for the bill.',
+      failed: 'Payment did not go through',
+      failedBody: 'The bank declined or cancelled the payment. Nothing was charged. You can try again or pay the waiter.',
+      expired: 'The code has expired',
+      expiredBody: 'The payment code is valid for 10 minutes. Nothing was charged; get a new one.',
+      tryAgain: 'Try again',
+      done: 'Done',
+      preparing: 'Preparing the payment…',
+      notAllowed: 'This order cannot be paid right now.',
     },
     errors: {
       blocked: 'Ordering from this table is temporarily disabled. Please call the waiter.',
@@ -315,6 +366,30 @@ export const dict: Record<UiLocale, Dictionary> = {
         body: 'Otkazao si je pre nego što ju je konobar preuzeo. Ništa nije naplaćeno.',
         short: 'Otkazano',
       },
+    },
+    pay: {
+      payByPhone: 'Plati telefonom',
+      paid: 'Plaćeno ✓',
+      paidCash: 'Plaćeno kešom',
+      paidWithTip: (tip) => `uklj. napojnicu ${tip}`,
+      sheetTitle: 'Plati telefonom',
+      tip: 'Napojnica za osoblje',
+      noTip: 'Bez napojnice',
+      toPay: 'Za plaćanje',
+      scanHint: 'Skeniraj kod aplikacijom svoje banke (IPS) ili otvori aplikaciju direktno.',
+      openBankApp: 'Otvori aplikaciju banke',
+      expiresIn: 'Kod važi još',
+      waiting: 'Čekamo potvrdu banke…',
+      success: 'Plaćeno ✓',
+      successBody: 'Hvala! Konobar je obavešten — ne moraš da tražiš račun.',
+      failed: 'Plaćanje nije prošlo',
+      failedBody: 'Banka je odbila ili prekinula plaćanje. Ništa nije naplaćeno. Pokušaj ponovo ili plati konobaru.',
+      expired: 'Kod je istekao',
+      expiredBody: 'Kod za plaćanje važi 10 minuta. Ništa nije naplaćeno — zatraži novi.',
+      tryAgain: 'Pokušaj ponovo',
+      done: 'Gotovo',
+      preparing: 'Pripremamo plaćanje…',
+      notAllowed: 'Ova narudžbina trenutno ne može da se plati.',
     },
     errors: {
       blocked: 'Naručivanje sa ovog stola je privremeno onemogućeno. Pozovite konobara.',

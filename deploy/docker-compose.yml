@@ -77,6 +77,8 @@ services:
       MAIL_PROVIDER: ${MAIL_PROVIDER:-resend}
       MAIL_FROM: ${MAIL_FROM:-otvori <zdravo@otvori.menu>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      PAYMENTS_ENCRYPTION_KEY: ${PAYMENTS_ENCRYPTION_KEY:?set PAYMENTS_ENCRYPTION_KEY in deploy/.env.prod}
+      OTP_ECOM_BASE_URL: ${OTP_ECOM_BASE_URL:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-}
       S3_BUCKET: ${S3_BUCKET:-}

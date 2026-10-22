@@ -38,6 +38,7 @@ import { logger } from '../../utils/logger.js';
 import { toIso } from '../../utils/objects.js';
 import { startOfDayInZone } from '../../utils/time.js';
 import { loadPublishedRestaurant } from '../public/service.js';
+import { toPaymentConfigDto } from '../payments/config.js';
 import { orderingBus } from './events.js';
 
 const ITEMS_INCLUDE = { model: OrderItem, as: 'items' } as const;
@@ -110,10 +111,24 @@ export function toOrderDto(order: Order): OrderDto {
     deliveredAt: toIso(order.deliveredAt),
     closedAt: toIso(order.closedAt),
     expiresAt: order.status === 'new' ? orderExpiresAt(order.createdAt).toISOString() : null,
+    paymentStatus: order.paymentStatus,
+    tipCents: order.tipCents,
+    paidAmountCents: order.paidAmountCents,
+    paidAt: toIso(order.paidAt),
+    providerRef: order.providerRef,
+    fiscalStatus: order.fiscalStatus,
+    fiscalInvoiceNumber: order.fiscalInvoiceNumber,
+    fiscalVerificationUrl: order.fiscalVerificationUrl,
+    fiscalError: order.fiscalError,
+    posRef: order.posRef,
   };
 }
 
-export function toPublicOrderDto(order: Order, restaurant: Pick<Restaurant, 'currency' | 'defaultLocale'>): PublicOrderDto {
+export function toPublicOrderDto(
+  order: Order,
+  restaurant: Pick<Restaurant, 'currency' | 'defaultLocale' | 'modules' | 'paymentConfig'>,
+): PublicOrderDto {
+  const payments = toPaymentConfigDto(restaurant);
   return {
     id: order.id,
     number: order.number,
@@ -141,6 +156,18 @@ export function toPublicOrderDto(order: Order, restaurant: Pick<Restaurant, 'cur
     deliveredAt: toIso(order.deliveredAt),
     closedAt: toIso(order.closedAt),
     expiresAt: order.status === 'new' ? orderExpiresAt(order.createdAt).toISOString() : null,
+    paymentStatus: order.paymentStatus,
+    tipCents: order.tipCents,
+    paidAmountCents: order.paidAmountCents,
+    paidAt: toIso(order.paidAt),
+    payments: {
+      enabled: hasModule(restaurant, 'payments') && payments.provider !== null && (payments.provider !== 'mock' || payments.simulator),
+      tipPresets: payments.tipPresets,
+      receiptEmailEnabled: payments.receiptEmailEnabled,
+    },
+    fiscalStatus: order.fiscalStatus,
+    fiscalInvoiceNumber: order.fiscalInvoiceNumber,
+    fiscalVerificationUrl: order.fiscalVerificationUrl,
   };
 }
 
@@ -200,7 +227,7 @@ export function isTableBlocked(table: Pick<RestaurantTable, 'blockedUntil'>, now
   return Boolean(table.blockedUntil && table.blockedUntil.getTime() > now.getTime());
 }
 
-function publishOrder(type: 'order.created' | 'order.updated', order: Order): void {
+export function publishOrder(type: 'order.created' | 'order.updated', order: Order): void {
   orderingBus.publish(order.restaurantId, { type, order: toOrderDto(order) });
 }
 

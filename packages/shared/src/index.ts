@@ -3,6 +3,8 @@ export * from './i18n.js';
 export * from './availability.js';
 export * from './ordering.js';
 export * from './modules.js';
+export * from './payments.js';
+export * from './schemas/payments.js';
 export * from './schemas/common.js';
 export * from './schemas/auth.js';
 export * from './schemas/restaurant.js';

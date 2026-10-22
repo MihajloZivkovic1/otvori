@@ -5,7 +5,10 @@ import {
   DEFAULT_MODULES,
   RESTAURANT_DEFAULTS,
   type OrderStatus,
+  tipCentsFor,
   type OrderingMode,
+  type PaymentProviderKey,
+  type PaymentStatus,
   type RestaurantModules,
   type Plan,
   type RestaurantStatus,
@@ -14,6 +17,7 @@ import {
 } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
+import { encryptSecret } from '../../utils/crypto.js';
 import { hashPassword } from '../../utils/password.js';
 import { formatZonedDate, startOfDayInZone, zonedParts } from '../../utils/time.js';
 import { runMigrations } from '../migrate.js';
@@ -105,6 +109,8 @@ interface SeedRestaurant {
   orderDays?: number;
   /** Feature modules (Phase 9b); default all off. */
   modules?: Partial<RestaurantModules>;
+  /** Online payment set-up (Phase 9c); the secret is encrypted at seed time. */
+  paymentConfig?: { provider: PaymentProviderKey; merchantId: string; secret: string; tipPresets: number[]; receiptEmailEnabled: boolean };
 }
 
 const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
@@ -230,6 +236,8 @@ const kafeterija: SeedRestaurant = {
   orderDays: 7,
   // Every module on: the demo venue shows ordering, the payment simulator and the mock POS (Phases 9c/9d).
   modules: { ordering: true, payments: true, pos: true },
+  // Mock provider: scanning a payment QR opens the simulator page (PAYMENTS_MOCK=true), see docs/DEMO.md.
+  paymentConfig: { provider: 'mock', merchantId: 'DEMO-KAFETERIJA', secret: 'demo-secret', tipPresets: [0, 5, 10, 15], receiptEmailEnabled: true },
 };
 
 const smallMenu = (a: [string, string], b: [string, string], base: number): SeedCategory[] => [
@@ -365,6 +373,9 @@ interface SeedOrder {
   acceptedAt?: Date;
   deliveredAt?: Date;
   closedAt?: Date;
+  /** Online payment (Phase 9c): some delivered orders were paid through the app, some in cash. */
+  paymentStatus?: PaymentStatus;
+  tipPercent?: number;
 }
 
 const GUEST_NAMES = ['Marko', 'Jelena', 'Nikola', 'Ana', 'Stefan', 'Milica'];
@@ -438,6 +449,15 @@ async function seedOrders(
         order.acceptedAt = new Date(createdAt.getTime() + randInt(25, 240) * 1000);
         order.deliveredAt = new Date(order.acceptedAt.getTime() + randInt(4, 18) * MINUTE_MS);
         order.closedAt = order.deliveredAt;
+        if (restaurant.modules.payments) {
+          const pay = rand();
+          if (pay < 0.45) {
+            order.paymentStatus = 'paid';
+            order.tipPercent = [0, 0, 5, 10, 10, 15][randInt(0, 5)];
+          } else if (pay < 0.8) {
+            order.paymentStatus = 'cash';
+          }
+        }
       }
       orders.push(order);
     }
@@ -497,6 +517,16 @@ async function seedOrders(
       totalCents,
       locale: order.lines[0]?.name.en && !order.lines[0]?.name.sr ? 'en' : restaurant.defaultLocale,
       rejectedReason: order.rejectedReason ?? null,
+      paymentStatus: order.paymentStatus ?? 'unpaid',
+      tipCents: order.paymentStatus === 'paid' ? tipCentsFor(totalCents, order.tipPercent ?? 0) : 0,
+      paidAmountCents:
+        order.paymentStatus === 'paid'
+          ? totalCents + tipCentsFor(totalCents, order.tipPercent ?? 0)
+          : order.paymentStatus === 'cash'
+            ? totalCents
+            : null,
+      paidAt: order.paymentStatus ? (order.deliveredAt ?? lastChange) : null,
+      providerRef: order.paymentStatus === 'paid' ? `mock_seed_${randomUUID().slice(0, 12)}` : null,
       acceptedAt: order.acceptedAt ?? null,
       deliveredAt: order.deliveredAt ?? null,
       closedAt: order.closedAt ?? null,
@@ -553,6 +583,15 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
       publishedAt: def.publishedAt ?? null,
       orderingMode: def.orderingMode ?? RESTAURANT_DEFAULTS.orderingMode,
       modules: { ...DEFAULT_MODULES, ...def.modules },
+      paymentConfig: def.paymentConfig
+        ? {
+            provider: def.paymentConfig.provider,
+            merchantId: def.paymentConfig.merchantId,
+            secretEncrypted: encryptSecret(def.paymentConfig.secret),
+            tipPresets: def.paymentConfig.tipPresets,
+            receiptEmailEnabled: def.paymentConfig.receiptEmailEnabled,
+          }
+        : null,
     },
     { transaction },
   );

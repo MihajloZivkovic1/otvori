@@ -18,7 +18,7 @@ import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
 import { formatPrice, plural } from '../lib/format';
 import { primeAlertSound, requestNotificationPermission } from '../lib/notify';
-import { useCompleteRequest, useUpdateOrderStatus } from '../lib/queries';
+import { useCompleteRequest, useMarkOrderCash, useUpdateOrderStatus } from '../lib/queries';
 
 /** Waiter screen (design B1–B3, B7): calls, new and in-progress orders, live over SSE with a polling fallback. */
 export function OrdersPage() {
@@ -47,11 +47,13 @@ export function OrdersPage() {
 const byCreated = (a: { createdAt: string }, b: { createdAt: string }) => a.createdAt.localeCompare(b.createdAt);
 
 function useBoard() {
-  const { restaurant } = useRestaurantContext();
+  const { restaurant, hasModule } = useRestaurantContext();
   const ordering = useOrdering();
   const toast = useToast();
   const now = useNow(30_000);
   const update = useUpdateOrderStatus(restaurant.id);
+  const markCash = useMarkOrderCash(restaurant.id);
+  const payments = hasModule('payments');
   const complete = useCompleteRequest(restaurant.id);
   const [rejecting, setRejecting] = useState<OrderDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -91,6 +93,7 @@ function useBoard() {
   return {
     restaurant,
     ordering,
+    payments,
     now,
     calls,
     newOrders,
@@ -107,6 +110,10 @@ function useBoard() {
     done: (request: ServiceRequestDto) => {
       setBusyId(request.id);
       complete.mutate(request.id, { onError, onSettled: () => setBusyId(null) });
+    },
+    cash: (order: OrderDto) => {
+      setBusyId(order.id);
+      markCash.mutate(order.id, { onError, onSettled: () => setBusyId(null) });
     },
   };
 }
@@ -129,6 +136,7 @@ function Cards({ board, group, compact }: { board: Board; group: 'calls' | 'new'
         now={now}
         busy={busyId === order.id}
         compact={compact}
+        payments={board.payments}
         onAccept={() => board.accept(order)}
         onReject={() => board.setRejecting(order)}
       />
@@ -142,7 +150,9 @@ function Cards({ board, group, compact }: { board: Board; group: 'calls' | 'new'
       defaultLocale={restaurant.defaultLocale}
       busy={busyId === order.id}
       compact={compact}
+      payments={board.payments}
       onDeliver={() => board.deliver(order)}
+      onCash={() => board.cash(order)}
     />
   ));
 }
@@ -249,7 +259,7 @@ function MobileOrders() {
               </section>
             ) : null,
           )}
-          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} />
+          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} />
         </div>
       )}
 
@@ -315,7 +325,7 @@ function DesktopOrders() {
               </Column>
             ))}
           </div>
-          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} />
+          <TodayHistory orders={board.history} count={board.todayCount} totalCents={board.todayTotal} currency={restaurant.currency} payments={board.payments} onCash={board.cash} />
         </>
       )}
       {board.rejecting ? (

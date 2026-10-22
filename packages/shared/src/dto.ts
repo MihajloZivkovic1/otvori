@@ -24,6 +24,7 @@ import {
   serviceRequestTypeSchema,
 } from './schemas/ordering.js';
 import { restaurantModulesSchema } from './modules.js';
+import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
 
 const isoString = z.string();
 
@@ -82,6 +83,22 @@ export type AuthResponseDto = z.infer<typeof authResponseDtoSchema>;
 export const okDtoSchema = z.object({ ok: z.literal(true) });
 export type OkDto = z.infer<typeof okDtoSchema>;
 
+export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
+export const paymentAttemptStatusSchema = z.enum(PAYMENT_ATTEMPT_STATUSES);
+export const fiscalStatusSchema = z.enum(FISCAL_STATUSES);
+
+export const paymentConfigDtoSchema = z.object({
+  provider: z.enum(PAYMENT_PROVIDERS).nullable(),
+  merchantId: z.string().nullable(),
+  hasSecret: z.boolean(),
+  /** Tip percentages offered to the guest (0 = "no tip" is always first). */
+  tipPresets: z.array(z.number().int()),
+  receiptEmailEnabled: z.boolean(),
+  /** True when the venue runs on the mock provider and PAYMENTS_MOCK is on: payments go through the simulator. */
+  simulator: z.boolean(),
+});
+export type PaymentConfigDto = z.infer<typeof paymentConfigDtoSchema>;
+
 export const restaurantDtoSchema = z.object({
   id: uuidSchema,
   slug: z.string(),
@@ -105,6 +122,8 @@ export const restaurantDtoSchema = z.object({
   publicUrl: z.string(),
   /** Feature modules (Phase 9b). `orderingMode` below is the setting; it only takes effect while `modules.ordering`. */
   modules: restaurantModulesSchema,
+  /** Online payment set-up (Phase 9c); the merchant secret never leaves the API (`hasSecret`). */
+  paymentConfig: paymentConfigDtoSchema,
   /** Table ordering: off (view-only), call_waiter (call/bill buttons) or order (guests send orders). */
   orderingMode: orderingModeSchema,
   /** When true the public menu hides "+"/cart and shows `pausedMessage`; calls still work. */
@@ -222,6 +241,10 @@ export const analyticsDtoSchema = z.object({
     previousMedianAcceptSeconds: z.number().nullable(),
     /** Sum of accepted + delivered orders — guests pay the waiter, so this is "ordered", not "paid". */
     orderedRevenueCents: analyticsMetricSchema,
+    /** Online payments (Phase 9c): count, amount without tips, and the tips. */
+    paidOnlineCount: analyticsMetricSchema,
+    paidOnlineCents: analyticsMetricSchema,
+    tipsCents: analyticsMetricSchema,
   }).nullable(),
 });
 export type AnalyticsDto = z.infer<typeof analyticsDtoSchema>;
@@ -314,6 +337,18 @@ export const orderDtoSchema = z.object({
   closedAt: isoString.nullable(),
   /** While `new`: when the order expires unless somebody accepts it. */
   expiresAt: isoString.nullable(),
+  /** Online payment (Phase 9c). `paidAmountCents` includes the tip; `providerRef` is the latest attempt. */
+  paymentStatus: paymentStatusSchema,
+  tipCents: z.number().int(),
+  paidAmountCents: z.number().int().nullable(),
+  paidAt: isoString.nullable(),
+  providerRef: z.string().nullable(),
+  /** Fiscal receipt (Phase 9d). */
+  fiscalStatus: fiscalStatusSchema,
+  fiscalInvoiceNumber: z.string().nullable(),
+  fiscalVerificationUrl: z.string().nullable(),
+  fiscalError: z.string().nullable(),
+  posRef: z.string().nullable(),
 });
 export type OrderDto = z.infer<typeof orderDtoSchema>;
 
@@ -349,8 +384,35 @@ export const publicOrderDtoSchema = z.object({
   deliveredAt: isoString.nullable(),
   closedAt: isoString.nullable(),
   expiresAt: isoString.nullable(),
+  paymentStatus: paymentStatusSchema,
+  tipCents: z.number().int(),
+  paidAmountCents: z.number().int().nullable(),
+  paidAt: isoString.nullable(),
+  /** Whether this venue offers online payment and which tip percentages it suggests. */
+  payments: z.object({ enabled: z.boolean(), tipPresets: z.array(z.number().int()), receiptEmailEnabled: z.boolean() }),
+  fiscalStatus: fiscalStatusSchema,
+  fiscalInvoiceNumber: z.string().nullable(),
+  fiscalVerificationUrl: z.string().nullable(),
 });
 export type PublicOrderDto = z.infer<typeof publicOrderDtoSchema>;
+
+/** One payment attempt as the guest sees it (POST …/payments and GET …/payments/:ref). */
+export const publicPaymentDtoSchema = z.object({
+  ref: z.string(),
+  status: paymentAttemptStatusSchema,
+  /** Order total without the tip, the tip, and what the guest is asked to pay. */
+  baseCents: z.number().int(),
+  tipCents: z.number().int(),
+  amountCents: z.number().int(),
+  currency: z.string(),
+  /** Text to encode as the QR (an IPS payment string, or the simulator URL on the mock provider). */
+  qrPayload: z.string(),
+  /** Opens the banking app directly when the provider supports it. */
+  deepLink: z.string().nullable(),
+  expiresAt: isoString,
+  paidAt: isoString.nullable(),
+});
+export type PublicPaymentDto = z.infer<typeof publicPaymentDtoSchema>;
 
 export const serviceRequestDtoSchema = z.object({
   id: uuidSchema,

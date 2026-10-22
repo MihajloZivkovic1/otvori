@@ -3,6 +3,7 @@ import {
   type PublicEventInput,
   type PublicMenuDto,
   type PublicOrderDto,
+  type PublicPaymentDto,
   type PublicServiceRequestDto,
   type ServiceRequestType,
 } from '@qr-menu/shared';
@@ -133,6 +134,19 @@ export function cancelOrder(slug: string | null, orderId: string): Promise<Publi
   return request<PublicOrderDto>(publicUrl(slug, `orders/${encodeURIComponent(orderId)}/cancel`), jsonInit('POST'));
 }
 
+/* ------------------------------------------------------------------ online payment (Phase 9c) */
+
+export function createPayment(slug: string | null, orderId: string, tipPercent: number): Promise<PublicPaymentDto> {
+  return request<PublicPaymentDto>(publicUrl(slug, `orders/${encodeURIComponent(orderId)}/payments`), jsonInit('POST', { tipPercent }));
+}
+
+export function fetchPayment(slug: string | null, orderId: string, ref: string, signal?: AbortSignal): Promise<PublicPaymentDto> {
+  return request<PublicPaymentDto>(
+    publicUrl(slug, `orders/${encodeURIComponent(orderId)}/payments/${encodeURIComponent(ref)}`),
+    { signal, headers: sessionHeaders() },
+  );
+}
+
 export function createServiceRequest(
   slug: string | null,
   type: ServiceRequestType,
@@ -171,6 +185,8 @@ export function orderingErrorMessage(error: unknown, t: Dictionary): string {
         return t.errors.disabled;
       case 'RATE_LIMITED':
         return t.errors.rateLimited;
+      case 'PAYMENT_NOT_ALLOWED':
+        return t.pay.notAllowed;
       default:
         return t.errors.generic;
     }

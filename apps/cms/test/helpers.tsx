@@ -106,6 +106,7 @@ export const restaurant: RestaurantDto = {
   publishedAt: '2026-09-01T10:00:00.000Z',
   publicUrl: 'http://kafeterija.localhost:5174',
   modules: { ordering: false, payments: false, pos: false },
+  paymentConfig: { provider: null, merchantId: null, hasSecret: false, tipPresets: [0, 5, 10, 15], receiptEmailEnabled: false, simulator: false },
   orderingMode: 'off',
   orderingPaused: false,
   pausedMessage: null,
@@ -230,6 +231,9 @@ export const analytics: AnalyticsDto = {
     medianAcceptSeconds: 100,
     previousMedianAcceptSeconds: 120,
     orderedRevenueCents: { value: 23845000, previous: 20100000, deltaPct: 18.6 },
+    paidOnlineCount: { value: 40, previous: 31, deltaPct: 29 },
+    paidOnlineCents: { value: 4120000, previous: 3300000, deltaPct: 24.8 },
+    tipsCents: { value: 312000, previous: 250000, deltaPct: 24.8 },
   },
 };
 
@@ -260,6 +264,16 @@ export const orders: OrderDto[] = [
     deliveredAt: null,
     closedAt: null,
     expiresAt: '2026-10-22T12:02:00.000Z',
+    paymentStatus: 'unpaid',
+    tipCents: 0,
+    paidAmountCents: null,
+    paidAt: null,
+    providerRef: null,
+    fiscalStatus: 'none',
+    fiscalInvoiceNumber: null,
+    fiscalVerificationUrl: null,
+    fiscalError: null,
+    posRef: null,
   },
   {
     id: ids.order143,
@@ -283,6 +297,16 @@ export const orders: OrderDto[] = [
     deliveredAt: null,
     closedAt: null,
     expiresAt: '2026-10-22T11:55:00.000Z',
+    paymentStatus: 'unpaid',
+    tipCents: 0,
+    paidAmountCents: null,
+    paidAt: null,
+    providerRef: null,
+    fiscalStatus: 'none',
+    fiscalInvoiceNumber: null,
+    fiscalVerificationUrl: null,
+    fiscalError: null,
+    posRef: null,
   },
   {
     id: ids.order141,
@@ -306,6 +330,16 @@ export const orders: OrderDto[] = [
     deliveredAt: null,
     closedAt: null,
     expiresAt: null,
+    paymentStatus: 'unpaid',
+    tipCents: 0,
+    paidAmountCents: null,
+    paidAt: null,
+    providerRef: null,
+    fiscalStatus: 'none',
+    fiscalInvoiceNumber: null,
+    fiscalVerificationUrl: null,
+    fiscalError: null,
+    posRef: null,
   },
   {
     id: ids.order140,
@@ -326,6 +360,16 @@ export const orders: OrderDto[] = [
     deliveredAt: '2026-10-22T11:02:00.000Z',
     closedAt: '2026-10-22T11:02:00.000Z',
     expiresAt: null,
+    paymentStatus: 'unpaid',
+    tipCents: 0,
+    paidAmountCents: null,
+    paidAt: null,
+    providerRef: null,
+    fiscalStatus: 'none',
+    fiscalInvoiceNumber: null,
+    fiscalVerificationUrl: null,
+    fiscalError: null,
+    posRef: null,
   },
 ];
 
@@ -518,6 +562,21 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
   if (path === `${base}/orders` && method === 'GET') return { body: orders };
   if (path === `${base}/requests` && method === 'GET') return { body: serviceRequests };
   if (path === `${base}/sse-token` && method === 'POST') return { body: { token: 'sse-token', expiresIn: 300 } };
+  const cashPatch = new RegExp(`^${base}/orders/([^/]+)/payment$`).exec(path);
+  if (cashPatch && method === 'PATCH') {
+    const order = orders.find((o) => o.id === cashPatch[1]);
+    if (!order) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Order not found' } } };
+    return { body: { ...order, paymentStatus: 'cash', paidAmountCents: order.totalCents, paidAt: '2026-10-22T11:50:00.000Z', updatedAt: '2026-10-22T11:50:00.000Z' } };
+  }
+  if (path === `${base}/payment-config`) {
+    if (method === 'GET') return { body: restaurant.paymentConfig };
+    if (method === 'PATCH') {
+      const patch = body as { secret?: string } & Partial<typeof restaurant.paymentConfig>;
+      const { secret, ...rest } = patch;
+      return { body: { ...restaurant.paymentConfig, ...rest, hasSecret: restaurant.paymentConfig.hasSecret || Boolean(secret), simulator: rest.provider === 'mock' } };
+    }
+  }
+  if (path === `${base}/payment-config/test` && method === 'POST') return { body: { ok: true, message: 'Simulator ready' } };
   const orderPatch = new RegExp(`^${base}/orders/([^/]+)$`).exec(path);
   if (orderPatch && method === 'PATCH') {
     const order = orders.find((o) => o.id === orderPatch[1]);

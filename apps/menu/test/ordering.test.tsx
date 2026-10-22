@@ -36,6 +36,14 @@ function orderDto(overrides: Partial<PublicOrderDto> = {}): PublicOrderDto {
     deliveredAt: null,
     closedAt: null,
     expiresAt: '2026-10-22T12:02:00.000Z',
+    paymentStatus: 'unpaid',
+    tipCents: 0,
+    paidAmountCents: null,
+    paidAt: null,
+    payments: { enabled: false, tipPresets: [], receiptEmailEnabled: false },
+    fiscalStatus: 'none',
+    fiscalInvoiceNumber: null,
+    fiscalVerificationUrl: null,
     ...overrides,
   };
 }

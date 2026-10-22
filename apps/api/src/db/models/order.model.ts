@@ -11,7 +11,14 @@ import {
   PrimaryKey,
   Table,
 } from 'sequelize-typescript';
-import { ORDER_STATUSES, type OrderStatus } from '@qr-menu/shared';
+import {
+  FISCAL_STATUSES,
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  type FiscalStatus,
+  type OrderStatus,
+  type PaymentStatus,
+} from '@qr-menu/shared';
 import { OrderItem } from './order-item.model.js';
 import { Restaurant } from './restaurant.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
@@ -91,6 +98,60 @@ export class Order extends Model<InferAttributes<Order>, InferCreationAttributes
   @AllowNull(true)
   @Column(DataType.DATE)
   closedAt!: CreationOptional<Date | null>;
+
+  /* ---------------------------------------------------------------- online payment (Phase 9c) */
+
+  @AllowNull(false)
+  @Default('unpaid')
+  @Column(DataType.ENUM(...PAYMENT_STATUSES))
+  paymentStatus!: CreationOptional<PaymentStatus>;
+
+  @AllowNull(false)
+  @Default(0)
+  @Column(DataType.INTEGER)
+  tipCents!: CreationOptional<number>;
+
+  /** What was actually paid online (total + tip); null until paid. */
+  @AllowNull(true)
+  @Column(DataType.INTEGER)
+  paidAmountCents!: CreationOptional<number | null>;
+
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  paidAt!: CreationOptional<Date | null>;
+
+  /** Reference of the latest payment attempt (payments.provider_ref). */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  providerRef!: CreationOptional<string | null>;
+
+  /* ---------------------------------------------------------------- fiscal receipt (Phase 9d) */
+
+  @AllowNull(false)
+  @Default('none')
+  @Column(DataType.ENUM(...FISCAL_STATUSES))
+  fiscalStatus!: CreationOptional<FiscalStatus>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  fiscalInvoiceNumber!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  fiscalVerificationUrl!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  fiscalReceiptText!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  fiscalError!: CreationOptional<string | null>;
+
+  /** The POS's reference for the opened order. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  posRef!: CreationOptional<string | null>;
 
   @BelongsTo(() => Restaurant)
   restaurant?: NonAttribute<Restaurant>;

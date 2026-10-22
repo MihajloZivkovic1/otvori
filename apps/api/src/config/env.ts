@@ -41,6 +41,13 @@ const envSchema = z.object({
   /** Escape hatch: run production with MAIL_PROVIDER=log (links end up in the logs). Never set it on a real deployment. */
   ALLOW_LOG_MAIL: boolFlag,
 
+  /** Online payment (Phase 9c). The simulator (mock provider + GET /dev/pay/:ref) only exists while PAYMENTS_MOCK. */
+  PAYMENTS_MOCK: boolFlag,
+  /** Key for the merchant secrets / POS API keys at rest (AES-256-GCM); `openssl rand -base64 32`. */
+  PAYMENTS_ENCRYPTION_KEY: z.string().min(16).optional(),
+  /** OTP eCommerce gateway base URL (sandbox or production); unset = provider unavailable. */
+  OTP_ECOM_BASE_URL: z.url().optional(),
+
   /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
   APP_VERSION: z.string().optional(),
   /** Run pending migrations before listening. Unset → on in production (container start), off elsewhere. */
@@ -56,6 +63,12 @@ const envSchema = z.object({
         path: ['MAIL_PROVIDER'],
         message: 'MAIL_PROVIDER=log would write magic links and password resets to the logs; set resend (or ALLOW_LOG_MAIL=1 knowingly)',
       });
+    }
+    if (!value.PAYMENTS_ENCRYPTION_KEY) {
+      ctx.addIssue({ code: 'custom', path: ['PAYMENTS_ENCRYPTION_KEY'], message: 'PAYMENTS_ENCRYPTION_KEY is required in production (openssl rand -base64 32)' });
+    }
+    if (value.PAYMENTS_MOCK) {
+      ctx.addIssue({ code: 'custom', path: ['PAYMENTS_MOCK'], message: 'PAYMENTS_MOCK must be off in production (the simulator accepts payments without a bank)' });
     }
     if (value.JWT_ACCESS_SECRET.length < 32 || /change-me|replace-me|example|secret/i.test(value.JWT_ACCESS_SECRET)) {
       ctx.addIssue({ code: 'custom', path: ['JWT_ACCESS_SECRET'], message: 'JWT_ACCESS_SECRET must be a random value of at least 32 characters in production' });
@@ -126,6 +139,8 @@ const corsOrigins = new Set<string>([
 
 export const env = {
   ...raw,
+  // Outside production a missing key falls back to one derived from the JWT secret, so dev/test need no extra set-up.
+  PAYMENTS_ENCRYPTION_KEY: raw.PAYMENTS_ENCRYPTION_KEY ?? `dev-${raw.JWT_ACCESS_SECRET}`,
   DATABASE_URL: databaseUrl,
   API_URL: apiUrl,
   APP_VERSION: raw.APP_VERSION ?? 'dev',

@@ -62,6 +62,7 @@ export function AnalyticsPage() {
             showOrdering={
               query.data.ordering !== null && hasModule('ordering') && (restaurant.orderingMode !== 'off' || query.data.ordering.orders.value > 0)
             }
+            showPayments={hasModule('payments')}
           />
         )}
       </div>
@@ -76,9 +77,11 @@ interface ReportProps {
   rangeDays: number;
   /** Ordering card (design B8): shown while ordering is on, or when the period has orders anyway. */
   showOrdering: boolean;
+  /** Payments module on: the online-payment tiles join the card. */
+  showPayments: boolean;
 }
 
-function Report({ data, defaultLocale, currency, rangeDays, showOrdering }: ReportProps) {
+function Report({ data, defaultLocale, currency, rangeDays, showOrdering, showPayments }: ReportProps) {
   const days = data.scansPerDay;
   const max = Math.max(0, ...days.map((d) => d.scans));
   const peak = days.reduce<{ date: string; scans: number } | null>((best, day) => (!best || day.scans > best.scans ? day : best), null);
@@ -128,7 +131,7 @@ function Report({ data, defaultLocale, currency, rangeDays, showOrdering }: Repo
         </div>
       </section>
 
-      {showOrdering ? <OrderingStats data={data} currency={currency} days={rangeDays} /> : null}
+      {showOrdering ? <OrderingStats data={data} currency={currency} days={rangeDays} payments={showPayments} /> : null}
 
       <div className="grid grid-cols-2 gap-4 max-tab:grid-cols-1 max-tab:gap-3">
         <RankedList
@@ -159,9 +162,16 @@ function Report({ data, defaultLocale, currency, rangeDays, showOrdering }: Repo
 }
 
 /** Orders, accepted rate, median time to accept, ordered revenue (design B8). */
-function OrderingStats({ data, currency, days }: { data: AnalyticsDto; currency: string; days: number }) {
+function OrderingStats({ data, currency, days, payments }: { data: AnalyticsDto; currency: string; days: number; payments: boolean }) {
   const { ordering } = data;
   if (!ordering) return null;
+  const paymentStats = payments
+    ? [
+        { value: count.format(ordering.paidOnlineCount.value), label: 'paid online', delta: percent(ordering.paidOnlineCount.deltaPct) },
+        { value: formatPrice(ordering.paidOnlineCents.value, currency), label: 'paid online (without tips)', delta: percent(ordering.paidOnlineCents.deltaPct) },
+        { value: formatPrice(ordering.tipsCents.value, currency), label: 'tips', delta: percent(ordering.tipsCents.deltaPct) },
+      ]
+    : [];
   const stats = [
     { value: count.format(ordering.orders.value), label: ordering.orders.value === 1 ? 'order' : 'orders', delta: percent(ordering.orders.deltaPct) },
     { value: `${Math.round(ordering.acceptedRate.value)}%`, label: 'accepted', delta: percent(ordering.acceptedRate.deltaPct) },
@@ -177,7 +187,7 @@ function OrderingStats({ data, currency, days }: { data: AnalyticsDto; currency:
         <span className="text-xs text-muted">Last {days} days</span>
       </div>
       <dl className="grid grid-cols-4 gap-x-5 gap-y-3.5 max-tab:grid-cols-2">
-        {stats.map((stat) => (
+        {[...stats, ...paymentStats].map((stat) => (
           <div key={stat.label} className="flex flex-col gap-0.5">
             <dd className="text-2xl font-semibold leading-[1.1] tracking-[-.01em] tabular-nums">{stat.value}</dd>
             <dt className="text-xs text-muted">{stat.label}</dt>

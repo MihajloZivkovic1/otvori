@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { isFinalOrderStatus, type OrderStatus, type PublicOrderDto } from '@qr-menu/shared';
+import { canPayOrder, isFinalOrderStatus, type OrderStatus, type PublicOrderDto } from '@qr-menu/shared';
 import { TableChip } from '../components/Chips';
 import { BackIcon, CheckIcon } from '../components/icons';
 import { OfflineScreen } from '../components/OfflineScreen';
@@ -18,6 +18,9 @@ import { dict, type Dictionary, type UiLocale } from '../lib/i18n';
 import { requestedLocale, resolveUiLocale } from '../lib/locale';
 import { rememberOrder } from '../lib/orders';
 import { menuPath, orderPath } from '../lib/routes';
+
+// Online payment sheet (Phase 9c): its own chunk, loaded when the guest taps "Pay by phone".
+const PaymentSheet = lazy(() => import('../components/PaymentSheet').then((module) => ({ default: module.PaymentSheet })));
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLL_MS = 5_000;
@@ -128,6 +131,8 @@ export function OrderPage() {
   const calls = useServiceCalls(slug, tenantKey, t);
   const [toast, showToast] = useToast();
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const onPaid = useCallback(() => void order.refetch(), [order]);
 
   const cancel = useMutation({
     mutationFn: () => cancelOrder(slug, orderId),
@@ -253,6 +258,20 @@ export function OrderPage() {
         </div>
 
         <div className="mt-auto flex flex-col gap-2.5">
+          {data.payments.enabled && canPayOrder(data) && (
+            <button type="button" onClick={() => setPaying(true)} className={PRIMARY}>
+              {t.pay.payByPhone}
+            </button>
+          )}
+          {(data.paymentStatus === 'paid' || data.paymentStatus === 'cash') && (
+            <p className="flex items-center justify-center gap-2 rounded-[14px] bg-ok-soft px-4 py-3 text-[15px] font-semibold text-ok" role="status">
+              <CheckIcon width={16} height={16} strokeWidth={2.6} />
+              {data.paymentStatus === 'cash' ? t.pay.paidCash : t.pay.paid}
+              {data.paymentStatus === 'paid' && data.tipCents > 0 && (
+                <span className="font-medium">· {t.pay.paidWithTip(formatPrice(data.tipCents, currency, locale))}</span>
+              )}
+            </p>
+          )}
           {data.status === 'new' &&
             (confirmingCancel ? (
               <div className="grid grid-cols-2 gap-2.5">
@@ -284,7 +303,7 @@ export function OrderPage() {
             </>
           )}
           {data.status === 'delivered' && (
-            <Link to={back} className={PRIMARY}>
+            <Link to={back} className={data.payments.enabled && canPayOrder(data) ? SECONDARY : PRIMARY}>
               {t.backToMenu}
             </Link>
           )}
@@ -312,6 +331,11 @@ export function OrderPage() {
           </section>
         )}
       </div>
+      {paying && (
+        <Suspense fallback={null}>
+          <PaymentSheet slug={slug} order={data} locale={locale} t={t} onClose={() => setPaying(false)} onPaid={onPaid} />
+        </Suspense>
+      )}
       <Toast toast={toast} raised={false} />
     </div>
   );

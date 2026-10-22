@@ -1,5 +1,6 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, Column, DataType, Default, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
+import type { PaymentProviderKey } from '@qr-menu/shared';
 import {
   DEFAULT_MODULES,
   ORDERING_MODES,
@@ -20,6 +21,15 @@ import { Order } from './order.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
 import { ServiceRequest } from './service-request.model.js';
+
+/** What `restaurants.payment_config` holds. */
+export interface StoredPaymentConfig {
+  provider: PaymentProviderKey | null;
+  merchantId: string | null;
+  secretEncrypted: string | null;
+  tipPresets: number[];
+  receiptEmailEnabled: boolean;
+}
 
 @Table({ tableName: 'restaurants', timestamps: true, underscored: true })
 export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreationAttributes<Restaurant>> {
@@ -110,6 +120,11 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Default(() => ({ ...DEFAULT_MODULES }))
   @Column(DataType.JSONB)
   modules!: CreationOptional<RestaurantModules>;
+
+  /** Online payment set-up (Phase 9c); `secretEncrypted` is AES-GCM (utils/crypto.ts), never sent to clients. */
+  @AllowNull(true)
+  @Column(DataType.JSONB)
+  paymentConfig!: CreationOptional<StoredPaymentConfig | null>;
 
   /** Table ordering: off (default, view-only menu), call_waiter or order. Only effective while modules.ordering. */
   @AllowNull(false)

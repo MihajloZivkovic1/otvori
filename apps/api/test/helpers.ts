@@ -9,14 +9,17 @@ import type {
 } from '@qr-menu/shared';
 import { createApp } from '../src/app.js';
 import { sequelize } from '../src/db/sequelize.js';
+import { settleBackgroundWork } from '../src/modules/payments/service.js';
 import { outbox } from '../src/utils/mailer.js';
 
 export const app = createApp();
 export const api = supertest(app);
 
 export async function resetDatabase(): Promise<void> {
+  // Webhook results are applied after the response; a TRUNCATE racing one of them deadlocks.
+  await settleBackgroundWork();
   await sequelize.query(
-    'TRUNCATE TABLE order_items, orders, service_requests, item_views, scan_events, tables, item_variants, menu_items, categories, auth_tokens, memberships, users, restaurants CASCADE',
+    'TRUNCATE TABLE payments, order_items, orders, service_requests, item_views, scan_events, tables, item_variants, menu_items, categories, auth_tokens, memberships, users, restaurants CASCADE',
   );
   outbox.length = 0;
 }

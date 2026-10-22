@@ -176,6 +176,70 @@ Per-venue feature switches so the CMS stays a plain QR menu by default: `restaur
   `apps/menu/test/ordering.test.tsx`; fixtures carry `modules`, and the CMS helpers `orderingMode()` / `liveOrdering()`
   switch the module on together with the mode.
 
+## Online payment (Phase 9c)
+
+Model: Serbian IPS instant payments through the venue's own bank e-commerce gateway (OTP eCommerce; Monri WSPay later).
+The venue holds the merchant contract and receives the money; otvori creates a payment, shows the QR / deep link and
+receives the webhook. Everything lives in `apps/api/src/modules/payments/` (`providers/` = `types.ts` interface,
+`mock.ts`, `otp.ts` skeleton, `index.ts` registry; `config.ts` stored config + DTO + decrypted credentials; `service.ts`
+domain; `controller.ts` + `router.ts`; `simulator.ts` the dev "bank" page; `reconcile.ts` interval job; `hooks.ts`
+"order became paid" hooks for Phase 9d).
+
+- **Entities**: `orders.payment_status` `unpaid | pending | paid | failed | cash` (+ `tip_cents`, `paid_amount_cents`
+  (total + tip), `paid_at`, `provider_ref` = latest attempt) and the Phase 9d fiscal columns (`fiscal_status`
+  `none | pending | issued | failed`, `fiscal_invoice_number`, `fiscal_verification_url`, `fiscal_receipt_text`,
+  `fiscal_error`, `pos_ref`); `payments` = one row per attempt (`provider`, `provider_ref` unique per provider,
+  `status` `pending | paid | failed | expired`, `base_cents`, `tip_cents`, `amount_cents`, `qr_payload`,
+  `deep_link`, `expires_at`, `paid_at`, `raw`); `restaurants.payment_config` JSONB `{ provider, merchantId,
+  secretEncrypted, tipPresets, receiptEmailEnabled }`. Secrets at rest: AES-256-GCM (`utils/crypto.ts`) with
+  `PAYMENTS_ENCRYPTION_KEY` (required in production, derived from the JWT secret elsewhere); DTOs only carry
+  `hasSecret`. Shared: `packages/shared/src/payments.ts` (`PAYMENT_STATUSES`, `PAYMENT_LIMITS` = tip ≤ 50 %, 10-minute
+  QR, reconcile after 2 min, poll 3 s; `canPayOrder()`, `tipCentsFor()`) and `schemas/payments.ts`.
+- **`PaymentProvider`** (`providers/types.ts`): `createPayment({ order, amountCents, tipCents, currency, description,
+  callbackUrl, credentials })` → `{ providerRef, qrPayload, deepLink?, expiresAt }`; `parseWebhook(req, lookupSecret)`
+  verifies the signature with the venue's secret (looked up by the reference in the unverified body) and maps to
+  `{ providerRef, status: paid | failed | expired, amountCents, paidAt, raw }`; `getStatus(ref, credentials)`;
+  `testConnection(credentials)`. Credentials are per venue and passed per call; providers are stateless.
+  `paymentProvider(key)` refuses `mock` unless `PAYMENTS_MOCK=true` (and production refuses to start with it).
+- **Mock provider + simulator** (`PAYMENTS_MOCK=true`): `qrPayload` = `deepLink` = `API_URL/dev/pay/<ref>`. Scanning
+  the QR with any phone opens the simulator page ("Plati 660 RSD" / "Odbij"); the page POSTs to
+  `/dev/pay/<ref>/confirm`, which signs a webhook body (hex HMAC-SHA256 over the exact JSON bytes with the venue's
+  decrypted secret, header `X-Mock-Signature`) and sends it to `API_URL/api/webhooks/payments/mock` like a bank would;
+  the outcome is also kept in memory so the reconciliation poll finds it if the HTTP hop fails. Guest UI
+  "Otvori aplikaciju banke" opens the same page, so a one-phone demo works too. The seed gives Kafeterija
+  `provider: mock`, merchant `DEMO-KAFETERIJA`, secret `demo-secret`, tips 0/5/10/15. End-to-end script: `docs/DEMO.md`.
+- **Guest API** (session-bound like orders): `POST /api/public/:slug/orders/:id/payments { tipPercent }` → 201
+  `PublicPaymentDto` (`ref, status, baseCents, tipCents, amountCents, currency, qrPayload, deepLink, expiresAt,
+  paidAt`); allowed only with the payments module (403 `MODULE_DISABLED`), a configured provider (503
+  `PAYMENT_PROVIDER_UNAVAILABLE`) and an `accepted`/`delivered` order that is not `paid`/`cash` (409
+  `PAYMENT_NOT_ALLOWED`). A still-valid pending attempt with the same tip is returned again; a different tip retires
+  it and starts a new one. `GET …/payments/:ref` = the attempt (a pending one past `expiresAt` reads as `expired` and
+  the order goes back to `unpaid`). `PublicOrderDto` carries `paymentStatus`, `tipCents`, `paidAmountCents`,
+  `paidAt`, `payments: { enabled, tipPresets, receiptEmailEnabled }` and the fiscal trio.
+- **Webhook** `POST /api/webhooks/payments/:provider` (no auth; raw body kept by `express.json({ verify })` as
+  `req.rawBody`): bad signature → 401 `INVALID_SIGNATURE`; otherwise `{ received: true }` at once and the result is
+  applied on `setImmediate`. `applyPaymentResult()` is idempotent under row locks: a final attempt never changes,
+  except that `paid` always wins (money moved) even for an attempt we expired; the amount must be ≥ the requested
+  one; the order's `paymentStatus` only follows its latest attempt; `order.updated` is published and
+  `runPaidOrderHooks()` fires once per order. Unknown references are acknowledged and logged.
+- **Reconciliation** (`startPaymentReconcileJob()` in `index.ts`, every 60 s): pending attempts older than 2 min →
+  `getStatus`; still pending past `expiresAt` → `expired`.
+- **Staff**: `PATCH /admin/restaurants/:id/orders/:orderId/payment { paymentStatus: 'cash' }` (both roles; 409 over
+  an online payment); `GET/PATCH /payment-config` (`updatePaymentConfigSchema`: provider, merchantId, write-only
+  `secret`, tipPresets ≤ 6 of 0–50 (0 always kept), receiptEmailEnabled; PATCH + `POST /payment-config/test` owner
+  only). `OrderDto` carries the payment + fiscal fields and `providerRef`. Analytics `ordering` gains
+  `paidOnlineCount`, `paidOnlineCents` (without tips), `tipsCents`. Webhook/public routes answer `no-store`.
+- **Menu app**: `pages/OrderPage.tsx` shows "Plati telefonom" when `payments.enabled && canPayOrder()`, "Plaćeno ✓
+  · uklj. napojnicu …" / "Plaćeno kešom" afterwards; `components/PaymentSheet.tsx` (lazy) = tip chips (presets),
+  amount, QR (`components/QrCode.tsx`, `qrcode-generator`), "Otvori aplikaciju banke" (deep link), countdown, polling
+  every 3 s until paid / failed / expired with retry; copy in `t.pay`. Tests `test/payment.test.tsx`.
+- **CMS**: `components/orders/PaymentChip.tsx` (Unpaid / Paying… / Paid · IPS · tip / Payment failed / Cash) in the
+  order card header and the Today rows; "Cash" on in-progress and delivered-unpaid orders (`useMarkOrderCash`); live
+  through the existing `order.updated` stream. Settings → `components/settings/PaymentCard.tsx` (owner, module on):
+  provider, merchant ID, write-only secret, tip presets, receipt-mail switch, Test connection, SIMULATOR badge when
+  `paymentConfig.simulator`. Analytics card gains "paid online", amount and "tips" tiles. Tests
+  `test/payments.test.tsx`. Query keys `['paymentConfig', rid]`.
+
 ## Table ordering (Phase 6)
 
 Guests send orders / call the waiter from the public menu; staff handle them on their phone in the CMS. No payment:

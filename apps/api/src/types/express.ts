@@ -23,6 +23,8 @@ declare global {
       restaurantSlug?: string;
       /** Guest session id from the X-Session-Id header (public ordering routes, see requireSession). */
       sessionId?: string;
+      /** Exact request bytes (JSON routes), kept for webhook signature checks. */
+      rawBody?: Buffer;
     }
   }
 }

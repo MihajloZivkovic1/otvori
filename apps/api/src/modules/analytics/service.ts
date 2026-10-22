@@ -30,6 +30,9 @@ interface OrderingRow {
   accepted: number;
   revenue: string | number | null;
   median_accept: string | number | null;
+  paid_online: number;
+  paid_online_cents: string | number | null;
+  tips_cents: string | number | null;
 }
 
 function select<T>(sql: string, replacements: Record<string, unknown>): Promise<T[]> {
@@ -119,6 +122,9 @@ async function orderingStats(restaurantId: string, period: Period) {
     `SELECT COUNT(*) FILTER (WHERE status <> 'cancelled')::int AS orders,
             COUNT(*) FILTER (WHERE accepted_at IS NOT NULL)::int AS accepted,
             COALESCE(SUM(total_cents) FILTER (WHERE status IN ('accepted', 'delivered')), 0)::bigint AS revenue,
+            COUNT(*) FILTER (WHERE payment_status = 'paid')::int AS paid_online,
+            COALESCE(SUM(paid_amount_cents - tip_cents) FILTER (WHERE payment_status = 'paid'), 0)::bigint AS paid_online_cents,
+            COALESCE(SUM(tip_cents) FILTER (WHERE payment_status = 'paid'), 0)::bigint AS tips_cents,
             percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (accepted_at - created_at)))
               FILTER (WHERE accepted_at IS NOT NULL) AS median_accept
      FROM orders
@@ -133,6 +139,9 @@ async function orderingStats(restaurantId: string, period: Period) {
     acceptedRate: orders > 0 ? Math.round((accepted / orders) * 1000) / 10 : 0,
     medianAcceptSeconds: row?.median_accept == null ? null : Math.round(Number(row.median_accept)),
     revenueCents: Number(row?.revenue ?? 0),
+    paidOnline: row?.paid_online ?? 0,
+    paidOnlineCents: Number(row?.paid_online_cents ?? 0),
+    tipsCents: Number(row?.tips_cents ?? 0),
   };
 }
 
@@ -222,6 +231,13 @@ export async function getAnalytics(restaurantId: string, range: AnalyticsRange, 
         previous: prevOrdering.revenueCents,
         deltaPct: deltaPct(ordering.revenueCents, prevOrdering.revenueCents),
       },
+      paidOnlineCount: { value: ordering.paidOnline, previous: prevOrdering.paidOnline, deltaPct: deltaPct(ordering.paidOnline, prevOrdering.paidOnline) },
+      paidOnlineCents: {
+        value: ordering.paidOnlineCents,
+        previous: prevOrdering.paidOnlineCents,
+        deltaPct: deltaPct(ordering.paidOnlineCents, prevOrdering.paidOnlineCents),
+      },
+      tipsCents: { value: ordering.tipsCents, previous: prevOrdering.tipsCents, deltaPct: deltaPct(ordering.tipsCents, prevOrdering.tipsCents) },
     },
   };
 }
