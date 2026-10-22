@@ -415,8 +415,8 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
   Change links there only.
 - **Concept: opening.** Copy (`i18n/sr.ts` is the source of truth, `en.ts` the translation; `tagline` = "Skeniraj. Otvori. Naruči.")
   follows the guest's three steps Skeniraj → Otvori → Naruči (`How.astro`, step 3 has a `sub` line "or just browse"); the hero
-  (`HeroVisual.astro`) is a `TableCard` hinged on its left edge (`.door-scene` / `.door`, CSS-only `door-open` animation, static when
-  `prefers-reduced-motion`) swung open in front of the phone mock, which runs in order mode (+ badges, cart bar). `Features.astro`
+  (`HeroVisual.astro`) is one large phone mock in order mode (+ badges, cart bar) rising out of the paper frame — no QR card or
+  table scene (the owner rejected the "card as a door" variant). `Features.astro`
   leads with ordering (waiter-card mock) and call-waiter (guest bar mock), then six icon cards. Every card is a `hinge-card`
   (white, 3 px plum left edge + a faint inner gradient); `Cta.astro` is the plum block with a plum-light hinge and the mark oversized
   at 7 % opacity. `Setup.astro` stacks three `TableCard`s. No textures, folded corners or napkins anywhere.
@@ -433,7 +433,7 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
 - Styling (`src/styles/global.css`): self-hosted variable woff2 fonts in `public/fonts` (Figtree, Libre Baskerville regular/italic)
   with `font-display: swap` and metric-matched fallbacks (`size-adjust` etc. → CLS 0). `@theme` tokens: `paper #F7F2EB`, `ink`,
   `muted #71717A` (white cards) / `muted-paper #66666F` (≥ 4.5:1 on paper), `plum #7A3E48`, `plum-light/pale/soft`, `dark`,
-  `shadow-door`. Utilities: `hinge-card`, `btn btn-plum|outline|paper|white`; `.door-scene` / `.door` for the hero. Mobile = design
+  Utilities: `hinge-card`, `btn btn-plum|outline|paper|white`. Mobile = design
   frame 390 (default classes), desktop = frame 1440 (`lg:`). Text inside decorative scenes still has to pass 4.5:1 (Lighthouse audits
   `aria-hidden` nodes too), so labels there use `text-ink-2`.
 - Brand components: `Mark.astro` (the mark, `currentColor`), `Wordmark.astro` (mark 1.125× the font size + "otvori" serif 400),

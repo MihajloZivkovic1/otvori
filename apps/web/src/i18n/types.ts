@@ -34,7 +34,7 @@ export interface Dictionary {
     menu: string;
     close: string;
   };
-  hero: { h: string; sub: string; cta: string; demo: string; note: string; cardCaption: string };
+  hero: { h: string; sub: string; cta: string; demo: string; note: string };
   guest: {
     tagline: string;
     table: string;

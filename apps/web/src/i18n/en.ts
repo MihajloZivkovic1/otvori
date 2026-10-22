@@ -26,7 +26,6 @@ export const en: Dictionary = {
     cta: 'Try it free for 30 days',
     demo: 'See the demo menu',
     note: 'No card needed. Cancel whenever you like.',
-    cardCaption: 'Scan for the menu',
   },
   guest: {
     tagline: 'Specialty coffee & breakfast',

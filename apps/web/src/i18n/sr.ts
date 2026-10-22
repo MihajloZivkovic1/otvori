@@ -26,7 +26,6 @@ export const sr: Dictionary = {
     cta: 'Probaj 30 dana besplatno',
     demo: 'Pogledaj demo meni',
     note: 'Bez kartice. Otkazuješ kad hoćeš.',
-    cardCaption: 'Skeniraj za meni',
   },
   guest: {
     tagline: 'Specialty kafa i doručak',

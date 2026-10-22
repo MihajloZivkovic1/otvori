@@ -1,7 +1,6 @@
 ---
 import { type Dictionary, type Locale, formatRsd } from '../i18n';
 import Mark from './Mark.astro';
-import TableCard from './TableCard.astro';
 
 interface Props {
   locale: Locale;
@@ -38,78 +37,84 @@ const coffee = [
     price: 200,
     photo: '#8C6A54',
   },
+  {
+    name: 'Kapućino',
+    en: 'Espresso, steamed milk, thick foam.',
+    sr: 'Espreso, mleko, gusta pena.',
+    price: 260,
+    photo: '#A98469',
+  },
 ];
 ---
 
-<!-- Decorative scene: the QR table card swings open on its hinge (a door) and reveals the phone with the guest menu. -->
+<!-- Decorative scene: one phone showing the guest menu in order mode (+ on rows, cart bar), rising out of the frame. -->
 <div
   aria-hidden="true"
-  class="relative mx-3 mt-7 h-[400px] overflow-hidden rounded-[18px] bg-paper-3 lg:mx-0 lg:mt-0 lg:h-[600px] lg:w-[640px] lg:rounded-3xl"
+  class="relative mx-3 mt-7 h-[420px] overflow-hidden rounded-[18px] bg-paper-3 lg:mx-0 lg:mt-0 lg:h-[600px] lg:w-[640px] lg:rounded-3xl"
 >
-  <!-- phone -->
-  <div class="absolute top-8 left-[152px] h-[340px] w-[200px] overflow-hidden rounded-[28px] bg-paper text-[#1F1A17] shadow-[0_0_0_7px_#18181B,0_0_0_8px_rgba(0,0,0,.2),0_24px_50px_rgba(40,30,20,.3)] lg:top-[60px] lg:left-[330px] lg:h-[500px] lg:w-[260px] lg:rounded-[34px] lg:shadow-[0_0_0_8px_#18181B,0_0_0_9px_rgba(0,0,0,.2),0_30px_70px_rgba(40,30,20,.3)]">
-    <div class="flex flex-col gap-2.5 px-3 pt-[22px] pb-2 lg:gap-3 lg:px-3.5 lg:pt-[30px] lg:pb-2.5">
+  <div class="absolute top-8 left-1/2 h-[520px] w-[250px] -translate-x-1/2 overflow-hidden rounded-[34px] bg-paper text-[#1F1A17] shadow-[0_0_0_8px_#18181B,0_0_0_9px_rgba(0,0,0,.2),0_30px_70px_rgba(40,30,20,.3)] lg:top-14 lg:h-[640px] lg:w-[300px] lg:rounded-[40px] lg:shadow-[0_0_0_9px_#18181B,0_0_0_10px_rgba(0,0,0,.2),0_36px_80px_rgba(40,30,20,.3)]">
+    <div class="flex flex-col gap-3 px-3.5 pt-7 pb-2.5 lg:gap-3.5 lg:px-4 lg:pt-9 lg:pb-3">
       <div class="flex items-center justify-between">
         <span class="inline-flex items-center gap-1 text-plum">
-          <Mark size={11} class="lg:hidden" />
-          <Mark size={13} class="max-lg:hidden" />
-          <span class="font-serif text-[9px] leading-none tracking-[-.02em] lg:text-[11px]">otvori</span>
+          <Mark size={13} class="lg:hidden" />
+          <Mark size={15} class="max-lg:hidden" />
+          <span class="font-serif text-[11px] leading-none tracking-[-.02em] lg:text-[13px]">otvori</span>
         </span>
-        <span class="hidden h-[26px] items-center gap-[3px] rounded-lg border border-[#1F1A17]/10 px-[7px] text-[9.5px] font-semibold lg:inline-flex">
-          <span style={sr ? '' : 'opacity:.4'}>SR</span>
+        <span class="inline-flex h-[26px] items-center gap-[3px] rounded-lg border border-[#1F1A17]/10 px-[7px] text-[9.5px] font-semibold lg:h-7 lg:text-[10.5px]">
+          <span style={sr ? '' : 'color:#6E645C'}>SR</span>
           <span class="font-normal text-[#6E645C]">/</span>
-          <span style={sr ? 'opacity:.4' : ''}>EN</span>
+          <span style={sr ? 'color:#6E645C' : ''}>EN</span>
         </span>
       </div>
-      <div class="flex items-center gap-[7px] lg:gap-[9px]">
-        <span class="grid size-[26px] place-items-center rounded-[7px] bg-[#3E2A22] font-serif text-[11px] font-bold text-white lg:size-[34px] lg:rounded-[9px] lg:text-sm">
+      <div class="flex items-center gap-[9px] lg:gap-2.5">
+        <span class="grid size-[34px] place-items-center rounded-[9px] bg-[#3E2A22] font-serif text-sm font-bold text-white lg:size-10 lg:rounded-[10px] lg:text-base">
           K
         </span>
         <div>
-          <div class="font-serif text-xs leading-[1.15] font-bold lg:text-[15px]">Kafeterija Dorćol</div>
-          <div class="mt-0.5 hidden text-[10px] text-[#6E645C] lg:block">{t.guest.tagline}</div>
+          <div class="font-serif text-[15px] leading-[1.15] font-bold lg:text-[17px]">Kafeterija Dorćol</div>
+          <div class="mt-0.5 text-[10px] text-[#6E645C] lg:text-[11px]">{t.guest.tagline}</div>
         </div>
       </div>
-      <div class="hidden items-center gap-1.5 lg:flex">
-        <span class="inline-flex h-5 items-center gap-[5px] rounded-full bg-[#EEE6DB] px-2 text-[9.5px] font-semibold">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-flex h-5 items-center gap-[5px] rounded-full bg-[#EEE6DB] px-2 text-[9.5px] font-semibold lg:h-[22px] lg:text-[10.5px]">
           <span class="size-[5px] rounded-full bg-plum"></span>
           {t.guest.table} 7
         </span>
-        <span class="text-[9.5px] text-[#6E645C]">{t.guest.hours}</span>
+        <span class="text-[9.5px] text-[#6E645C] lg:text-[10.5px]">{t.guest.hours}</span>
       </div>
     </div>
-    <div class="flex gap-1 border-b border-[#1F1A17]/10 px-3 py-1 lg:gap-[5px] lg:px-3.5 lg:py-1.5">
-      <span class="inline-flex h-[22px] items-center rounded-full bg-plum px-2 text-[9px] font-medium text-white lg:h-[26px] lg:px-2.5 lg:text-[10px]">
+    <div class="flex gap-[5px] border-b border-[#1F1A17]/10 px-3.5 py-1.5 lg:px-4 lg:py-2">
+      <span class="inline-flex h-[26px] items-center rounded-full bg-plum px-2.5 text-[10px] font-medium text-white lg:h-7 lg:px-3 lg:text-[11px]">
         {t.guest.cat1}
       </span>
-      <span class="inline-flex h-[22px] items-center rounded-full border border-[#1F1A17]/14 px-2 text-[9px] font-medium lg:h-[26px] lg:px-2.5 lg:text-[10px]">
+      <span class="inline-flex h-[26px] items-center rounded-full border border-[#1F1A17]/14 px-2.5 text-[10px] font-medium lg:h-7 lg:px-3 lg:text-[11px]">
         {t.guest.cat2}
       </span>
-      <span class="hidden h-[26px] items-center rounded-full border border-[#1F1A17]/14 px-2.5 text-[10px] font-medium lg:inline-flex">
+      <span class="inline-flex h-[26px] items-center rounded-full border border-[#1F1A17]/14 px-2.5 text-[10px] font-medium lg:h-7 lg:px-3 lg:text-[11px]">
         {t.guest.cat3}
       </span>
     </div>
-    <div class="px-3 pt-2 lg:px-3.5 lg:pt-3.5">
-      <div class="mb-0.5 hidden items-baseline justify-between lg:flex">
-        <span class="font-serif text-sm font-bold">{t.guest.cat1}</span>
-        <span class="text-[9.5px] text-[#6E645C]">4 {t.guest.items}</span>
+    <div class="px-3.5 pt-3.5 lg:px-4 lg:pt-4">
+      <div class="mb-1 flex items-baseline justify-between">
+        <span class="font-serif text-[15px] font-bold lg:text-[17px]">{t.guest.cat1}</span>
+        <span class="text-[9.5px] text-[#6E645C] lg:text-[10.5px]">5 {t.guest.items}</span>
       </div>
       {coffee.map((it, i) => (
-        <div class="flex gap-1.5 border-b border-[#1F1A17]/10 py-[7px] lg:gap-2.5 lg:py-2.5">
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5 lg:gap-[3px]">
-            <div class="flex justify-between gap-1.5 lg:gap-2">
-              <span class="font-serif text-[10px] leading-[1.3] lg:text-xs">{it.name}</span>
-              <span class="text-[9px] font-semibold whitespace-nowrap lg:text-[11px]">{formatRsd(it.price)} RSD</span>
+        <div class="flex gap-2.5 border-b border-[#1F1A17]/10 py-2.5 lg:gap-3 lg:py-3">
+          <div class="flex min-w-0 flex-1 flex-col gap-[3px] lg:gap-1">
+            <div class="flex justify-between gap-2">
+              <span class="font-serif text-xs leading-[1.3] lg:text-[13px]">{it.name}</span>
+              <span class="text-[11px] font-semibold whitespace-nowrap lg:text-xs">{formatRsd(it.price)} RSD</span>
             </div>
-            <div class="hidden text-[9.5px] leading-[1.4] text-[#6E645C] lg:block">{sr ? it.sr : it.en}</div>
+            <div class="text-[9.5px] leading-[1.4] text-[#6E645C] lg:text-[10.5px]">{sr ? it.sr : it.en}</div>
           </div>
           <div
-            class="relative size-[30px] flex-none rounded-md lg:size-[46px] lg:rounded-[9px]"
+            class="relative size-[46px] flex-none rounded-[9px] lg:size-[54px] lg:rounded-[10px]"
             style={`background:${it.photo ?? '#EEE6DB'}`}
           >
             <span
               class:list={[
-                'absolute right-[-4px] bottom-[-4px] grid size-4 place-items-center rounded-full border border-white text-[11px] leading-none font-semibold lg:size-5 lg:text-[13px]',
+                'absolute right-[-5px] bottom-[-5px] grid size-5 place-items-center rounded-full border border-white text-[13px] leading-none font-semibold lg:size-[22px] lg:text-sm',
                 i === 0 ? 'bg-plum text-white' : 'bg-white text-plum',
               ]}
             >
@@ -119,28 +124,12 @@ const coffee = [
         </div>
       ))}
     </div>
-    <!-- cart bar -->
-    <div class="absolute inset-x-2.5 bottom-2.5 flex h-9 items-center justify-between rounded-xl bg-plum px-3 text-white shadow-[0_8px_20px_rgba(122,62,72,.35)] lg:inset-x-3.5 lg:bottom-3.5 lg:h-11 lg:rounded-[14px] lg:px-3.5">
-      <span class="text-[9px] font-medium lg:text-[11px]">
-        {t.guest.cartItems} · {formatRsd(580)} RSD
-      </span>
-      <span class="text-[9.5px] font-semibold lg:text-xs">{t.guest.send} →</span>
-    </div>
   </div>
-
-  <!-- QR table card as a door: hinged on its left edge, swung open toward the viewer -->
-  <div class="door-scene absolute top-[88px] left-3.5 lg:top-[150px] lg:left-12">
-    <span class="absolute top-[-6px] bottom-[-6px] left-[-5px] w-[5px] rounded-full bg-plum shadow-[0_2px_6px_rgba(0,0,0,.25)]"></span>
-    <div class="door">
-      <TableCard size={176} table={`${t.guest.table} 7`} tagline={t.tagline} logo={t.setup.logo} class="lg:hidden" />
-      <TableCard
-        size={290}
-        table={`${t.guest.table} 7`}
-        tagline={t.tagline}
-        logo={t.setup.logo}
-        class="max-lg:hidden"
-      />
-    </div>
-    <p class="mt-3 ml-1 text-[12px] font-medium text-ink-2 lg:mt-5 lg:text-sm">{t.hero.cardCaption} ↑</p>
+  <!-- cart bar: the app pins it to the bottom of the screen, so it sits on the bottom of the scene, above the phone -->
+  <div class="absolute bottom-5 left-1/2 flex h-11 w-[222px] -translate-x-1/2 items-center justify-between rounded-[14px] bg-plum px-3.5 text-white shadow-[0_8px_20px_rgba(122,62,72,.35)] lg:bottom-6 lg:h-12 lg:w-[268px] lg:px-4">
+    <span class="text-[11px] font-medium lg:text-xs">
+      {t.guest.cartItems} · {formatRsd(580)} RSD
+    </span>
+    <span class="text-xs font-semibold lg:text-[13px]">{t.guest.send} →</span>
   </div>
 </div>
