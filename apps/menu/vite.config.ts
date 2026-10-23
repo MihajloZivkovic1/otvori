@@ -55,6 +55,8 @@ export default defineConfig(({ mode }) => {
       modulePreload: { polyfill: false },
     },
     test: {
+      // The guest sees times in the phone's own zone; the fixtures assert Belgrade times, so pin the zone for CI (UTC).
+      env: { TZ: 'Europe/Belgrade' },
       environment: 'jsdom',
       setupFiles: ['./test/setup.ts'],
       include: ['test/**/*.test.{ts,tsx}'],
