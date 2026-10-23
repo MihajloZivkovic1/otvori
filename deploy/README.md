@@ -45,6 +45,28 @@ the others would double-run harmlessly but noisily. The API's V8 heap is capped 
 
 Everything below is the top-to-bottom checklist for a fresh setup. Commands prefixed `droplet$` run on the server.
 
+
+## Production facts (first deploy 2026-10-23, Phase 10)
+
+| What | Value |
+| --- | --- |
+| Droplet | DigitalOcean **fra1**, Ubuntu 24.04, Premium Intel 1 vCPU / 1 GB / 35 GB NVMe (Basic-Regular was unavailable in FRA1), hostname `otvori`, IPv4 **46.101.242.76**, 1 GB swap, ufw 22/80/443 |
+| Users | `root` (SSH key only) and `deploy` (your laptop key + the GitHub Actions key; no sudo; docker group) |
+| Checkout | `/opt/otvori` = clone of `https://github.com/MihajloZivkovic1/salveta.git` (the repo was renamed from `qr-menu`; the old URL redirects), `deploy/.env.prod` chmod 600 |
+| DNS | Cloudflare zone `otvori.menu` (registrar: Vercel/Name.com, nameservers `rosemary`/`yoxall.ns.cloudflare.com`): A `@`, `www`, `app`, `api`, `*` → 46.101.242.76, all **DNS only**; Resend records on `send`/`resend._domainkey`; DMARC `_dmarc` TXT `v=DMARC1; p=none;` optional |
+| Hosts | `otvori.menu` (marketing), `www` → 301, `app.otvori.menu` (CMS), `api.otvori.menu` (API; `/` is 404 by design), `*.otvori.menu` (menus). Certificates: Let's Encrypt via Cloudflare DNS-01, wildcard included (first issued 2026-10-23, 90-day renewal by Caddy) |
+| Images | `ghcr.io/mihajlozivkovic1/otvori-api` and `otvori-caddy`, tags = git short SHA + `latest`; first live tag `d0fe2ba` |
+| Flags | `FEATURE_PAYMENTS=false`, `FEATURE_POS=true` — visible at `https://api.otvori.menu/api/config` |
+| Storage | AWS S3 `otvori-media` (eu-central-1), IAM user `otvori-api` / policy `otvori-media-rw`, bucket policy public-read on `restaurants/*`; image URLs `https://otvori-media.s3.eu-central-1.amazonaws.com/restaurants/<id>/…` |
+| Mail | Resend, domain `otvori.menu` verified (EU, Ireland), API key `otvori-api` (sending only, domain-scoped), sender `otvori <zdravo@otvori.menu>` |
+| Backups | cron `15 3 * * *` as `deploy` → `s3://otvori-media/backups/salveta-<stamp>.sql.gz`, 14 days; log `/home/deploy/otvori-backup.log`; restore drill done 2026-10-23 into `salveta_scratch` (1 restaurant, 4 items, 1 order, 2 users, 7 migrations) |
+| Monitoring | **to do**: UptimeRobot HTTP monitor on `https://api.otvori.menu/api/health`, 5 min (the endpoint returns 503 when Postgres is down) |
+| Accounts | superadmin `admin@otvori.menu` (password in the owner's password manager); first venue `x-caffe` (`https://x-caffe.otvori.menu/t/1`) |
+| Memory at idle | api ≈ 130 MB, postgres ≈ 50 MB, caddy ≈ 65 MB of 961 MB; swap barely used |
+| Logs | `ssh deploy@46.101.242.76`, then `cd /opt/otvori/deploy && docker compose --env-file .env.prod -f docker-compose.yml logs -f --tail=100 api` (JSON; `"level":50` = errors) |
+| Deploy / rollback | push to `main` → CI → Deploy; by hand `./deploy/deploy.sh <tag>`; `cat /opt/otvori/deploy/.deployed-tag` shows what runs |
+| GitHub | repo `MihajloZivkovic1/salveta`, secrets `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY` (Actions-only ed25519 key, public half in `/home/deploy/.ssh/authorized_keys`); no variables set |
+
 ## 1. Cloudflare DNS (zone `otvori.menu`)
 
 Records, all pointing at the droplet's IPv4 (add AAAA records too if the droplet has IPv6):
@@ -158,8 +180,9 @@ fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
 echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf && sysctl -p /etc/sysctl.d/99-swappiness.conf
 
-# Docker (official repository), the aws CLI for backups, git
-apt-get install -y ca-certificates curl git awscli
+# Docker (official repository), git, and the AWS CLI v2 for backups (Ubuntu 24.04 ships no `awscli` package)
+apt-get install -y ca-certificates curl git unzip
+curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip && (cd /tmp && unzip -q awscliv2.zip && ./aws/install && rm -rf aws awscliv2.zip)
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && chmod a+r /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
@@ -177,7 +200,7 @@ Only `deploy/` is used at runtime (compose file, scripts, `.env.prod`), but `dep
 ```bash
 droplet$ ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519 -C 'otvori droplet'   # if the GitHub repo is private
 droplet$ cat ~/.ssh/id_ed25519.pub        # → GitHub repo → Settings → Deploy keys → Add (read-only)
-droplet$ git clone git@github.com:MihajloZivkovic1/qr-menu.git /opt/otvori      # or the https URL for a public repo
+droplet$ git clone git@github.com:MihajloZivkovic1/salveta.git /opt/otvori      # or the https URL for a public repo
 ```
 
 ## 6. `.env.prod`
@@ -257,9 +280,11 @@ Running it again for an existing email promotes that user and replaces their pas
 ```bash
 droplet$ /opt/otvori/deploy/backup.sh                    # try one now → "uploaded s3://otvori-media/backups/…"; lists at ./restore.sh --list
 droplet$ crontab -e
-15 3 * * * /opt/otvori/deploy/backup.sh >> /var/log/otvori-backup.log 2>&1
-droplet$ sudo touch /var/log/otvori-backup.log && sudo chown deploy /var/log/otvori-backup.log
+15 3 * * * /opt/otvori/deploy/backup.sh >> /home/deploy/otvori-backup.log 2>&1
 ```
+
+(`deploy` has no sudo, so the log lives in its home: `/home/deploy/otvori-backup.log`. The entry above is what runs in
+production; `crontab -l` as `deploy` shows it.)
 
 Restore (stops the API for the duration):
 

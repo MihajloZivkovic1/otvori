@@ -32,7 +32,7 @@ FROM caddy:2-builder AS caddy-build
 RUN xcaddy build --with github.com/caddy-dns/cloudflare
 
 FROM caddy:2
-ARG SOURCE_URL=https://github.com/MihajloZivkovic1/qr-menu
+ARG SOURCE_URL=https://github.com/MihajloZivkovic1/salveta
 LABEL org.opencontainers.image.source=$SOURCE_URL
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /app/apps/menu/dist /srv/menu

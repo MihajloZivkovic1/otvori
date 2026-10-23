@@ -1,5 +1,9 @@
 # Manual steps for the first production deploy (Phase 10)
 
+> **Status: done on 2026-10-23.** Every step below was executed; the resulting facts (IP, hosts, bucket, cron, accounts) are
+> in `deploy/README.md` → "Production facts". Keep this file as the recipe for a rebuild. Deviations met on the way are
+> marked **(as built)**.
+
 Everything the code cannot do for you, in the order we run it. Each step says what it unblocks; `deploy/README.md`
 has the longer explanations and the day-2 commands (logs, rollback, restore). Online payment stays **off**
 (`FEATURE_PAYMENTS=false`); POS is offered (`FEATURE_POS=true`).
@@ -33,9 +37,15 @@ is the short form.
 
 DigitalOcean → Create → Droplets: region **Frankfurt (fra1)**, image **Ubuntu 24.04 (LTS) x64**, size **Basic →
 Regular → 1 GB / 1 vCPU / 25 GB**, authentication **SSH key** (your laptop's public key), hostname `otvori`.
+**(as built)** Basic-Regular was unavailable in FRA1; Premium Intel 1 GB / 35 GB NVMe (≈ 8 $) was used instead. Make
+sure the SSH key you tick is the one whose private half is on your laptop (`ssh-keygen -lf ~/.ssh/id_ed25519.pub`).
 Write down the **IPv4 address**.
 
 ## 2. Cloudflare DNS
+
+**(as built)** The domain was bought at Vercel: add the site to Cloudflare first, then replace Vercel's nameservers
+(`ns1/ns2.vercel-dns.com`) with Cloudflare's in Vercel → Domains → Nameservers, and delete every record Cloudflare
+imports from Vercel (A/CAA/CNAME) before continuing. Delegation took about a minute.
 
 Zone `otvori.menu` → DNS → Records → five **A** records with the droplet IPv4: `@`, `www`, `app`, `api`, `*`.
 Proxy status **DNS only (grey)** for all of them; `api` and `*` stay that way forever, `@`/`www`/`app` may be proxied
@@ -55,6 +65,8 @@ SPF TXT on `send`, MX on `send`) → add each at Cloudflare, **DNS only** → ba
 Create API Key `otvori-api`, permission *Sending access*, domain `otvori.menu` → `RESEND_API_KEY`.
 
 Check: `dig +short TXT resend._domainkey.otvori.menu` returns the key; Resend shows the domain as Verified.
+**(as built)** Resend's "Forge" setup uses a CNAME on `send` instead of TXT+MX; accept whatever Resend lists. Several
+domains can share one Resend account; give otvori its own domain-scoped API key.
 
 ## 5. AWS
 
@@ -69,13 +81,14 @@ on one under `backups/` (commands in README section 2.5).
 ## 6. Prepare the server
 
 `ssh root@<IP>` and paste the block from README section 4 ("as root, once"). It creates the `deploy` user, opens
-22/80/443, adds the 1 GB swap file, installs Docker (Docker's repository), git and the aws CLI, creates `/opt/otvori`.
+22/80/443, adds the 1 GB swap file, installs Docker (Docker's repository), git and the AWS CLI v2, creates `/opt/otvori`.
+**(as built)** Ubuntu 24.04 has no `awscli` apt package; the README block installs AWS CLI v2 from the official zip.
 
 ## 7. Clone and `.env.prod`
 
 ```bash
 ssh deploy@<IP>
-git clone https://github.com/MihajloZivkovic1/qr-menu.git /opt/otvori     # or a read-only deploy key for a private repo (README § 5)
+git clone https://github.com/MihajloZivkovic1/salveta.git /opt/otvori     # public repo; a read-only deploy key only for a private one (README § 5)
 cd /opt/otvori/deploy && cp .env.prod.example .env.prod && chmod 600 .env.prod
 openssl rand -hex 32        # → POSTGRES_PASSWORD
 openssl rand -base64 48     # → JWT_ACCESS_SECRET
@@ -162,8 +175,7 @@ docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql 
 aws s3 cp s3://otvori-media/backups/<file> - | gunzip | docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -d salveta_scratch -q
 docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -d salveta_scratch -c 'SELECT count(*) FROM restaurants'
 docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -c 'DROP DATABASE salveta_scratch'
-sudo touch /var/log/otvori-backup.log && sudo chown deploy /var/log/otvori-backup.log
-crontab -e     # 15 3 * * * /opt/otvori/deploy/backup.sh >> /var/log/otvori-backup.log 2>&1
+crontab -e     # 15 3 * * * /opt/otvori/deploy/backup.sh >> /home/deploy/otvori-backup.log 2>&1   (deploy has no sudo → log in $HOME)
 ```
 
 ## 14. UptimeRobot
