@@ -18,5 +18,6 @@ services:
       dockerfile: deploy/Dockerfile.caddy
       args:
         DOMAIN: ${DOMAIN:-localhost}
+        FEATURE_PAYMENTS: ${FEATURE_PAYMENTS:-false}
     volumes:
       - ./Caddyfile.local:/etc/caddy/Caddyfile:ro

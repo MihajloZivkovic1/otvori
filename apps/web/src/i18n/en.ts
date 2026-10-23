@@ -94,6 +94,10 @@ export const en: Dictionary = {
         text: 'See which tables scan, what gets ordered and when it gets busy.',
       },
     ],
+    payments: {
+      title: 'Pay by phone, straight to your account',
+      text: 'Guests pay the order from their banking app (IPS code); the money lands directly in the venue’s account. Tip with one tap, fiscal receipt on the phone.',
+    },
   },
   setup: {
     eyebrow: 'Menu entry and QR cards',
@@ -171,6 +175,10 @@ export const en: Dictionary = {
         a: 'One click in settings. No phone call, no notice period. The menu stays live until the end of the paid period.',
       },
     ],
+    payments: {
+      q: 'How does paying by phone work?',
+      a: 'The guest scans the IPS code or jumps straight into their banking app and confirms. The money goes to the venue’s account through your own contract with the bank; we never hold a dinar. It is switched on by arrangement, once you have an e-commerce contract with your bank.',
+    },
   },
   cta: { h: 'Open the menu on every table.' },
   footer: {

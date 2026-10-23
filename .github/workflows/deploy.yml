@@ -87,6 +87,7 @@ jobs:
             APP_VERSION=${{ steps.meta.outputs.tag }}
             PUBLIC_ANALYTICS_SRC=${{ vars.PUBLIC_ANALYTICS_SRC }}
             PUBLIC_ANALYTICS_DOMAIN=${{ vars.PUBLIC_ANALYTICS_DOMAIN }}
+            FEATURE_PAYMENTS=${{ vars.FEATURE_PAYMENTS || 'false' }}
             SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=caddy
           cache-to: type=gha,scope=caddy,mode=max

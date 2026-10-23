@@ -21,9 +21,11 @@ RUN npm run build -w @qr-menu/shared
 RUN VITE_API_URL= VITE_DEFAULT_SLUG= npm run build -w @qr-menu/menu
 RUN VITE_API_URL= APP_VERSION="${APP_VERSION}" npm run build -w @qr-menu/cms
 # Marketing site; SITE_URL feeds canonical/hreflang/sitemap, PUBLIC_ANALYTICS_* the optional analytics tag.
+# FEATURE_PAYMENTS (default false, same as the API's flag) decides whether the online-payment copy is rendered.
 ARG PUBLIC_ANALYTICS_SRC=
 ARG PUBLIC_ANALYTICS_DOMAIN=
-RUN SITE_URL="https://${DOMAIN}" npm run build -w @qr-menu/web
+ARG FEATURE_PAYMENTS=false
+RUN SITE_URL="https://${DOMAIN}" PUBLIC_FEATURE_PAYMENTS="${FEATURE_PAYMENTS}" npm run build -w @qr-menu/web
 
 # Caddy with the Cloudflare DNS module (ACME DNS-01 for every certificate, including *.DOMAIN).
 FROM caddy:2-builder AS caddy-build

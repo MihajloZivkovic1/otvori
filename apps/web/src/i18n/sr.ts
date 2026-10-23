@@ -88,6 +88,10 @@ export const sr: Dictionary = {
       { title: 'Tvoj logo i boje', text: 'Meni izgleda kao tvoj lokal, ne kao naš softver.' },
       { title: 'Ko šta gleda i naručuje, po stolu', text: 'Vidiš koji sto skenira, šta se naručuje i kad je gužva.' },
     ],
+    payments: {
+      title: 'Plaćanje telefonom, pravo na tvoj račun',
+      text: 'Gost plati narudžbinu iz svoje bankarske aplikacije (IPS kod), novac leže direktno na račun lokala. Napojnica jednim dodirom, fiskalni račun na telefon.',
+    },
   },
   setup: {
     eyebrow: 'Unos menija i QR kartice',
@@ -165,6 +169,10 @@ export const sr: Dictionary = {
         a: 'Jednim klikom u podešavanjima. Bez poziva i bez otkaznog roka. Meni radi do kraja plaćenog perioda.',
       },
     ],
+    payments: {
+      q: 'Kako radi plaćanje telefonom?',
+      a: 'Gost skenira IPS kod ili uđe pravo u svoju bankarsku aplikaciju i potvrdi. Novac stiže na račun lokala preko tvog ugovora sa bankom, mi ne držimo ni dinar. Uključuje se po dogovoru, kad imaš e-commerce ugovor sa bankom.',
+    },
   },
   cta: { h: 'Otvori meni na svakom stolu.' },
   footer: {

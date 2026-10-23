@@ -1,7 +1,6 @@
 import { Op, Transaction } from 'sequelize';
 import {
   POS_LIMITS,
-  hasModule,
   posExternalId,
   resolveText,
   type ApplyPosSyncInput,
@@ -13,6 +12,7 @@ import {
   type TranslatedText,
   type UpdatePosConfigInput,
 } from '@qr-menu/shared';
+import { moduleOn } from '../../config/features.js';
 import { env } from '../../config/env.js';
 import { Category, MenuItem, Order, OrderItem, PosJob, Restaurant } from '../../db/models/index.js';
 import type { PosJobPayload } from '../../db/models/pos-job.model.js';
@@ -196,7 +196,7 @@ export async function applyPosSync(restaurantId: string, input: ApplyPosSyncInpu
 /* ------------------------------------------------------------------ jobs: open on accept, close on payment */
 
 function assertPosEnabled(restaurant: Restaurant): StoredPosConfig {
-  if (!hasModule(restaurant, 'pos')) throw moduleDisabled('pos');
+  if (!moduleOn(restaurant, 'pos')) throw moduleDisabled('pos');
   return storedPosConfig(restaurant);
 }
 
@@ -234,7 +234,7 @@ async function enqueue(order: Order, type: PosJob['type'], payload: PosJobPayloa
 /** Hook: staff accepted the order → open it on the register's table (when the venue sends orders). */
 export async function onOrderAcceptedForPos(order: Order): Promise<void> {
   const restaurant = await Restaurant.findByPk(order.restaurantId, { attributes: ['id', 'modules', 'posConfig', 'defaultLocale'] });
-  if (!restaurant || !hasModule(restaurant, 'pos')) return;
+  if (!restaurant || !moduleOn(restaurant, 'pos')) return;
   const config = storedPosConfig(restaurant);
   if (!config.provider || !config.sendOrdersToPos) return;
   await enqueue(order, 'send_order', null);
@@ -243,7 +243,7 @@ export async function onOrderAcceptedForPos(order: Order): Promise<void> {
 /** Hook: the guest paid online → close the order on the register with the pre-tip amount and a fiscal receipt. */
 export async function onOrderPaidForPos(order: Order): Promise<void> {
   const restaurant = await Restaurant.findByPk(order.restaurantId, { attributes: ['id', 'modules', 'posConfig', 'defaultLocale'] });
-  if (!restaurant || !hasModule(restaurant, 'pos')) return;
+  if (!restaurant || !moduleOn(restaurant, 'pos')) return;
   const config = storedPosConfig(restaurant);
   if (!config.provider || !config.closeOnPayment) return;
   await enqueue(order, 'close_order', { amountCents: order.totalCents, paymentKind: 'instant' });
@@ -372,7 +372,7 @@ export interface RegisterMismatch {
  * the two differ the guest pays the whole table at the waiter. An unreachable register does not block (logged).
  */
 export async function registerMismatch(restaurant: Restaurant, order: Order): Promise<RegisterMismatch | null> {
-  if (!hasModule(restaurant, 'pos')) return null;
+  if (!moduleOn(restaurant, 'pos')) return null;
   const config = storedPosConfig(restaurant);
   if (!config.provider || !config.sendOrdersToPos || !order.posRef) return null;
   let registerLines;

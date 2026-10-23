@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
+import { features } from './config/features.js';
 import { runMigrations } from './db/migrate.js';
 import { sequelize } from './db/sequelize.js';
 import { startOrderExpiryJob } from './modules/ordering/expiry.js';
@@ -32,9 +33,11 @@ async function main(): Promise<void> {
   // Stale `new` orders expire after 20 minutes (in-process job; one instance only, see modules/ordering/expiry.ts).
   const stopExpiryJob = startOrderExpiryJob();
   // Pending payments older than 2 minutes are checked against the provider (missed webhooks) and expired.
-  const stopReconcileJob = startPaymentReconcileJob();
+  // Not started while the feature is off: no payment can exist, and the interval would only cost memory.
+  const stopReconcileJob = features.payments ? startPaymentReconcileJob() : () => undefined;
   // Calls to the register (open on accept, close + fiscal receipt on payment) with retries.
-  const stopPosQueue = startPosQueue();
+  const stopPosQueue = features.pos ? startPosQueue() : () => undefined;
+  logger.info({ features }, 'Feature flags');
 
   let shuttingDown = false;
   const shutdown = (signal: string) => {

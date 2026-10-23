@@ -23,6 +23,7 @@ import {
   serviceRequestStatusSchema,
   serviceRequestTypeSchema,
 } from './schemas/ordering.js';
+import { featureFlagsSchema } from './features.js';
 import { restaurantModulesSchema } from './modules.js';
 import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
 import { posConfigDtoSchema } from './pos.js';
@@ -495,5 +496,14 @@ export const healthDtoSchema = z.object({
   ok: z.boolean(),
   db: z.enum(['ok', 'error']),
   version: z.string(),
+  /** Global feature flags of this deployment (Phase 10), so a health probe also shows what is switched on. */
+  features: featureFlagsSchema,
 });
 export type HealthDto = z.infer<typeof healthDtoSchema>;
+
+/** GET /api/config — the tiny public document the front-ends read at startup (no auth, no database). */
+export const appConfigDtoSchema = z.object({
+  version: z.string(),
+  features: featureFlagsSchema,
+});
+export type AppConfigDto = z.infer<typeof appConfigDtoSchema>;

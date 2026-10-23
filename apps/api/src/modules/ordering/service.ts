@@ -1,5 +1,6 @@
 import { Op, Transaction, type Order as SequelizeOrder, type WhereOptions } from 'sequelize';
 import { effectiveOrderingMode, hasModule } from '@qr-menu/shared';
+import { moduleOn } from '../../config/features.js';
 import {
   OPEN_ORDER_STATUSES,
   ORDERING_LIMITS,
@@ -162,7 +163,7 @@ export function toPublicOrderDto(
     paidAmountCents: order.paidAmountCents,
     paidAt: toIso(order.paidAt),
     payments: {
-      enabled: hasModule(restaurant, 'payments') && payments.provider !== null && (payments.provider !== 'mock' || payments.simulator),
+      enabled: moduleOn(restaurant, 'payments') && payments.provider !== null && (payments.provider !== 'mock' || payments.simulator),
       tipPresets: payments.tipPresets,
       receiptEmailEnabled: payments.receiptEmailEnabled,
     },

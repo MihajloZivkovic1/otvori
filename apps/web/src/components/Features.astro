@@ -1,9 +1,12 @@
 ---
+import { featurePayments } from '../features';
 import type { Dictionary } from '../i18n';
 interface Props {
   t: Dictionary;
 }
 const { t } = Astro.props;
+// payments: phone with a tick (only with FEATURE_PAYMENTS=true at build time)
+const paymentsIcon = 'M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM11 18h2M9.5 11l2 2 3.5-4';
 const icons = [
   // price: pencil
   'M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3ZM13 7l4 4',
@@ -108,6 +111,32 @@ const icons = [
         <p class="text-sm text-muted lg:text-base">{t.features.f2.text}</p>
       </div>
     </li>
+    {featurePayments && (
+      <li class="hinge-card flex items-start gap-4 p-5 lg:flex-col lg:gap-[18px] lg:p-6">
+        <span
+          class="grid size-10 flex-none place-items-center rounded-[10px] bg-plum-soft text-plum lg:size-11 lg:rounded-xl"
+          aria-hidden="true"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lg:size-[22px]"
+          >
+            <path d={paymentsIcon} />
+          </svg>
+        </span>
+        <div class="flex flex-col gap-1 lg:gap-1.5">
+          <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">{t.features.payments.title}</h3>
+          <p class="text-sm text-muted lg:text-base">{t.features.payments.text}</p>
+        </div>
+      </li>
+    )}
     {t.features.rest.map((f, i) => (
       <li class="hinge-card flex items-start gap-4 p-5 lg:flex-col lg:gap-[18px] lg:p-6">
         <span

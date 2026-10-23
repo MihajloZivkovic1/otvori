@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect } from 'react';
 import { Navigate, Outlet, useParams } from 'react-router';
-import { hasModule, type MembershipRole, type ModuleKey, type RestaurantDto } from '@qr-menu/shared';
+import { hasModule, moduleAvailable, type FeatureFlags, type MembershipRole, type ModuleKey, type RestaurantDto } from '@qr-menu/shared';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { ApiError, errorMessage } from '../../lib/api';
 import { useMe } from '../../lib/auth';
+import { useAppConfig } from '../../lib/config';
 import { useRestaurant } from '../../lib/queries';
 import { lastRestaurant } from '../../lib/storage';
 import { HomePage } from '../../pages/HomePage';
@@ -18,8 +19,13 @@ export interface RestaurantContextValue {
   /** Owners (and superadmins acting as owners) may change settings, branding, publish and delete. */
   isOwner: boolean;
   isMobile: boolean;
-  /** Feature modules (Phase 9b): every ordering/payment/POS screen, card and action is gated on these. */
+  /**
+   * Feature modules (Phase 9b): every ordering/payment/POS screen, card and action is gated on these. A module whose
+   * global feature flag (Phase 10, GET /api/config) is off reads as off here even if the venue has it stored.
+   */
   hasModule: (module: ModuleKey) => boolean;
+  /** The deployment's global flags, for copy such as "Not available yet". */
+  features: FeatureFlags;
 }
 
 const RestaurantContext = createContext<RestaurantContextValue | null>(null);
@@ -35,6 +41,7 @@ export function RestaurantLayout() {
   const { restaurantId = '' } = useParams();
   const me = useMe();
   const isMobile = useIsMobile();
+  const { features } = useAppConfig();
   const membership = me.memberships.find((m) => m.restaurant.id === restaurantId);
   const allowed = Boolean(membership) || me.user.isSuperadmin;
   const query = useRestaurant(restaurantId, allowed);
@@ -65,7 +72,14 @@ export function RestaurantLayout() {
   const role: MembershipRole = me.user.isSuperadmin ? 'owner' : membership!.role;
   return (
     <RestaurantContext.Provider
-      value={{ restaurant: query.data, role, isOwner: role === 'owner', isMobile, hasModule: (module) => hasModule(query.data, module) }}
+      value={{
+        restaurant: query.data,
+        role,
+        isOwner: role === 'owner',
+        isMobile,
+        hasModule: (module) => moduleAvailable(features, module) && hasModule(query.data, module),
+        features,
+      }}
     >
       {/* Live orders/calls (SSE + polling fallback) for the nav badge, the title and the waiter screen; idle when ordering is off. */}
       <OrderingProvider restaurant={query.data}>

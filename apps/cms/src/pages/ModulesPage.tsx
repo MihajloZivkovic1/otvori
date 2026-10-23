@@ -1,4 +1,4 @@
-import { MODULES, OWNER_TOGGLABLE_MODULES, type ModuleKey } from '@qr-menu/shared';
+import { MODULES, OWNER_TOGGLABLE_MODULES, moduleAvailable, type ModuleKey } from '@qr-menu/shared';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { StatusPill } from '../components/ui/Chip';
@@ -41,7 +41,7 @@ const OWNER_TOGGLABLE: readonly ModuleKey[] = OWNER_TOGGLABLE_MODULES;
 
 /** Settings → Modules (Phase 9b): three cards, one per module, with the owner's switch or the "contact us" path. */
 export function ModulesPage() {
-  const { restaurant, isOwner, isMobile } = useRestaurantContext();
+  const { restaurant, isOwner, isMobile, features } = useRestaurantContext();
   const toast = useToast();
   const update = useUpdateRestaurant(restaurant.id);
 
@@ -63,8 +63,10 @@ export function ModulesPage() {
       )}
       <div className={cn('flex flex-col', isMobile ? 'gap-3' : 'gap-4')}>
         {MODULES.map((module) => {
-          const on = restaurant.modules[module];
-          const ownerToggle = OWNER_TOGGLABLE.includes(module);
+          // Not offered by this deployment yet (global flag off): the API masks it, so `on` is false as well.
+          const available = moduleAvailable(features, module);
+          const on = available && restaurant.modules[module];
+          const ownerToggle = available && OWNER_TOGGLABLE.includes(module);
           const copy = COPY[module];
           const subject = encodeURIComponent(`${copy.title} for ${restaurant.name}`);
           return (
@@ -78,7 +80,7 @@ export function ModulesPage() {
                   <h2 id={`module-${module}`} className="text-base font-semibold">
                     {copy.title}
                   </h2>
-                  <StatusPill tone={on ? 'success' : 'neutral'}>{on ? 'On' : 'Off'}</StatusPill>
+                  <StatusPill tone={on ? 'success' : 'neutral'}>{on ? 'On' : available ? 'Off' : 'Not available yet'}</StatusPill>
                 </div>
                 {ownerToggle ? (
                   <Switch
@@ -95,7 +97,9 @@ export function ModulesPage() {
                 <span className="font-medium text-ink-2">Requirements: </span>
                 {copy.requirements}
               </p>
-              {ownerToggle ? (
+              {!available ? (
+                <p className="text-[13px] text-muted">Not available yet. We will let you know when it opens.</p>
+              ) : ownerToggle ? (
                 isOwner ? null : (
                   <p className="text-[13px] text-muted">Only owners can switch modules.</p>
                 )

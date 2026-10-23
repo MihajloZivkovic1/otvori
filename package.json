@@ -10,6 +10,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "check:flags": "node scripts/check-feature-defaults.mjs",
     "test": "turbo run test --concurrency=2",
     "migrate": "turbo run migrate --filter=@qr-menu/api",
     "migrate:undo": "turbo run migrate:undo --filter=@qr-menu/api",

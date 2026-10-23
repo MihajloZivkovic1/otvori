@@ -146,3 +146,60 @@ Method: three read-only passes (API + data layer, deploy/CI/env/PWA, both SPAs +
 18. Minor: `ORDERING_PAUSED` custom-message detection compares against the English default string (send
     `details.custom` instead); desktop `Drawer` does not lock body scroll; the menu's 5xx state reuses the
     "check your connection" copy; the clear-search button is 36 px.
+
+---
+
+# Re-check before the first production deploy (Phase 10a) — 2026-10-23
+
+The Phase 9a checklist was run again on the tree that ships to production (feature flags, AWS S3, deploy refresh).
+Method as above: typecheck + lint of every workspace, every test suite, `npm audit`, both compose files through
+`docker compose config`, `caddy validate` on the laptop Caddyfile, a local build of both images and the full-stack
+smoke test on the laptop (`deploy/README.md` → "Laptop full-stack check") with the seed loaded.
+
+## Regressions found and fixed
+
+| # | Finding | Where | Fix |
+| --- | --- | --- | --- |
+| R1 | **Uploads would have failed on AWS**: the driver sent `ACL: public-read` on every `PutObject`; an S3 bucket with the default *Object Ownership: bucket owner enforced* rejects that with `AccessControlListNotSupported` (400), so the first logo upload in production would have been a 500. | `apps/api/src/utils/storage.ts` | **Fixed**: no custom endpoint ⇒ AWS mode — no per-object ACL (the bucket policy on `restaurants/*` makes images public), regional endpoint, virtual-hosted URLs; an `S3_ENDPOINT` (Spaces, MinIO) keeps the ACL. `s3ClientOptions` / `s3PublicBase` / `s3ObjectAcl` are pure and covered by `test/storage.test.ts`. |
+| R2 | The laptop full-stack check had silently broken since Phase 9a/9c: `.env.local.example` carried a `JWT_ACCESS_SECRET` containing the word "secret" (refused by the S5 production check), no `PAYMENTS_ENCRYPTION_KEY` (required in production mode) and no `ALLOW_LOG_MAIL`, which the compose file did not even pass through — the API container restarted in a loop. | `deploy/.env.local.example`, `deploy/docker-compose.yml` | **Fixed**: new placeholder values, `ALLOW_LOG_MAIL` forwarded (empty in production), flags with production parity. The stack starts, applies all seven migrations over the Phase 4b volume and passes the smoke test. |
+| R3 | `S3_ENDPOINT`/`S3_REGION` defaulted to DigitalOcean Spaces when unset, so a production `.env` that only set the AWS bucket and keys would have talked to `fra1.digitaloceanspaces.com`. | `apps/api/src/config/env.ts` | **Fixed**: unset endpoint = AWS, region default `eu-central-1`, `S3_PUBLIC_BASE_URL` (alias `S3_PUBLIC_URL`). |
+| R4 | `PAYMENTS_MOCK` / `POS_MOCK` in production stopped the API instead of being neutralised, and the `/dev/pay` simulator was mounted on the single condition `PAYMENTS_MOCK`. | `apps/api/src/config/env.ts`, `app.ts` | **Fixed**: both forced to `false` under `NODE_ENV=production` (warning logged); the simulator additionally requires `!isProduction` and `FEATURE_PAYMENTS`. |
+| R5 | Audit TODO 15 (V8 heap cap for the API container) was still open; with three interval jobs now running it mattered more. | `deploy/docker-compose.yml` | **Done**: `NODE_OPTIONS=--max-old-space-size=160` inside the 256 MB limit. Measured idle: api 75 MB (RSS 47 MB), postgres 61 MB, caddy 20 MB. |
+
+## New in this phase (verified by tests)
+
+- Global feature flags `FEATURE_PAYMENTS` (default **false**) / `FEATURE_POS` (default true) above the per-venue
+  modules; `GET /api/health` and the new `GET /api/config` report them. Flag off ⇒ every DTO masks the module, the
+  module's routes answer 404, the bank webhook and the simulator are not mounted, the reconcile job / POS queue are not
+  started, superadmin PATCHes drop the module. `apps/api/test/features.test.ts` (8 tests) drives the off state with the
+  seeded-style "module stored ON" venue; `apps/cms/test/features.test.tsx` covers the hidden Payment card, "Not
+  available yet" on the Modules page and the disabled superadmin switch; `apps/web/test/features.test.ts` the
+  build-time copy gate. `scripts/check-feature-defaults.mjs` (CI step `check:flags`) fails a `main` where the default
+  is on in any of the six places it lives.
+- Local smoke test on the built images (production mode, `DOMAIN=localhost`): 36 checks — flags on health/config,
+  five hosts + HSTS/CSP, `sw.js` no-cache, seeded Kafeterija (payments + POS stored ON) reads `payments:false` in the
+  public menu, the owner DTO and the superadmin list, payment-config/webhook/simulator/guest-payment routes 404 while
+  `pos-config` is 200, a guest order (`payments.enabled:false`) → accepted by staff → visible to the guest, call
+  waiter, and the SSE stream through Caddy on `app.localhost` (`text/event-stream`, no `Content-Encoding`,
+  `retry: 3000`, `order.created`, `order.updated`, `request.*` within the 6-second window), marketing apex without a
+  single "IPS" mention.
+
+## Checked again and fine
+
+- Migrations on start: the container ran `20261022000000-ordering` … `20261026000000-fiscal-manual` before listening;
+  `deploy.sh`'s health wait therefore also waits for migrations.
+- SSE in `deploy/Caddyfile`: the `…/events` handle with `flush_interval -1` and the `no-transform` response header are
+  still in place for `app.` and `api.`; `Caddyfile.local` routes are byte-identical to the production file (`caddy validate` OK).
+- Jobs for one instance: order expiry, payment reconcile (only with the payments feature) and the POS queue
+  (`FOR UPDATE SKIP LOCKED`) all start from `index.ts` and stop on SIGTERM; the compose file still runs one `api`.
+- Compose: `config --quiet` passes for `.env.prod.example` and `.env.local`; every new variable (`FEATURE_*`,
+  `S3_PUBLIC_BASE_URL`, `ALLOW_LOG_MAIL`, `NODE_OPTIONS`) has a default or is required explicitly; images
+  `ghcr.io/<owner>/otvori-api|otvori-caddy`, domain `otvori.menu` everywhere.
+- Secrets in logs: unchanged serializers; the new `GET /api/config` is auth-less and carries nothing sensitive.
+- Tenant isolation: the new code adds no query; `requireFeature`/`requireModule` only ever narrow access.
+- `npm audit --omit=dev`: 3 moderate, all transitive (down from 7 after the Phase 9d lockfile), no production fix without a major bump.
+- Tests after this commit: api 86, cms 48, menu 54, web 17 — all green; typecheck and lint clean in every workspace.
+
+## Still open (unchanged from the Phase 9a TODO)
+
+Items 1–14 and 16–18 of the list above. Item 15 is done. Nothing blocks the deployment.

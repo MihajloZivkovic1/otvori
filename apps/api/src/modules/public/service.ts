@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
-import { DEFAULT_MODULES, effectiveOrderingMode, hasModule } from '@qr-menu/shared';
+import { effectiveOrderingMode } from '@qr-menu/shared';
+import { dtoModules, moduleOn } from '../../config/features.js';
 import {
   isEffectivelyAvailable,
   pickLocale,
@@ -27,7 +28,7 @@ export async function loadPublishedRestaurant(slug: string): Promise<Restaurant>
 
 /** With `sendOrdersToPos` on, only items the register knows (a POS code) can be ordered. */
 export function orderableOnPos(restaurant: Pick<Restaurant, 'modules' | 'posConfig'>, item: Pick<MenuItem, 'posProductCode'>): boolean {
-  if (!hasModule(restaurant, 'pos') || !restaurant.posConfig?.sendOrdersToPos) return true;
+  if (!moduleOn(restaurant, 'pos') || !restaurant.posConfig?.sendOrdersToPos) return true;
   return Boolean(item.posProductCode);
 }
 
@@ -89,7 +90,7 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       supportedLocales: restaurant.supportedLocales,
       address: restaurant.address,
       city: restaurant.city,
-      modules: { ...DEFAULT_MODULES, ...restaurant.modules },
+      modules: dtoModules(restaurant.modules),
       orderingMode: effectiveOrderingMode(restaurant),
       orderingPaused: restaurant.orderingPaused,
       pausedMessage: restaurant.pausedMessage,

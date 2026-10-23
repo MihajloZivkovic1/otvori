@@ -31,6 +31,8 @@ jobs:
       - run: npm run build -w @qr-menu/shared
       - run: npm run typecheck
       - run: npm run lint
+      - name: Feature flag defaults (FEATURE_PAYMENTS must stay off on main)
+        run: npm run check:flags
       - run: npm test
       - name: Build the static apps (menu, cms, web)
         run: npm run build -w @qr-menu/menu -w @qr-menu/cms -w @qr-menu/web

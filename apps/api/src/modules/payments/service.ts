@@ -3,7 +3,6 @@ import { Op, Transaction } from 'sequelize';
 import {
   PAYMENT_LIMITS,
   canPayOrder,
-  hasModule,
   tipCentsFor,
   type CreatePaymentInput,
   type OrderDto,
@@ -12,6 +11,7 @@ import {
   type PublicPaymentDto,
   type UpdatePaymentConfigInput,
 } from '@qr-menu/shared';
+import { featureEnabled, moduleOn } from '../../config/features.js';
 import { env } from '../../config/env.js';
 import { Order, OrderItem, Payment, Restaurant } from '../../db/models/index.js';
 import type { StoredPaymentConfig } from '../../db/models/restaurant.model.js';
@@ -97,7 +97,9 @@ function toPublicPaymentDto(payment: Payment, currency: string): PublicPaymentDt
 const paymentNotAllowed = (message: string) => new AppError(409, 'PAYMENT_NOT_ALLOWED', message);
 
 function assertPaymentsEnabled(restaurant: Restaurant): void {
-  if (!hasModule(restaurant, 'payments')) throw moduleDisabled('payments');
+  // The route guard already answers 404 while the feature is off; this keeps the service honest when called directly.
+  if (!featureEnabled('payments')) throw notFound();
+  if (!moduleOn(restaurant, 'payments')) throw moduleDisabled('payments');
 }
 
 /**

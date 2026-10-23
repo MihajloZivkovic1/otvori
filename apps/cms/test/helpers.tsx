@@ -532,6 +532,8 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
       : { status: 401, body: { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } } };
   }
   if (path === '/api/auth/logout') return { body: { ok: true } };
+  // Global feature flags (Phase 10). The fixtures mirror a dev API with everything switched on; test/features.test.tsx overrides it.
+  if (path === '/api/config') return { body: { version: 'test', features: { payments: true, pos: true } } };
   if (path === '/api/auth/me') return { body: me };
   if (path === base && method === 'GET') return { body: restaurant };
   if (path === base && method === 'PATCH') return { body: { ...restaurant, ...(body as Partial<RestaurantDto>) } };

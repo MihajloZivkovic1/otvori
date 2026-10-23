@@ -6,6 +6,12 @@ const boolFlag = z
   .optional()
   .transform((v) => v === '1' || v === 'true');
 
+/** Like boolFlag, but unset means **on**. */
+const boolFlagDefaultOn = z
+  .enum(['0', '1', 'true', 'false'])
+  .optional()
+  .transform((v) => v === undefined || v === '1' || v === 'true');
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -26,12 +32,21 @@ const envSchema = z.object({
   PUBLIC_MENU_BASE_URL: z.string().default('http://{slug}.localhost:5174'),
   CORS_ORIGINS: z.string().optional(),
 
-  S3_ENDPOINT: z.string().optional(),
-  S3_REGION: z.string().optional(),
+  /**
+   * Object storage. Production = AWS S3 (bucket `otvori-media`, eu-central-1): leave S3_ENDPOINT empty and the
+   * SDK talks to the regional AWS endpoint (virtual-hosted style, bucket policy makes `restaurants/*` public).
+   * An S3-compatible service (DigitalOcean Spaces, MinIO) is selected by setting S3_ENDPOINT; those get
+   * `ACL: public-read` per object instead.
+   */
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().default('eu-central-1'),
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
-  S3_PUBLIC_URL: z.string().optional(),
+  /** Base of every public image URL (CDN or the bucket's own host). Default: the bucket's virtual-hosted URL. */
+  S3_PUBLIC_BASE_URL: z.url().optional(),
+  /** Older name of S3_PUBLIC_BASE_URL (Phase 4b deployments); still honoured. */
+  S3_PUBLIC_URL: z.url().optional(),
   UPLOADS_DIR: z.string().default('./uploads'),
 
   MAIL_FROM: z.string().default('otvori <zdravo@otvori.menu>'),
@@ -41,7 +56,18 @@ const envSchema = z.object({
   /** Escape hatch: run production with MAIL_PROVIDER=log (links end up in the logs). Never set it on a real deployment. */
   ALLOW_LOG_MAIL: boolFlag,
 
-  /** Online payment (Phase 9c). The simulator (mock provider + GET /dev/pay/:ref) only exists while PAYMENTS_MOCK. */
+  /**
+   * Global feature flags (Phase 10), above the per-venue modules. FEATURE_PAYMENTS defaults to **off**: online
+   * payment is still being built on `feature/payments` and must not be reachable in production until the bank
+   * integration is signed off (CI checks this default). FEATURE_POS defaults to on.
+   */
+  FEATURE_PAYMENTS: boolFlag,
+  FEATURE_POS: boolFlagDefaultOn,
+
+  /**
+   * Online payment (Phase 9c). The simulator (mock provider + GET /dev/pay/:ref) only exists while PAYMENTS_MOCK —
+   * and never in production: there the value is forced to false below, whatever the environment says.
+   */
   PAYMENTS_MOCK: boolFlag,
   /** Key for the merchant secrets / POS API keys at rest (AES-256-GCM); `openssl rand -base64 32`. */
   PAYMENTS_ENCRYPTION_KEY: z.string().min(16).optional(),
@@ -72,12 +98,6 @@ const envSchema = z.object({
     if (!value.PAYMENTS_ENCRYPTION_KEY) {
       ctx.addIssue({ code: 'custom', path: ['PAYMENTS_ENCRYPTION_KEY'], message: 'PAYMENTS_ENCRYPTION_KEY is required in production (openssl rand -base64 32)' });
     }
-    if (value.POS_MOCK) {
-      ctx.addIssue({ code: 'custom', path: ['POS_MOCK'], message: 'POS_MOCK must be off in production (fake fiscal receipts)' });
-    }
-    if (value.PAYMENTS_MOCK) {
-      ctx.addIssue({ code: 'custom', path: ['PAYMENTS_MOCK'], message: 'PAYMENTS_MOCK must be off in production (the simulator accepts payments without a bank)' });
-    }
     if (value.JWT_ACCESS_SECRET.length < 32 || /change-me|replace-me|example|secret/i.test(value.JWT_ACCESS_SECRET)) {
       ctx.addIssue({ code: 'custom', path: ['JWT_ACCESS_SECRET'], message: 'JWT_ACCESS_SECRET must be a random value of at least 32 characters in production' });
     }
@@ -92,11 +112,20 @@ const rawEnv = Object.fromEntries(
 const parsed = envSchema.safeParse(rawEnv);
 if (!parsed.success) {
   const lines = parsed.error.issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`);
-   
   console.error(`Invalid environment configuration:\n${lines.join('\n')}`);
   process.exit(1);
 }
 const raw = parsed.data;
+
+// The mock bank and the mock register can never run in production: the simulator would accept payments without a
+// bank and the register would print fake fiscal receipts. Whatever .env.prod says, both are forced off here, and
+// app.ts additionally refuses to mount /dev/pay outside development/test.
+const mocksForcedOff = raw.NODE_ENV === 'production' && (raw.PAYMENTS_MOCK || raw.POS_MOCK);
+if (mocksForcedOff) {
+  console.warn('PAYMENTS_MOCK / POS_MOCK are ignored in production (forced to false)');
+}
+const paymentsMock = raw.NODE_ENV === 'production' ? false : raw.PAYMENTS_MOCK;
+const posMock = raw.NODE_ENV === 'production' ? false : raw.POS_MOCK;
 
 function withDatabaseName(url: string, transform: (name: string) => string): string {
   const parsedUrl = new URL(url);
@@ -125,15 +154,26 @@ function publicMenuHostSuffix(template: string): string | null {
   }
 }
 
-const s3 =
+export interface S3Config {
+  /** Custom endpoint of an S3-compatible service; null = AWS S3 (regional endpoint from `region`). */
+  endpoint: string | null;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  /** S3_PUBLIC_BASE_URL (or the older S3_PUBLIC_URL); null = derive from bucket + endpoint/region. */
+  publicBaseUrl: string | null;
+}
+
+const s3: S3Config | null =
   raw.S3_BUCKET && raw.S3_ACCESS_KEY_ID && raw.S3_SECRET_ACCESS_KEY
     ? {
-        endpoint: raw.S3_ENDPOINT ?? 'https://fra1.digitaloceanspaces.com',
-        region: raw.S3_REGION ?? 'fra1',
+        endpoint: raw.S3_ENDPOINT ?? null,
+        region: raw.S3_REGION,
         bucket: raw.S3_BUCKET,
         accessKeyId: raw.S3_ACCESS_KEY_ID,
         secretAccessKey: raw.S3_SECRET_ACCESS_KEY,
-        publicUrl: raw.S3_PUBLIC_URL ?? null,
+        publicBaseUrl: raw.S3_PUBLIC_BASE_URL ?? raw.S3_PUBLIC_URL ?? null,
       }
     : null;
 
@@ -147,6 +187,8 @@ const corsOrigins = new Set<string>([
 
 export const env = {
   ...raw,
+  PAYMENTS_MOCK: paymentsMock,
+  POS_MOCK: posMock,
   // Outside production a missing key falls back to one derived from the JWT secret, so dev/test need no extra set-up.
   PAYMENTS_ENCRYPTION_KEY: raw.PAYMENTS_ENCRYPTION_KEY ?? `dev-${raw.JWT_ACCESS_SECRET}`,
   DATABASE_URL: databaseUrl,

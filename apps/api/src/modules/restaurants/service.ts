@@ -7,6 +7,7 @@ import {
   type UpdateRestaurantInput,
   isReservedSlug,
 } from '@qr-menu/shared';
+import { dtoModules } from '../../config/features.js';
 import { Membership, MenuItem, Restaurant } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import type { AuthUser } from '../../types/express.js';
@@ -43,7 +44,7 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     trialEndsAt: toIso(r.trialEndsAt),
     publishedAt: toIso(r.publishedAt),
     publicUrl: buildMenuUrl(r.slug),
-    modules: { ...DEFAULT_MODULES, ...r.modules },
+    modules: dtoModules(r.modules),
     paymentConfig: toPaymentConfigDto(r),
     posConfig: toPosConfigDto(r),
     orderingMode: r.orderingMode,

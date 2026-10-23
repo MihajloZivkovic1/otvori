@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { env } from '../config/env.js';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client, type S3ClientConfig } from '@aws-sdk/client-s3';
+import { env, type S3Config } from '../config/env.js';
 import { logger } from './logger.js';
 
 export interface StorageDriver {
@@ -57,24 +57,44 @@ export class LocalStorage implements StorageDriver {
   }
 }
 
+/**
+ * SDK options for the configured bucket. AWS S3 (no custom endpoint): regional endpoint resolved by the SDK,
+ * virtual-hosted-style URLs, objects public through the bucket policy on `restaurants/*`. An S3-compatible service
+ * (DigitalOcean Spaces, MinIO) is addressed through S3_ENDPOINT and gets `ACL: public-read` per object instead.
+ */
+export function s3ClientOptions(config: S3Config): S3ClientConfig {
+  return {
+    ...(config.endpoint ? { endpoint: config.endpoint } : {}),
+    region: config.region,
+    forcePathStyle: false,
+    credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+  };
+}
+
+/** Base of the public URLs: S3_PUBLIC_BASE_URL, else the bucket's virtual-hosted host (AWS regional or custom). */
+export function s3PublicBase(config: S3Config): string {
+  if (config.publicBaseUrl) return config.publicBaseUrl.replace(/\/+$/, '');
+  if (!config.endpoint) return `https://${config.bucket}.s3.${config.region}.amazonaws.com`;
+  const endpoint = new URL(config.endpoint);
+  return `${endpoint.protocol}//${config.bucket}.${endpoint.host}`;
+}
+
+/** Only S3-compatible services need (or accept) a per-object ACL; AWS buckets use "bucket owner enforced" + policy. */
+export function s3ObjectAcl(config: S3Config): 'public-read' | undefined {
+  return config.endpoint ? 'public-read' : undefined;
+}
+
 export class S3Storage implements StorageDriver {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly publicBase: string;
+  private readonly acl: 'public-read' | undefined;
 
-  constructor(config: NonNullable<typeof env.s3>) {
-    this.client = new S3Client({
-      endpoint: config.endpoint,
-      region: config.region,
-      forcePathStyle: false,
-      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-    });
+  constructor(config: S3Config) {
+    this.client = new S3Client(s3ClientOptions(config));
     this.bucket = config.bucket;
-    const endpointHost = new URL(config.endpoint);
-    this.publicBase = (config.publicUrl ?? `${endpointHost.protocol}//${config.bucket}.${endpointHost.host}`).replace(
-      /\/+$/,
-      '',
-    );
+    this.publicBase = s3PublicBase(config);
+    this.acl = s3ObjectAcl(config);
   }
 
   async put(key: string, body: Buffer, contentType: string): Promise<string> {
@@ -85,7 +105,7 @@ export class S3Storage implements StorageDriver {
         Key: key,
         Body: body,
         ContentType: contentType,
-        ACL: 'public-read',
+        ...(this.acl ? { ACL: this.acl } : {}),
         CacheControl: 'public, max-age=31536000, immutable',
       }),
     );

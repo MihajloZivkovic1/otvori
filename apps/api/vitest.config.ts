@@ -16,6 +16,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
       JWT_ACCESS_SECRET: 'test-only-secret-not-for-production',
+      // The payment suite needs the feature; test/features.test.ts flips it off at runtime.
+      FEATURE_PAYMENTS: 'true',
       PAYMENTS_MOCK: 'true',
       POS_MOCK: 'true',
       PAYMENTS_ENCRYPTION_KEY: 'test-only-encryption-key-32-bytes!!',

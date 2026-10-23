@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import type { HealthDto } from '@qr-menu/shared';
+import type { AppConfigDto, HealthDto } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
+import { features } from '../../config/features.js';
 import { sequelize } from '../../db/sequelize.js';
 
 export const healthRouter = Router();
@@ -25,7 +26,18 @@ async function pingDatabase(): Promise<boolean> {
 /** Liveness + readiness in one: `ok` is false (HTTP 503) when Postgres does not answer within 2 s. */
 healthRouter.get('/', async (_req, res) => {
   const dbOk = await pingDatabase();
-  const body: HealthDto = { ok: dbOk, db: dbOk ? 'ok' : 'error', version: env.APP_VERSION };
+  const body: HealthDto = { ok: dbOk, db: dbOk ? 'ok' : 'error', version: env.APP_VERSION, features: { ...features } };
   res.setHeader('Cache-Control', 'no-store');
   res.status(dbOk ? 200 : 503).json(body);
+});
+
+/**
+ * GET /api/config — what the front-ends read at startup: the build and the global feature flags. No auth, no
+ * database, cacheable for a minute (a flag flip is a redeploy anyway).
+ */
+export const configRouter = Router();
+configRouter.get('/', (_req, res) => {
+  const body: AppConfigDto = { version: env.APP_VERSION, features: { ...features } };
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.json(body);
 });

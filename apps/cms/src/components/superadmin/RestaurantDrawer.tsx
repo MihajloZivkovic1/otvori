@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   MODULES,
   PLANS,
+  moduleAvailable,
   RESTAURANT_STATUSES,
   superadminUpdateRestaurantSchema,
   type ModuleKey,
@@ -11,6 +12,7 @@ import {
   type SuperadminRestaurantDto,
 } from '@qr-menu/shared';
 import { errorMessage } from '../../lib/api';
+import { useAppConfig } from '../../lib/config';
 import { useSuperadminUpdateRestaurant } from '../../lib/queries';
 import { Button } from '../ui/Button';
 import { Drawer } from '../ui/Drawer';
@@ -35,6 +37,7 @@ const MODULE_COPY: Record<ModuleKey, { label: string; hint: string }> = {
 export function RestaurantDrawer({ restaurant, onClose }: { restaurant: SuperadminRestaurantDto; onClose: () => void }) {
   const toast = useToast();
   const update = useSuperadminUpdateRestaurant();
+  const { features } = useAppConfig();
   const [status, setStatus] = useState<RestaurantStatus>(restaurant.status);
   const [plan, setPlan] = useState<Plan>(restaurant.plan);
   const [trialEndsAt, setTrialEndsAt] = useState(toLocalInput(restaurant.trialEndsAt));
@@ -112,15 +115,24 @@ export function RestaurantDrawer({ restaurant, onClose }: { restaurant: Superadm
         </Field>
         <fieldset className="flex flex-col gap-3 border-0 p-0">
           <legend className="mb-1 text-[13px] font-medium">Modules</legend>
-          {MODULES.map((key) => (
-            <div key={key} className="flex items-center justify-between gap-4">
-              <div className="flex flex-col">
-                <span className="text-sm">{MODULE_COPY[key].label}</span>
-                <span className="text-xs text-muted">{MODULE_COPY[key].hint}</span>
+          {MODULES.map((key) => {
+            // Global feature flag off (Phase 10): nobody can switch it; the API ignores the value anyway.
+            const available = moduleAvailable(features, key);
+            return (
+              <div key={key} className="flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="text-sm">{MODULE_COPY[key].label}</span>
+                  <span className="text-xs text-muted">{available ? MODULE_COPY[key].hint : 'Not available yet'}</span>
+                </div>
+                <Switch
+                  label={MODULE_COPY[key].label}
+                  checked={available && modules[key]}
+                  disabled={!available}
+                  onChange={(checked) => setModules({ ...modules, [key]: checked })}
+                />
               </div>
-              <Switch label={MODULE_COPY[key].label} checked={modules[key]} onChange={(checked) => setModules({ ...modules, [key]: checked })} />
-            </div>
-          ))}
+            );
+          })}
         </fieldset>
       </div>
     </Drawer>

@@ -145,6 +145,42 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   latest scan (one is created if missing). Table QR codes encode `PUBLIC_MENU_BASE_URL/t/<tableNumber>` (`utils/public-url.ts`;
   the menu app still accepts the older `?t=<tableNumber>`).
 
+## Feature flags, branches and production (Phase 10)
+
+**`main` is production.** Every push to `main` that passes CI is built into images and deployed to the droplet by
+`.github/workflows/deploy.yml`. Online payment is **not released**: payment/POS work continues on **`feature/payments`**
+and merges to `main` only behind the flag below — CI's `npm run check:flags` (`scripts/check-feature-defaults.mjs`)
+fails the build if `FEATURE_PAYMENTS` ever defaults to true in the API schema, the shared defaults, `.env.prod.example`,
+the compose file, the Caddy Dockerfile or the Deploy workflow.
+
+- **Global flags**, separate from the per-venue modules: env `FEATURE_PAYMENTS` (default **false**) and `FEATURE_POS`
+  (default **true**). Shared: `packages/shared/src/features.ts` (`FeatureFlags`, `DEFAULT_FEATURE_FLAGS`,
+  `moduleAvailable(features, module)`, `visibleModules(modules, features)`). API: `config/features.ts` (`features`,
+  `featureEnabled()`, `moduleOn(restaurant, module)` — use it instead of `hasModule()` inside the API — `dtoModules()`,
+  `setFeaturesForTests()`). Exposed by `GET /api/health` (`features`) and the auth-less `GET /api/config`
+  (`{ version, features }`, `max-age=60`) that the CMS reads at startup (`lib/config.ts` → `useAppConfig()`).
+- **Flag off ⇒ the module does not exist in that deployment**: every DTO masks it (`RestaurantDto`,
+  `SuperadminRestaurantDto`, `PublicMenuDto.restaurant.modules`, `PublicOrderDto.payments.enabled`), `requireModule()`
+  and `requireFeature()` answer **404** on its routes (payment-config, order payment, guest payments, POS config/sync),
+  the bank webhook `/api/webhooks/payments/*` and the `/dev/pay` simulator are not mounted, the reconcile job / POS
+  queue are not started, and a superadmin PATCH silently drops that module (the stored value is left alone, so a
+  masked round-trip from the drawer never flips it). CMS: `useRestaurantContext().hasModule()` already includes the
+  flag; the Modules page shows "Not available yet" instead of the mailto, the superadmin drawer disables the switch.
+  Menu app: nothing to do — it only ever sees the masked payload. Marketing site: `PUBLIC_FEATURE_PAYMENTS`
+  (build arg `FEATURE_PAYMENTS` of the Caddy image, GitHub variable `vars.FEATURE_PAYMENTS`) renders the payment
+  feature card and FAQ entry (`src/features.ts`, copy under `features.payments` / `faq.payments`); off by default.
+- **Mocks can never run in production**: `env.ts` forces `PAYMENTS_MOCK` and `POS_MOCK` to false when
+  `NODE_ENV=production` (with a warning), and `app.ts` mounts `/dev/pay` only outside production *and* with the
+  payments feature on. Tests: `apps/api/test/features.test.ts`, `apps/cms/test/features.test.tsx`,
+  `apps/web/test/features.test.ts`; the API suite runs with `FEATURE_PAYMENTS=true` (vitest env) and flips it per test.
+- **Storage in production = AWS S3** bucket `otvori-media` (eu-central-1), IAM user `otvori-api` limited to that
+  bucket, bucket policy making `restaurants/*` public-read, `backups/*` private. `S3_ENDPOINT` empty ⇒ AWS (regional
+  endpoint, virtual-hosted URLs, **no per-object ACL**); `S3_PUBLIC_BASE_URL` is the base of every image URL
+  (`S3_PUBLIC_URL` is the older alias). DigitalOcean Spaces (or any S3-compatible service) stays available by setting
+  `S3_ENDPOINT`, which switches `ACL: public-read` back on (`utils/storage.ts`: `s3ClientOptions`, `s3PublicBase`,
+  `s3ObjectAcl`; `test/storage.test.ts`). `deploy/backup.sh` / `restore.sh` use the plain aws CLI against the same
+  bucket (`--endpoint-url` only when `S3_ENDPOINT` is set).
+
 ## Restaurant modules (Phase 9b)
 
 Per-venue feature switches so the CMS stays a plain QR menu by default: `restaurants.modules` JSONB
@@ -366,7 +402,7 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
   Phase 9a) that list rows use; the CMS table and the menu rows fall back to `imageUrl`.
 - Slugs: `slugSchema` (shared) rejects `RESERVED_SLUGS` (`app`, `api`, `www`, `mail`, …) and `uniqueSlug()` skips them, so a
   venue can never shadow a service subdomain.
-- `utils/storage.ts`: S3-compatible driver (DigitalOcean Spaces) when `S3_BUCKET` + keys are set, otherwise local
+- `utils/storage.ts`: S3 driver (AWS when `S3_ENDPOINT` is empty, any S3-compatible service otherwise) when `S3_BUCKET` + keys are set, otherwise local
   `UPLOADS_DIR` served at `API_URL/uploads`. Keys: `restaurants/<id>/logo-<ts>.png`, `restaurants/<id>/items/<itemId>-<ts>.webp`.
 - QR: `qrcode` (PNG/SVG); A4 QR sheet via pdfkit with DejaVu Sans (needed for č/ć/đ/š/ž).
 
@@ -636,9 +672,10 @@ the three static builds inside). **Images are built by `.github/workflows/deploy
   stack (`docker-compose.local.yml`, `DOMAIN=localhost`).
 - API in production: `TRUST_PROXY=1`, CORS allowlist = `APP_URL` + `CORS_ORIGINS` (apex, www) + every `{slug}.DOMAIN`, secure
   httpOnly cookies, auth/public-event rate limits, JSON logs, graceful SIGTERM (10 s), migrations on start, `APP_VERSION` = image tag.
-- Storage: Spaces bucket `otvori` (fra1, CDN): `restaurants/<id>/…` public-read via `S3_PUBLIC_URL` (CDN), `backups/` private.
-  `deploy/backup.sh` (cron, `pg_dump | gzip`, keeps 14 days) and `deploy/restore.sh` use the aws CLI with the Spaces endpoint.
-- `deploy/README.md` is the full checklist (DNS records, Spaces, droplet, swap, Docker, secrets, first deploy, superadmin, backups,
+- Storage: AWS S3 bucket `otvori-media` (eu-central-1): `restaurants/<id>/…` public through the bucket policy, URLs
+  from `S3_PUBLIC_BASE_URL`, `backups/` private. `deploy/backup.sh` (cron, `pg_dump | gzip`, keeps 14 days) and
+  `deploy/restore.sh` use the plain aws CLI (Spaces remains possible via `S3_ENDPOINT`; see "Feature flags, branches and production").
+- `deploy/README.md` is the full checklist (DNS records, AWS S3, droplet, swap, Docker, secrets, first deploy, superadmin, backups,
   rollback, logs); `deploy/TODO-manual.md` the one-time manual steps.
 
 ## Testing

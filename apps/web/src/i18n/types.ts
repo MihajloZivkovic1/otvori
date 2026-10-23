@@ -65,6 +65,8 @@ export interface Dictionary {
     f1: Feature;
     f2: Feature;
     rest: [Feature, Feature, Feature, Feature, Feature, Feature];
+    /** Online payment card — rendered only when the site is built with FEATURE_PAYMENTS=true (src/features.ts). */
+    payments: Feature;
   };
   setup: {
     eyebrow: string;
@@ -91,7 +93,8 @@ export interface Dictionary {
     setupLine: string;
     toggleLabel: string;
   };
-  faq: { h: string; sub: string; items: Faq[] };
+  /** `payments` is appended to `items` only when the payments feature is on at build time. */
+  faq: { h: string; sub: string; items: Faq[]; payments: Faq };
   cta: { h: string };
   footer: { desc: string; contact: string; links: { label: string; href: string }[]; copyright: string };
   card: { logo: string; note: string };

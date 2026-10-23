@@ -5,10 +5,11 @@ import cors from 'cors';
 import express from 'express';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
+import { features } from './config/features.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { adminRouter } from './modules/admin.router.js';
 import { authRouter } from './modules/auth/router.js';
-import { healthRouter } from './modules/health/router.js';
+import { configRouter, healthRouter } from './modules/health/router.js';
 import { paymentSimulatorRouter } from './modules/payments/simulator.js';
 import { paymentWebhookRouter } from './modules/payments/router.js';
 import { registerPosHooks } from './modules/pos/queue.js';
@@ -82,7 +83,10 @@ export function createApp(): express.Express {
     }),
   );
   app.use(cookieParser());
-  if (env.PAYMENTS_MOCK) app.use('/dev/pay', express.urlencoded({ extended: false, limit: '10kb' }));
+  // The payment simulator (mock bank) exists only in development/test with PAYMENTS_MOCK and the payments feature;
+  // env.ts already forces PAYMENTS_MOCK off in production, this is the second lock on the same door.
+  const simulator = env.PAYMENTS_MOCK && features.payments && !env.isProduction;
+  if (simulator) app.use('/dev/pay', express.urlencoded({ extended: false, limit: '10kb' }));
 
   const uploadsDir = localUploadsDir();
   if (uploadsDir) {
@@ -90,13 +94,15 @@ export function createApp(): express.Express {
   }
 
   app.use('/api/health', healthRouter);
+  app.use('/api/config', configRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
   app.use('/api/superadmin', superadminRouter);
   app.use('/api/public', publicRouter);
   // Bank callbacks (no auth: each provider verifies its own signature) and, in development, the payment simulator.
-  app.use('/api/webhooks/payments', paymentWebhookRouter);
-  if (env.PAYMENTS_MOCK) app.use('/dev/pay', paymentSimulatorRouter);
+  // Neither is mounted while FEATURE_PAYMENTS is off: the paths answer 404 like any unknown route.
+  if (features.payments) app.use('/api/webhooks/payments', paymentWebhookRouter);
+  if (simulator) app.use('/dev/pay', paymentSimulatorRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

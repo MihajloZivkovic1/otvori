@@ -1,11 +1,13 @@
 import { Op, literal, type FindAttributeOptions } from 'sequelize';
 import {
   DEFAULT_MODULES,
+  type ModuleKey,
   type PaginatedDto,
   type SuperadminListRestaurantsQuery,
   type SuperadminRestaurantDto,
   type SuperadminUpdateRestaurantInput,
 } from '@qr-menu/shared';
+import { dtoModules, featureEnabled } from '../../config/features.js';
 import { Membership, Restaurant, User } from '../../db/models/index.js';
 import { notFound } from '../../utils/errors.js';
 import { definedOnly, toIso } from '../../utils/objects.js';
@@ -35,7 +37,7 @@ function toDto(restaurant: Restaurant, owner: Owner): SuperadminRestaurantDto {
     publishedAt: toIso(restaurant.publishedAt),
     tableCount: Number(restaurant.get('tableCount') ?? 0),
     itemCount: Number(restaurant.get('itemCount') ?? 0),
-    modules: { ...DEFAULT_MODULES, ...restaurant.modules },
+    modules: dtoModules(restaurant.modules),
     owner,
     createdAt: restaurant.createdAt.toISOString(),
     updatedAt: restaurant.updatedAt.toISOString(),
@@ -92,12 +94,17 @@ export async function updateRestaurant(
 ): Promise<SuperadminRestaurantDto> {
   const restaurant = await Restaurant.findByPk(restaurantId, { attributes: COUNT_ATTRIBUTES });
   if (!restaurant) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
+  // A module whose global feature flag is off cannot be switched by anyone: the drawer shows it as "not available
+  // yet" and sends it back masked, so the stored value is left alone rather than overwritten.
+  const modules = input.modules
+    ? Object.fromEntries(Object.entries(input.modules).filter(([key]) => featureEnabled(key as ModuleKey)))
+    : undefined;
   await restaurant.update(
     definedOnly({
       status: input.status,
       plan: input.plan,
       trialEndsAt: input.trialEndsAt === undefined ? undefined : input.trialEndsAt ? new Date(input.trialEndsAt) : null,
-      modules: input.modules ? { ...DEFAULT_MODULES, ...restaurant.modules, ...input.modules } : undefined,
+      modules: modules ? { ...DEFAULT_MODULES, ...restaurant.modules, ...modules } : undefined,
     }),
   );
   const owners = await ownersFor([restaurant.id]);

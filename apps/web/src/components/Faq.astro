@@ -1,10 +1,13 @@
 ---
 import { contact } from '../config';
+import { featurePayments } from '../features';
 import type { Dictionary } from '../i18n';
 interface Props {
   t: Dictionary;
 }
 const { t } = Astro.props;
+// The online-payment question only exists once the feature is released (FEATURE_PAYMENTS=true at build time).
+const items = featurePayments ? [...t.faq.items, t.faq.payments] : t.faq.items;
 ---
 
 <section
@@ -22,7 +25,7 @@ const { t } = Astro.props;
     </p>
   </div>
   <div class="flex flex-col border-t border-line-strong" data-faq>
-    {t.faq.items.map((item, i) => (
+    {items.map((item, i) => (
       <div class="border-b border-line-strong">
         <h3 class="m-0">
           <button

@@ -7,7 +7,7 @@ describe('health', () => {
   it('pings the database and reports the build version', async () => {
     const res = await api.get('/api/health');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: true, db: 'ok', version: 'dev' });
+    expect(res.body).toEqual({ ok: true, db: 'ok', version: 'dev', features: { payments: true, pos: true } });
     expect(res.headers['cache-control']).toBe('no-store');
   });
 });

@@ -22,8 +22,26 @@ Files in this folder:
 | `Caddyfile` / `Caddyfile.local` | routing, TLS (Cloudflare DNS-01 / internal CA), caching, security headers |
 | `.env.prod.example` | every runtime variable, commented — copy to `.env.prod` on the droplet |
 | `deploy.sh <tag>` | `compose pull && up -d`, waits for the API health check, prunes old images |
-| `backup.sh` / `restore.sh` | nightly `pg_dump \| gzip` to Spaces `backups/`, 14-day retention / restore from a key or file |
-| `TODO-manual.md` | the one-time manual steps (DNS, Spaces, droplet, secrets) in order |
+| `backup.sh` / `restore.sh` | nightly `pg_dump \| gzip` to the S3 bucket under `backups/`, 14-day retention / restore from a key or file |
+| `TODO-manual.md` | the one-time manual steps (DNS, Resend, AWS, droplet, GitHub, secrets, smoke test) in order |
+
+**Feature flags.** `.env.prod` carries `FEATURE_PAYMENTS=false` and `FEATURE_POS=true` (Phase 10). Online payment is
+not released: with the flag off no venue can have the module, the payment routes and the bank webhook answer 404 and
+no payment UI exists anywhere; `GET /api/health` and `GET /api/config` show the flags, so a probe tells you what a
+deployment offers. Flipping a flag is `./deploy/deploy.sh` after editing `.env.prod` (no rebuild) — except the
+marketing site's payment copy, which is baked at build time from the GitHub variable `FEATURE_PAYMENTS`. CI refuses a
+`main` where the default is anything but off (`npm run check:flags`).
+
+**Migrations** run inside the API container before it listens (`MIGRATE_ON_START=1` in the compose file), so a
+release with new migrations needs no extra step: `deploy.sh` waits for the health check, which only turns green after
+they applied. Seven migrations exist as of Phase 10 (schema, ordering, thumbnails, modules, payments, POS, fiscal manual).
+
+**One API instance.** The order-expiry job, the payment reconcile job, the POS queue (all `setInterval`s inside
+`index.ts`) and the SSE fan-out (`EventEmitter`) assume a single API container, which is what the compose file runs.
+`POS` jobs are claimed with `FOR UPDATE SKIP LOCKED`, so even an accidental second instance would not double-send;
+the others would double-run harmlessly but noisily. The API's V8 heap is capped at 160 MB (`NODE_OPTIONS`) inside the
+256 MB container limit so sharp's native buffers always fit; idle the stack uses ≈ 60 MB (postgres) + 90 MB (api) +
+25 MB (caddy) of the 1 GB.
 
 Everything below is the top-to-bottom checklist for a fresh setup. Commands prefixed `droplet$` run on the server.
 
@@ -48,23 +66,69 @@ API token (for the DNS-01 challenge): Cloudflare → My Profile → API Tokens �
 Zone Resources: *Include → Specific zone → otvori.menu* → Continue → Create → copy it into `CF_API_TOKEN`.
 (Permissions: Zone → DNS → Edit, plus Zone → Zone → Read.)
 
-## 2. DigitalOcean Spaces (images + backups)
+## 2. AWS S3 (images + backups)
 
-1. Spaces Object Storage → Create → region **Frankfurt (fra1)**, name **`otvori`**, *Restrict File Listing* on (default).
-2. Bucket → Settings → **CDN → Enable** (default TTL is fine). The CDN endpoint is
-   `https://otvori.fra1.cdn.digitaloceanspaces.com` → `S3_PUBLIC_URL`.
-3. API → **Spaces Keys** → Generate New Key (name `otvori-droplet`) → copy both values into
-   `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` (the secret is shown once).
+One bucket, **`otvori-media`** in **eu-central-1 (Frankfurt)**, and one IAM user that can touch nothing else.
 
-The API writes public images under `restaurants/<restaurantId>/…` with `ACL: public-read` and returns CDN URLs; backups
-go under `backups/` as private objects. No bucket-level public setting and no CORS rule is needed.
+1. **Bucket**: S3 → Create bucket → name `otvori-media`, region `eu-central-1`, *Object Ownership* **ACLs disabled
+   (bucket owner enforced)** (default), *Block Public Access*: untick **only** "Block public access to buckets and
+   objects granted through new public bucket policies" and "…through any public bucket policies" (keep the two ACL
+   boxes ticked), Bucket Versioning off, default encryption SSE-S3 → Create.
+2. **Bucket policy** (bucket → Permissions → Bucket policy): public read for images only.
 
-Optional: expire backups in the bucket itself (in addition to `backup.sh`'s own pruning):
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "PublicReadImages",
+         "Effect": "Allow",
+         "Principal": "*",
+         "Action": "s3:GetObject",
+         "Resource": "arn:aws:s3:::otvori-media/restaurants/*"
+       }
+     ]
+   }
+   ```
 
-```bash
-aws s3api put-bucket-lifecycle-configuration --bucket otvori --endpoint-url https://fra1.digitaloceanspaces.com \
-  --lifecycle-configuration '{"Rules":[{"ID":"backups-14d","Status":"Enabled","Filter":{"Prefix":"backups/"},"Expiration":{"Days":14}}]}'
-```
+   `backups/*` is not mentioned, so it stays private. The API never sets per-object ACLs on AWS (the bucket refuses
+   them); it writes `restaurants/<restaurantId>/…` and the policy makes them readable.
+3. **IAM user** `otvori-api` (IAM → Users → Create user, no console access) → *Attach policies directly* → *Create
+   policy* → JSON:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       { "Sid": "ListBucket", "Effect": "Allow", "Action": ["s3:ListBucket", "s3:GetBucketLocation"], "Resource": "arn:aws:s3:::otvori-media" },
+       { "Sid": "Objects", "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::otvori-media/*" }
+     ]
+   }
+   ```
+
+   Name it `otvori-media-rw`, attach it, create the user → Security credentials → **Create access key** (use case
+   "Application running outside AWS") → copy both into `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` (shown once).
+4. `.env.prod`: `S3_ENDPOINT=` (empty = AWS), `S3_REGION=eu-central-1`, `S3_BUCKET=otvori-media`,
+   `S3_PUBLIC_BASE_URL=https://otvori-media.s3.eu-central-1.amazonaws.com`.
+5. Check from your laptop with the same keys (`aws configure --profile otvori`):
+
+   ```bash
+   aws --profile otvori s3 ls s3://otvori-media
+   echo hello > /tmp/t.txt && aws --profile otvori s3 cp /tmp/t.txt s3://otvori-media/restaurants/_test/t.txt
+   curl -s https://otvori-media.s3.eu-central-1.amazonaws.com/restaurants/_test/t.txt      # hello (public)
+   aws --profile otvori s3 cp /tmp/t.txt s3://otvori-media/backups/_test.txt
+   curl -sI https://otvori-media.s3.eu-central-1.amazonaws.com/backups/_test.txt | head -1 # 403 (private)
+   aws --profile otvori s3 rm s3://otvori-media/restaurants/_test/t.txt && aws --profile otvori s3 rm s3://otvori-media/backups/_test.txt
+   ```
+
+Optional: a lifecycle rule on the bucket (Management → Lifecycle rules, prefix `backups/`, expire after 14 days) as a
+second safety net next to `backup.sh`'s own pruning. A CloudFront distribution in front of the bucket is not needed at
+this size; if you add one later, point `S3_PUBLIC_BASE_URL` at it (existing image URLs keep the old host and keep working).
+
+**Alternative: DigitalOcean Spaces** (or any S3-compatible service). Set `S3_ENDPOINT=https://fra1.digitaloceanspaces.com`,
+`S3_REGION=fra1`, `S3_BUCKET=<space>`, `S3_PUBLIC_BASE_URL=https://<space>.fra1.cdn.digitaloceanspaces.com` and the
+Spaces keys; with an endpoint set the API uploads with `ACL: public-read` per object (Spaces has no bucket policy),
+and `backup.sh`/`restore.sh` pass `--endpoint-url` automatically.
 
 ## 3. Mail (Resend)
 
@@ -122,7 +186,8 @@ droplet$ git clone git@github.com:MihajloZivkovic1/qr-menu.git /opt/otvori      
 droplet$ cd /opt/otvori/deploy && cp .env.prod.example .env.prod && chmod 600 .env.prod
 droplet$ openssl rand -hex 32        # → POSTGRES_PASSWORD (hex: it is embedded in a URL)
 droplet$ openssl rand -base64 48     # → JWT_ACCESS_SECRET
-droplet$ nano .env.prod              # DOMAIN, ACME_EMAIL, CF_API_TOKEN, GHCR_OWNER, the two secrets, Resend, S3_*
+droplet$ openssl rand -base64 32     # → PAYMENTS_ENCRYPTION_KEY
+droplet$ nano .env.prod              # DOMAIN, ACME_EMAIL, CF_API_TOKEN, GHCR_OWNER, the three secrets, Resend, S3_*, FEATURE_*
 ```
 
 `deploy.sh` refuses to run while any value still contains `replace-me`. Validate:
@@ -141,7 +206,8 @@ Repository → Settings → Secrets and variables → Actions:
 | `DROPLET_USER` | `deploy` |
 | `DROPLET_SSH_KEY` | a private key whose public half is in `/home/deploy/.ssh/authorized_keys` — generate one just for Actions: `ssh-keygen -t ed25519 -N '' -C github-actions -f gha_otvori`, paste the *private* file, append `gha_otvori.pub` to the droplet |
 
-Variables (optional): `DOMAIN` (default `otvori.menu`), `PUBLIC_ANALYTICS_SRC`, `PUBLIC_ANALYTICS_DOMAIN`.
+Variables (optional): `DOMAIN` (default `otvori.menu`), `PUBLIC_ANALYTICS_SRC`, `PUBLIC_ANALYTICS_DOMAIN`,
+`FEATURE_PAYMENTS` (default `false`; only affects the marketing site's payment copy — the API reads its own flag from `.env.prod`).
 
 Images land in `ghcr.io/<owner>/otvori-api` and `otvori-caddy` (owner = the lowercase GitHub user/org, set `GHCR_OWNER`
 in `.env.prod` accordingly). The workflow logs the droplet in with its job token for the pull. For **manual** pulls and
@@ -168,7 +234,8 @@ droplet$ ./deploy/deploy.sh a1b2c3d                        # a specific build
 Check:
 
 ```bash
-curl -s https://api.otvori.menu/api/health      # {"ok":true,"db":"ok","version":"a1b2c3d"}
+curl -s https://api.otvori.menu/api/health      # {"ok":true,"db":"ok","version":"a1b2c3d","features":{"payments":false,"pos":true}}
+curl -s https://api.otvori.menu/api/config      # {"version":"a1b2c3d","features":{"payments":false,"pos":true}}
 curl -sI https://app.otvori.menu/ | head -5     # 200 + security headers
 curl -sI https://anything.otvori.menu/ | head -1  # 200 (wildcard certificate)
 ```
@@ -188,7 +255,7 @@ Running it again for an existing email promotes that user and replaces their pas
 ## 10. Backups
 
 ```bash
-droplet$ /opt/otvori/deploy/backup.sh                    # try one now; lists at ./restore.sh --list
+droplet$ /opt/otvori/deploy/backup.sh                    # try one now → "uploaded s3://otvori-media/backups/…"; lists at ./restore.sh --list
 droplet$ crontab -e
 15 3 * * * /opt/otvori/deploy/backup.sh >> /var/log/otvori-backup.log 2>&1
 droplet$ sudo touch /var/log/otvori-backup.log && sudo chown deploy /var/log/otvori-backup.log
@@ -249,6 +316,13 @@ docker compose --env-file deploy/.env.local -f deploy/docker-compose.yml -f depl
 curl -k https://api.localhost/api/health
 curl -k --resolve kafeterija.localhost:443:127.0.0.1 https://kafeterija.localhost/t/1 | head -3
 ```
+
+The laptop stack runs with production parity: `FEATURE_PAYMENTS=false`, `FEATURE_POS=true`, `MAIL_PROVIDER=log`
+(allowed by `ALLOW_LOG_MAIL=1` in `.env.local`). Smoke test used before Phase 10: health + config flags, the five
+hosts, a seeded venue (`docker compose … exec api npm run seed` needs `ALLOW_SEED=1`), an order placed from
+`kafeterija.localhost/t/1` and accepted on `app.localhost`, the SSE stream through Caddy
+(`curl -N https://app.localhost/api/admin/restaurants/<id>/events?token=…` shows `retry: 3000` and a `ping`), module
+gating (payment routes 404) and no payment UI.
 
 Caddy issues self-signed certificates from its internal CA (`Caddyfile.local`), so use `-k` / accept the warning. For a
 browser, add `127.0.0.1 localhost app.localhost api.localhost kafeterija.localhost` to `/etc/hosts` (macOS does not resolve
