@@ -1,5 +1,5 @@
 import type { CookieOptions, Request, Response } from 'express';
-import type { AuthResponseDto, MeDto, OkDto } from '@qr-menu/shared';
+import { acceptInviteSchema, joinWithCodeSchema, type AuthResponseDto, type InvitePreviewDto, type MeDto, type OkDto } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
 import { noStore } from '../../utils/http.js';
@@ -13,6 +13,7 @@ import {
 } from './schemas.js';
 import * as authService from './service.js';
 import type { Session } from './service.js';
+import { previewInvite } from '../team/service.js';
 
 const COOKIE_PATH = '/api/auth';
 
@@ -39,6 +40,7 @@ function sendSession(res: Response, session: Session, status = 200): void {
     expiresIn: session.expiresIn,
     user: session.user,
     memberships: session.memberships,
+    ...(session.elevations ? { elevations: session.elevations } : {}),
   };
   res.status(status).json(body);
 }
@@ -50,7 +52,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
 export async function login(req: Request, res: Response): Promise<void> {
   const input = loginSchema.parse(req.body);
-  sendSession(res, await authService.login(input));
+  sendSession(res, await authService.login(input, req.ip ?? null));
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
@@ -80,7 +82,7 @@ export async function requestMagicLink(req: Request, res: Response): Promise<voi
 
 export async function consumeMagicLink(req: Request, res: Response): Promise<void> {
   const token = tokenParamSchema.parse(req.params.token);
-  sendSession(res, await authService.consumeMagicLink(token));
+  sendSession(res, await authService.consumeMagicLink(token, req.ip ?? null));
 }
 
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
@@ -93,11 +95,31 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const { token, password } = resetPasswordSchema.parse(req.body);
-  sendSession(res, await authService.resetPassword(token, password));
+  sendSession(res, await authService.resetPassword(token, password, req.ip ?? null));
 }
 
 export async function me(req: Request, res: Response): Promise<void> {
   const body: MeDto = await authService.me(req.user!.id);
   noStore(res);
   res.json(body);
+}
+
+/* ------------------------------------------------------------------ team (Phase 11) */
+
+/** GET /api/auth/invite/:token — what the invite page shows before the person accepts. */
+export async function inviteInfo(req: Request, res: Response): Promise<void> {
+  const token = tokenParamSchema.parse(req.params.token);
+  noStore(res);
+  const body: InvitePreviewDto = await previewInvite(token);
+  res.json(body);
+}
+
+export async function acceptInvite(req: Request, res: Response): Promise<void> {
+  const input = acceptInviteSchema.parse(req.body);
+  sendSession(res, await authService.acceptInvite(input, req.ip ?? null), 201);
+}
+
+export async function joinWithCode(req: Request, res: Response): Promise<void> {
+  const input = joinWithCodeSchema.parse(req.body);
+  sendSession(res, await authService.joinWithCode(input, req.ip ?? null), 201);
 }

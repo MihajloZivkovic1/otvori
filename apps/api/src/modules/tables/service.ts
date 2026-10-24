@@ -6,6 +6,7 @@ import { conflict, notFound } from '../../utils/errors.js';
 import { definedOnly, toIso } from '../../utils/objects.js';
 import { buildMenuUrl } from '../../utils/public-url.js';
 import { storage } from '../../utils/storage.js';
+import * as audit from '../audit/service.js';
 import { applySortOrder } from '../shared/sort-order.js';
 import { touchRestaurant } from '../shared/touch-restaurant.js';
 import { qrPng, qrSvg, renderQrSheet } from './qr.js';
@@ -95,7 +96,9 @@ export async function createTable(restaurantId: string, input: CreateTableInput)
     await touchRestaurant(restaurantId, transaction);
     return table.id;
   });
-  return getTable(restaurantId, id);
+  const dto = await getTable(restaurantId, id);
+  await audit.record({ restaurantId, action: 'table.create', entity: { type: 'table', id, label: dto.label }, after: { number: dto.number, label: dto.label } });
+  return dto;
 }
 
 export async function updateTable(restaurantId: string, tableId: string, input: UpdateTableInput): Promise<TableDto> {
@@ -103,11 +106,15 @@ export async function updateTable(restaurantId: string, tableId: string, input: 
   if (input.number !== undefined && input.number !== table.number) {
     await assertNumberFree(restaurantId, input.number, table.id);
   }
+  const before = { number: table.number, label: table.label };
   await sequelize.transaction(async (transaction) => {
     await table.update(definedOnly(input), { transaction });
     await touchRestaurant(restaurantId, transaction);
   });
-  return getTable(restaurantId, tableId);
+  const dto = await getTable(restaurantId, tableId);
+  const changes = audit.diff(before, { number: dto.number, label: dto.label });
+  if (changes) await audit.record({ restaurantId, action: 'table.update', entity: { type: 'table', id: tableId, label: dto.label }, ...changes });
+  return dto;
 }
 
 export async function deleteTable(restaurantId: string, tableId: string): Promise<void> {
@@ -116,6 +123,7 @@ export async function deleteTable(restaurantId: string, tableId: string): Promis
     await table.destroy({ transaction }); // scan_events.table_id is set to NULL by the FK
     await touchRestaurant(restaurantId, transaction);
   });
+  await audit.record({ restaurantId, action: 'table.delete', entity: { type: 'table', id: tableId, label: table.label }, before: { number: table.number, label: table.label } });
 }
 
 export async function reorderTables(restaurantId: string, ids: string[]): Promise<TableDto[]> {
@@ -123,6 +131,7 @@ export async function reorderTables(restaurantId: string, ids: string[]): Promis
     await applySortOrder('tables', restaurantId, ids, transaction);
     await touchRestaurant(restaurantId, transaction);
   });
+  await audit.record({ restaurantId, action: 'table.reorder', entity: { type: 'table' }, after: { ids } });
   return listTables(restaurantId);
 }
 
@@ -130,12 +139,14 @@ export async function reorderTables(restaurantId: string, ids: string[]): Promis
 export async function blockTable(restaurantId: string, tableId: string, now = new Date()): Promise<TableDto> {
   const table = await loadTable(restaurantId, tableId);
   await table.update({ blockedUntil: new Date(now.getTime() + ORDERING_LIMITS.tableBlockMinutes * 60_000) });
+  await audit.record({ restaurantId, action: 'table.block', entity: { type: 'table', id: tableId, label: table.label }, after: { blockedUntil: table.blockedUntil?.toISOString() ?? null } });
   return getTable(restaurantId, tableId);
 }
 
 export async function unblockTable(restaurantId: string, tableId: string): Promise<TableDto> {
   const table = await loadTable(restaurantId, tableId);
   await table.update({ blockedUntil: null });
+  await audit.record({ restaurantId, action: 'table.unblock', entity: { type: 'table', id: tableId, label: table.label } });
   return getTable(restaurantId, tableId);
 }
 

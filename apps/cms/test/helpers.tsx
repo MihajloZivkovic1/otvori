@@ -16,6 +16,7 @@ import type {
   ServiceRequestDto,
   SuperadminRestaurantDto,
   TableDto,
+  TeamDto,
   UpdateOrderStatusInput,
   UserDto,
 } from '@qr-menu/shared';
@@ -111,6 +112,7 @@ export const restaurant: RestaurantDto = {
   orderingMode: 'off',
   orderingPaused: false,
   pausedMessage: null,
+  pinSet: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-10-20T09:12:00.000Z',
 };
@@ -446,6 +448,23 @@ export class MockEventSource {
   }
 }
 
+/** Team (Phase 11): the owner and one waiter who joined with a code. */
+export const team: TeamDto = {
+  members: [
+    { membershipId: ids.membership, userId: ids.user, name: user.name, email: user.email, role: 'owner', isSelf: true, hasRealEmail: true },
+    { membershipId: '88888888-8888-4888-8888-888888888888', userId: '99999999-9999-4999-8999-999999999998', name: 'Marko Konobar', email: 'marko.konobar@kafeterija.staff.otvori.menu', role: 'staff', isSelf: false, hasRealEmail: false },
+  ],
+  invites: [],
+  joinCode: null,
+};
+
+/** A venue with an owner PIN (Phase 11) and an elevation for this device (5 minutes from now). */
+export const restaurantWithPin: RestaurantDto = { ...restaurant, pinSet: true };
+export const elevation = { token: 'elev-test', expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), window: '5' as const };
+export function unlockDevice(token = elevation.token): void {
+  sessionStorage.setItem(`tabla.cms.elevation.${ids.restaurant}`, JSON.stringify({ ...elevation, token }));
+}
+
 export const superadminRows: SuperadminRestaurantDto[] = [
   {
     id: restaurant.id,
@@ -643,6 +662,19 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
     if (!request) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Request not found' } } };
     return { body: { ...request, status: 'done', doneAt: '2026-10-22T11:50:00.000Z', updatedAt: '2026-10-22T11:50:00.000Z' } };
   }
+  // Owner PIN, team and the audit log (Phase 11): a venue without a PIN, the owner alone, an empty history.
+  if (path === `${base}/security` && method === 'GET') return { body: { pinSet: false, dailyDigest: false, lockedUntil: null } };
+  if (path === `${base}/security` && method === 'PATCH') return { body: { pinSet: false, lockedUntil: null, ...(body as object) } };
+  if (path === `${base}/security/pin` && method === 'PUT') return { body: { pinSet: true, dailyDigest: false, lockedUntil: null } };
+  if (path === `${base}/security/pin` && method === 'DELETE') return { body: { pinSet: false, dailyDigest: false, lockedUntil: null } };
+  if (path === `${base}/team` && method === 'GET') return { body: team };
+  if (path === `${base}/team/invites` && method === 'POST') {
+    const input = body as { email: string; role?: string };
+    return { status: 201, body: { ...team, invites: [{ id: '77777777-7777-4777-8777-777777777777', email: input.email, role: input.role ?? 'staff', invitedBy: user.name, createdAt: stamps.updatedAt, expiresAt: '2026-10-29T09:12:00.000Z' }] } };
+  }
+  if (path === `${base}/team/join-code` && method === 'POST') return { status: 201, body: { code: '482913', expiresAt: '2026-10-23T09:12:00.000Z' } };
+  if (path === `${base}/team/join-code` && method === 'DELETE') return { body: team };
+  if (path === `${base}/audit-log` && method === 'GET') return { body: { items: [], total: 0, page: 1, pageSize: 50, users: [] } };
   if (path === '/api/superadmin/restaurants') return { body: { items: superadminRows, total: superadminRows.length, page: 1, pageSize: 50 } };
   if (path.endsWith('/qr.svg')) return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', { headers: { 'Content-Type': 'image/svg+xml' } });
   return { status: 404, body: { error: { code: 'NOT_FOUND', message: `No mock for ${method} ${path}` } } };

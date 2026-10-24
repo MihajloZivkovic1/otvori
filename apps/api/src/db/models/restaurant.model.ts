@@ -159,6 +159,16 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Column(DataType.TEXT)
   pausedMessage!: CreationOptional<string | null>;
 
+  /** Owner PIN (Phase 11): bcrypt hash of the 4 digits; null = owner actions need only the owner role. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  ownerPinHash!: CreationOptional<string | null>;
+
+  /** Local date (YYYY-MM-DD) of the last daily digest mail, so the hourly job sends it once. */
+  @AllowNull(true)
+  @Column(DataType.DATEONLY)
+  digestSentOn!: CreationOptional<string | null>;
+
   createdAt!: CreationOptional<Date>;
   updatedAt!: CreationOptional<Date>;
 

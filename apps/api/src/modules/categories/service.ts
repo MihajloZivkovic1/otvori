@@ -5,6 +5,7 @@ import { sequelize } from '../../db/sequelize.js';
 import { notFound } from '../../utils/errors.js';
 import { definedOnly } from '../../utils/objects.js';
 import { deleteStoredUrl } from '../../utils/storage.js';
+import * as audit from '../audit/service.js';
 import { applySortOrder } from '../shared/sort-order.js';
 import { touchRestaurant } from '../shared/touch-restaurant.js';
 
@@ -58,7 +59,9 @@ export async function createCategory(restaurantId: string, input: CreateCategory
     await touchRestaurant(restaurantId, transaction);
     return category.id;
   });
-  return getCategory(restaurantId, id);
+  const dto = await getCategory(restaurantId, id);
+  await audit.record({ restaurantId, action: 'category.create', entity: { type: 'category', id, label: audit.labelOf(dto.name) }, after: { name: dto.name, isHidden: dto.isHidden } });
+  return dto;
 }
 
 export async function updateCategory(
@@ -67,11 +70,17 @@ export async function updateCategory(
   input: UpdateCategoryInput,
 ): Promise<CategoryDto> {
   const category = await loadCategory(restaurantId, categoryId);
+  const before = { name: category.name, isHidden: category.isHidden };
   await sequelize.transaction(async (transaction) => {
     await category.update(definedOnly(input), { transaction });
     await touchRestaurant(restaurantId, transaction);
   });
-  return getCategory(restaurantId, categoryId);
+  const dto = await getCategory(restaurantId, categoryId);
+  const changes = audit.diff(before, { name: dto.name, isHidden: dto.isHidden });
+  if (changes) {
+    await audit.record({ restaurantId, action: 'category.update', entity: { type: 'category', id: categoryId, label: audit.labelOf(dto.name) }, ...changes });
+  }
+  return dto;
 }
 
 /** Deletes the category and (via FK cascade) its items. Owner only. */
@@ -82,6 +91,12 @@ export async function deleteCategory(restaurantId: string, categoryId: string): 
     await category.destroy({ transaction });
     await touchRestaurant(restaurantId, transaction);
   });
+  await audit.record({
+    restaurantId,
+    action: 'category.delete',
+    entity: { type: 'category', id: categoryId, label: audit.labelOf(category.name) },
+    before: { name: category.name, itemCount: items.length },
+  });
   await Promise.all(items.map((item) => deleteStoredUrl(item.imageUrl)));
 }
 
@@ -90,5 +105,6 @@ export async function reorderCategories(restaurantId: string, ids: string[]): Pr
     await applySortOrder('categories', restaurantId, ids, transaction);
     await touchRestaurant(restaurantId, transaction);
   });
+  await audit.record({ restaurantId, action: 'category.reorder', entity: { type: 'category' }, after: { ids } });
   return listCategories(restaurantId);
 }

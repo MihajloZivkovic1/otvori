@@ -88,6 +88,11 @@ export function LoginPage() {
           <Link to="/register" className="font-medium no-underline">
             Create a restaurant
           </Link>
+          <br />
+          Waiter with a join code?{' '}
+          <Link to="/join" className="font-medium no-underline">
+            Join with a code
+          </Link>
         </>
       }
     >

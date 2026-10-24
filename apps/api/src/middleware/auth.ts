@@ -8,10 +8,10 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   const header = req.headers.authorization ?? '';
   const [scheme, token] = header.split(' ');
   if (scheme !== 'Bearer' || !token) throw unauthorized('Missing bearer token');
-  const { userId } = verifyAccessToken(token.trim());
+  const { userId, sessionId } = verifyAccessToken(token.trim());
   const user = await User.findByPk(userId, { attributes: ['id', 'email', 'name', 'isSuperadmin'] });
   if (!user) throw unauthorized('User no longer exists');
-  req.user = { id: user.id, email: user.email, name: user.name, isSuperadmin: user.isSuperadmin };
+  req.user = { id: user.id, email: user.email, name: user.name, isSuperadmin: user.isSuperadmin, sessionId };
   next();
 }
 

@@ -16,6 +16,8 @@ import { DeleteVenueModal } from '../components/settings/DeleteVenueModal';
 import { OrderingCard } from '../components/settings/OrderingCard';
 import { IntegrationsCard } from '../components/settings/IntegrationsCard';
 import { PaymentCard } from '../components/settings/PaymentCard';
+import { SecurityCard } from '../components/settings/SecurityCard';
+import { TeamCard } from '../components/settings/TeamCard';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { Button } from '../components/ui/Button';
@@ -175,6 +177,10 @@ export function SettingsPage() {
       </section>
 
       <ModulesCard restaurantId={restaurant.id} modules={restaurant.modules} isMobile={isMobile} />
+
+      {isOwner ? <SecurityCard /> : null}
+
+      {isOwner ? <TeamCard /> : null}
 
       {isOwner && hasModule('ordering') ? <OrderingCard /> : null}
 

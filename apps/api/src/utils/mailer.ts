@@ -87,3 +87,86 @@ export function sendPasswordReset(email: string, url: string): Promise<void> {
     text: `Reset your password by opening this link (valid for 1 hour):\n\n${url}\n\nIf you did not request this, you can ignore this email.`,
   });
 }
+
+/* ------------------------------------------------------------------ Phase 11: owner PIN, team, digest */
+
+export function sendPinLockoutAlert(email: string, info: { venue: string; lockouts: number; historyUrl: string }): Promise<void> {
+  return sendMail({
+    to: email,
+    subject: `${info.venue} · owner PIN locked ${info.lockouts} times today`,
+    text:
+      `Someone entered a wrong owner PIN for ${info.venue} five times in a row — that is lockout number ${info.lockouts} in the last 24 hours.\n` +
+      `Neko je ${info.lockouts}. put danas pet puta zaredom uneo pogrešan PIN vlasnika za ${info.venue}.\n\n` +
+      `Every attempt is in the change history: ${info.historyUrl}\n\n` +
+      `If this was not you or your staff, change the PIN in Settings → Protection (your password is needed).\n\n— otvori.menu`,
+  });
+}
+
+export function sendTeamInvite(
+  email: string,
+  info: { venue: string; inviter: string; role: 'owner' | 'staff'; url: string },
+): Promise<void> {
+  const role = info.role === 'owner' ? 'an owner' : 'staff';
+  return sendMail({
+    to: email,
+    subject: `${info.inviter} invited you to ${info.venue} on otvori`,
+    text:
+      `${info.inviter} added you to ${info.venue} as ${role}. Open this link to join (valid for 7 days):\n\n${info.url}\n\n` +
+      `${info.inviter} te je dodao/la u ${info.venue}. Otvori link da pristupiš (važi 7 dana).\n\n— otvori.menu`,
+  });
+}
+
+export interface DigestCounts {
+  priceChanges: number;
+  newItems: number;
+  deletedItems: number;
+  availability: number;
+  pinFailures: number;
+  lockouts: number;
+  ordersAccepted: number;
+  ordersRejected: number;
+  logins: number;
+  settings: number;
+  team: number;
+}
+
+/** Serbian plural forms: 1 promena, 2–4 promene, 5+ promena. */
+export function srPlural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+/** "Juče: 3 promene cena, 1 novi artikal, 2 pogrešna PIN-a" — only the non-zero parts. */
+export function digestSummary(c: DigestCounts): string {
+  const parts: string[] = [];
+  if (c.priceChanges) parts.push(`${c.priceChanges} ${srPlural(c.priceChanges, 'promena cene', 'promene cena', 'promena cena')}`);
+  if (c.newItems) parts.push(`${c.newItems} ${srPlural(c.newItems, 'novi artikal', 'nova artikla', 'novih artikala')}`);
+  if (c.deletedItems) parts.push(`${c.deletedItems} ${srPlural(c.deletedItems, 'obrisan artikal', 'obrisana artikla', 'obrisanih artikala')}`);
+  if (c.availability) parts.push(`${c.availability} ${srPlural(c.availability, 'promena dostupnosti', 'promene dostupnosti', 'promena dostupnosti')}`);
+  if (c.ordersAccepted) parts.push(`${c.ordersAccepted} ${srPlural(c.ordersAccepted, 'prihvaćena narudžbina', 'prihvaćene narudžbine', 'prihvaćenih narudžbina')}`);
+  if (c.ordersRejected) parts.push(`${c.ordersRejected} ${srPlural(c.ordersRejected, 'odbijena narudžbina', 'odbijene narudžbine', 'odbijenih narudžbina')}`);
+  if (c.pinFailures) parts.push(`${c.pinFailures} ${srPlural(c.pinFailures, 'pogrešan PIN', 'pogrešna PIN-a', 'pogrešnih PIN-ova')}`);
+  if (c.lockouts) parts.push(`${c.lockouts} ${srPlural(c.lockouts, 'zaključavanje', 'zaključavanja', 'zaključavanja')}`);
+  if (c.settings) parts.push(`${c.settings} ${srPlural(c.settings, 'promena podešavanja', 'promene podešavanja', 'promena podešavanja')}`);
+  if (c.team) parts.push(`${c.team} ${srPlural(c.team, 'promena tima', 'promene tima', 'promena tima')}`);
+  if (c.logins) parts.push(`${c.logins} ${srPlural(c.logins, 'prijava', 'prijave', 'prijava')}`);
+  return parts.length ? `Juče: ${parts.join(', ')}` : 'Juče: bez promena';
+}
+
+export function sendDailyDigest(
+  email: string,
+  info: { venue: string; date: string; counts: DigestCounts; historyUrl: string },
+): Promise<void> {
+  const summary = digestSummary(info.counts);
+  return sendMail({
+    to: email,
+    subject: `${info.venue} · ${summary}`,
+    text:
+      `${info.venue}, ${info.date}\n${summary}.\n\n` +
+      `Ko je šta promenio i kad / who changed what and when: ${info.historyUrl}\n\n` +
+      `Ovaj dnevni pregled možeš isključiti u Podešavanja → Zaštita.\n— otvori.menu`,
+  });
+}

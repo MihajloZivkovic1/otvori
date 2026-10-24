@@ -3,6 +3,7 @@ import { errorMessage } from '../../lib/api';
 import { usePublishRestaurant } from '../../lib/queries';
 import { screenTitle, useScreen } from '../../lib/screens';
 import { Icon } from '../icons';
+import { LockStatus } from '../security/LockStatus';
 import { Button } from '../ui/Button';
 import { StatusPill } from '../ui/Chip';
 import { useToast } from '../ui/Toast';
@@ -24,7 +25,10 @@ export function Topbar({ restaurant, role, title }: TopbarProps) {
         </span>
         <span className="truncate font-semibold text-ink">{title ?? screenTitle(screen)}</span>
       </nav>
-      {restaurant ? <PublishControls restaurant={restaurant} role={role} /> : null}
+      <div className="flex items-center gap-3">
+        <LockStatus variant="topbar" />
+        {restaurant ? <PublishControls restaurant={restaurant} role={role} /> : null}
+      </div>
     </header>
   );
 }

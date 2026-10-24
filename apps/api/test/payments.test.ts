@@ -270,7 +270,7 @@ describe('online payment', () => {
     const staff = await registerUser();
     const { Membership } = await import('../src/db/models/index.js');
     await Membership.create({ userId: staff.user.id, restaurantId: ctx.owner.restaurantId, role: 'staff' });
-    expect((await api.get(`${ctx.admin}/payment-config`).set(bearer(staff.accessToken))).status).toBe(200);
+    expect((await api.get(`${ctx.admin}/payment-config`).set(bearer(staff.accessToken))).status).toBe(403); // Phase 11: settings reads are owner-level
     expect((await api.patch(`${ctx.admin}/payment-config`).set(bearer(staff.accessToken)).send({ merchantId: 'X' })).status).toBe(403);
     // The OTP skeleton is honest about not being wired yet.
     await api.patch(`${ctx.admin}/payment-config`).set(ctx.auth).send({ provider: 'otp' });

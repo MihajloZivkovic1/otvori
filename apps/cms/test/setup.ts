@@ -2,12 +2,14 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { tokenStore } from '../src/lib/api';
+import { elevationStore } from '../src/lib/elevation';
 import { setViewport } from './helpers';
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   tokenStore.set(null);
+  elevationStore.clearAll();
   setViewport('desktop');
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.scrollTo = vi.fn();

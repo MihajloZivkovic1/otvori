@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   name: string;
   isSuperadmin: boolean;
+  /** Stable id of this sign-in (auth_tokens.session_id); null for tokens minted before Phase 11. */
+  sessionId: string | null;
 }
 
 export interface MembershipContext {
@@ -12,6 +14,8 @@ export interface MembershipContext {
   role: MembershipRole;
   /** True when a superadmin is acting on a restaurant they are not a member of. */
   viaSuperadmin: boolean;
+  /** True once requireOwner verified an elevation token (owner PIN / password) for this request, or no PIN is set. */
+  elevated: boolean;
 }
 
 declare global {

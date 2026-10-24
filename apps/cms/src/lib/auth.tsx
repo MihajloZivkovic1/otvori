@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AuthResponseDto, MeDto } from '@qr-menu/shared';
 import { api, refreshSession, setUnauthorizedHandler, tokenStore } from './api';
+import { elevationStore } from './elevation';
 import { sessionFlags } from './storage';
 
 export type AuthStatus = 'restoring' | 'anonymous' | 'authenticated';
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       sessionFlags.clear();
+      elevationStore.clearAll();
       setMe(null);
       setStatus('anonymous');
       queryClient.clear();
@@ -58,6 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback((session: AuthResponseDto, remember = true) => {
     tokenStore.set(session.accessToken);
     sessionFlags.markSignedIn(remember);
+    // A password sign-in proves the owner: venues with a PIN start unlocked for the default window on this device.
+    elevationStore.clearAll();
+    session.elevations?.forEach((e) => elevationStore.setFromDto(e));
     setMe({ user: session.user, memberships: session.memberships });
     setSignedOutExplicitly(false);
     setStatus('authenticated');
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     tokenStore.set(null);
     sessionFlags.clear();
+    elevationStore.clearAll();
     setMe(null);
     setSignedOutExplicitly(true);
     setStatus('anonymous');

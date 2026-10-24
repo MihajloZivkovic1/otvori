@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireMembership } from '../middleware/membership.js';
 import { requireModule } from '../middleware/modules.js';
 import { analyticsRouter } from './analytics/router.js';
+import { auditRouter } from './audit/router.js';
 import { categoriesRouter } from './categories/router.js';
 import { itemsRouter } from './items/router.js';
 import * as orderingController from './ordering/controller.js';
@@ -14,9 +15,15 @@ import { posConfigRouter, posRouter } from './pos/router.js';
 import { requireSseToken, streamEvents } from './ordering/sse.js';
 import * as restaurantsController from './restaurants/controller.js';
 import { restaurantsRouter } from './restaurants/router.js';
+import { securityRouter } from './security/router.js';
 import { tablesRouter } from './tables/router.js';
+import { teamRouter } from './team/router.js';
 
-/** /api/admin/restaurants/:restaurantId/... — every route below is tenant-scoped by requireMembership. */
+/**
+ * /api/admin/restaurants/:restaurantId/... — every route below is tenant-scoped by requireMembership.
+ * Which routes are `service` (both roles) and which are `owner` (requireOwner: owner role + the PIN elevation when
+ * the venue has one) is the matrix in docs/PERMISSIONS.md.
+ */
 export const adminRouter = Router();
 
 // The one admin route without a :restaurantId: it creates the venue the caller will own.
@@ -43,6 +50,10 @@ scoped.use('/pos-config', posConfigRouter);
 scoped.use('/pos', posRouter);
 scoped.post('/orders/:id/fiscal/retry', requireModule('ordering'), requireModule('pos'), posController.retryFiscal);
 scoped.post('/orders/:id/fiscal/manual', requireModule('ordering'), requireModule('pos'), posController.fiscalManual);
+// Owner PIN, team and the audit log (Phase 11).
+scoped.use('/security', securityRouter);
+scoped.use('/team', teamRouter);
+scoped.use('/audit-log', auditRouter);
 scoped.use('/', restaurantsRouter);
 
 adminRouter.use('/restaurants/:restaurantId', requireAuth, requireMembership(), scoped);

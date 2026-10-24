@@ -63,7 +63,7 @@ describe('membership isolation', () => {
     expect(listB.body.map((i: { id: string }) => i.id)).toEqual([itemB.id]);
   });
 
-  it('staff can edit the menu but not settings or destructive actions', async () => {
+  it('staff can read the venue but not change menu content, settings or delete (Phase 11 matrix)', async () => {
     const owner = await registerUser();
     const staff = await registerUser();
     await Membership.create({ userId: staff.user.id, restaurantId: owner.restaurantId, role: 'staff' });
@@ -71,7 +71,13 @@ describe('membership isolation', () => {
     const read = await api.get(`/api/admin/restaurants/${owner.restaurantId}`).set(bearer(staff.accessToken));
     expect(read.status).toBe(200);
 
-    const category = await createCategory(staff, { name: { sr: 'Dorучак', en: 'Breakfast' } }, owner.restaurantId);
+    const staffCreate = await api
+      .post(`/api/admin/restaurants/${owner.restaurantId}/categories`)
+      .set(bearer(staff.accessToken))
+      .send({ name: { sr: 'Doručak', en: 'Breakfast' } });
+    expect(staffCreate.status).toBe(403);
+    expect(staffCreate.body.error.code).toBe('ROLE_REQUIRED');
+    const category = await createCategory(owner, { name: { sr: 'Doručak', en: 'Breakfast' } });
     expect(category.restaurantId).toBe(owner.restaurantId);
 
     const settings = await api

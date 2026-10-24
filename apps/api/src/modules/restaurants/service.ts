@@ -18,6 +18,7 @@ import { buildMenuUrl } from '../../utils/public-url.js';
 import { slugify } from '../../utils/slug.js';
 import { deleteStoredUrl, storage } from '../../utils/storage.js';
 import { generateOpaqueToken } from '../../utils/tokens.js';
+import * as audit from '../audit/service.js';
 import { toPaymentConfigDto } from '../payments/config.js';
 import { toPosConfigDto } from '../pos/config.js';
 
@@ -50,6 +51,7 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     orderingMode: r.orderingMode,
     orderingPaused: r.orderingPaused,
     pausedMessage: r.pausedMessage,
+    pinSet: r.ownerPinHash !== null && r.ownerPinHash !== undefined,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
@@ -126,9 +128,14 @@ export async function updateRestaurant(restaurantId: string, input: UpdateRestau
     throw badRequest('supportedLocales must include defaultLocale');
   }
   const { modules, ...rest } = input;
+  const keys = Object.keys(definedOnly(input)) as (keyof UpdateRestaurantInput)[];
+  const before = Object.fromEntries(keys.map((key) => [key, restaurant.get(key)])) as Record<string, unknown>;
   await restaurant.update(
     definedOnly({ ...rest, modules: modules ? { ...DEFAULT_MODULES, ...restaurant.modules, ...modules } : undefined }),
   );
+  const after = Object.fromEntries(keys.map((key) => [key, restaurant.get(key)])) as Record<string, unknown>;
+  const changes = audit.diff(before, after);
+  if (changes) await audit.record({ restaurantId, action: 'restaurant.update', entity: { type: 'restaurant', id: restaurantId, label: restaurant.name }, ...changes });
   return toRestaurantDto(restaurant);
 }
 
@@ -140,19 +147,24 @@ export async function uploadLogo(restaurantId: string, file: Buffer): Promise<Re
   const previous = restaurant.logoUrl;
   await restaurant.update({ logoUrl: url });
   await deleteStoredUrl(previous);
+  await audit.record({ restaurantId, action: 'restaurant.logo', entity: { type: 'restaurant', id: restaurantId, label: restaurant.name }, after: { logoUrl: url } });
   return toRestaurantDto(restaurant);
 }
 
 export async function publishRestaurant(restaurantId: string): Promise<RestaurantDto> {
   const restaurant = await loadRestaurant(restaurantId);
+  const first = restaurant.publishedAt === null;
   await restaurant.update({ publishedAt: new Date() });
+  if (first) await audit.record({ restaurantId, action: 'restaurant.publish', entity: { type: 'restaurant', id: restaurantId, label: restaurant.name } });
   return toRestaurantDto(restaurant);
 }
 
 export async function deleteRestaurant(restaurantId: string): Promise<void> {
   const restaurant = await loadRestaurant(restaurantId);
   const items = await MenuItem.findAll({ where: { restaurantId }, attributes: ['imageUrl'] });
-  await restaurant.destroy(); // FKs cascade to categories, items, variants, tables, memberships, scans
+  // The log row cascades away with the venue, so this one only goes to the server log.
+  await audit.record({ restaurantId, action: 'restaurant.delete', entity: { type: 'restaurant', id: restaurantId, label: restaurant.name } });
+  await restaurant.destroy(); // FKs cascade to categories, items, variants, tables, memberships, scans, audit log
   await deleteStoredUrl(restaurant.logoUrl);
   await Promise.all(items.map((item) => deleteStoredUrl(item.imageUrl)));
 }

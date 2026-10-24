@@ -1,3 +1,4 @@
+import { AuditLog } from './audit-log.model.js';
 import { AuthToken } from './auth-token.model.js';
 import { Category } from './category.model.js';
 import { ItemVariant } from './item-variant.model.js';
@@ -12,9 +13,11 @@ import { Restaurant } from './restaurant.model.js';
 import { RestaurantTable } from './restaurant-table.model.js';
 import { ScanEvent } from './scan-event.model.js';
 import { ServiceRequest } from './service-request.model.js';
+import { TeamInvite } from './team-invite.model.js';
 import { User } from './user.model.js';
 
 export {
+  AuditLog,
   AuthToken,
   Category,
   ItemVariant,
@@ -29,6 +32,7 @@ export {
   RestaurantTable,
   ScanEvent,
   ServiceRequest,
+  TeamInvite,
   User,
 };
 
@@ -48,4 +52,6 @@ export const allModels = [
   ServiceRequest,
   Payment,
   PosJob,
+  TeamInvite,
+  AuditLog,
 ];

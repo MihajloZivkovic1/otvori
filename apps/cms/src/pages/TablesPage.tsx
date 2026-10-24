@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { OrderDto, ServiceRequestDto, TableDto } from '@qr-menu/shared';
 import { Icon } from '../components/icons';
 import { useOrdering } from '../components/orders/OrderingProvider';
+import { useGuard } from '../components/security/ElevationProvider';
+import { LockGlyph } from '../components/security/LockStatus';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { PrintAllModal } from '../components/tables/PrintAllModal';
@@ -110,6 +112,7 @@ const BLOCKED_NOTE = (
 
 export function TablesPage() {
   const { restaurant, isOwner, isMobile } = useRestaurantContext();
+  const { guard } = useGuard();
   const toast = useToast();
   const query = useTables(restaurant.id);
   const remove = useDeleteTable(restaurant.id);
@@ -149,7 +152,15 @@ export function TablesPage() {
   if (isMobile) {
     return (
       <>
-        <MobileTables tables={tables} loading={query.isPending} onAdd={() => setEditing('new')} onEdit={setEditing} onDelete={isOwner ? setDeleting : undefined} onPrint={() => setPrinting(true)} />
+        <MobileTables
+          tables={tables}
+          loading={query.isPending}
+          canEdit={isOwner}
+          onAdd={guard(() => setEditing('new'))}
+          onEdit={guard((table: TableDto) => setEditing(table))}
+          onDelete={isOwner ? guard((table: TableDto) => setDeleting(table)) : undefined}
+          onPrint={guard(() => setPrinting(true))}
+        />
         {modals}
       </>
     );
@@ -161,12 +172,18 @@ export function TablesPage() {
         title="Tables & QR codes"
         subtitle="Each code opens the menu with the table pre-selected."
         actions={
-          <>
-            <Button onClick={() => setEditing('new')}>Add table</Button>
-            <Button variant="primary" icon={<Icon name="print" size={14} strokeWidth={1.8} />} onClick={() => setPrinting(true)} disabled={tables.length === 0}>
-              Print all
-            </Button>
-          </>
+          isOwner ? (
+            <>
+              <Button icon={<LockGlyph />} onClick={guard(() => setEditing('new'))}>
+                Add table
+              </Button>
+              <Button variant="primary" icon={<Icon name="print" size={14} strokeWidth={1.8} />} onClick={guard(() => setPrinting(true))} disabled={tables.length === 0}>
+                Print all
+              </Button>
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">The owner manages tables and prints QR codes.</span>
+          )
         }
       />
       <div className="overflow-hidden rounded-[10px] border border-line bg-surface">
@@ -195,11 +212,11 @@ export function TablesPage() {
         ) : query.isError ? (
           <EmptyState variant="inline" title="Could not load tables" description={errorMessage(query.error)} actions={<Button size="sm" onClick={() => void query.refetch()}>Try again</Button>} />
         ) : tables.length === 0 ? (
-          <EmptyState variant="inline" title="No tables yet." description="Add your first table to get a QR code for it." actions={<Button size="sm" onClick={() => setEditing('new')}>Add table</Button>} />
+          <EmptyState variant="inline" title="No tables yet." description="Add your first table to get a QR code for it." actions={isOwner ? <Button size="sm" onClick={guard(() => setEditing('new'))}>Add table</Button> : undefined} />
         ) : (
           <ul aria-label="Tables">
             {tables.map((table) => (
-              <DesktopTableRow key={table.id} table={table} grid={grid} onEdit={() => setEditing(table)} onDelete={isOwner ? () => setDeleting(table) : undefined} />
+              <DesktopTableRow key={table.id} table={table} grid={grid} canEdit={isOwner} onEdit={guard(() => setEditing(table))} onDelete={isOwner ? guard(() => setDeleting(table)) : undefined} />
             ))}
           </ul>
         )}
@@ -210,17 +227,18 @@ export function TablesPage() {
   );
 }
 
-function DesktopTableRow({ table, grid, onEdit, onDelete }: { table: TableDto; grid: string; onEdit: () => void; onDelete?: () => void }) {
+function DesktopTableRow({ table, grid, canEdit, onEdit, onDelete }: { table: TableDto; grid: string; canEdit: boolean; onEdit: () => void; onDelete?: () => void }) {
   const { restaurant } = useRestaurantContext();
   const ordering = useOrdering();
+  const { guard } = useGuard();
   const { download, busy } = useTableActions();
   const tags = ordering.enabled ? openTags(table, ordering.orders, ordering.requests) : [];
-  const downloadsCell = (
+  const downloadsCell = canEdit ? (
     <div className="flex items-center gap-1.5">
-      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-png`} onClick={() => void download(table, 'png')}>
+      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" icon={<LockGlyph />} loading={busy === `${table.id}-png`} onClick={guard(() => void download(table, 'png'))}>
         PNG
       </Button>
-      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-svg`} onClick={() => void download(table, 'svg')}>
+      <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" loading={busy === `${table.id}-svg`} onClick={guard(() => void download(table, 'svg'))}>
         SVG
       </Button>
       <Menu
@@ -236,6 +254,10 @@ function DesktopTableRow({ table, grid, onEdit, onDelete }: { table: TableDto; g
         )}
       />
     </div>
+  ) : (
+    <Button size="sm" className="h-8 rounded-md px-2.5 text-xs" onClick={() => void navigator.clipboard?.writeText(table.menuUrl)}>
+      Copy link
+    </Button>
   );
 
   return (
@@ -269,6 +291,7 @@ function DesktopTableRow({ table, grid, onEdit, onDelete }: { table: TableDto; g
 interface MobileTablesProps {
   tables: TableDto[];
   loading: boolean;
+  canEdit: boolean;
   onAdd: () => void;
   onEdit: (table: TableDto) => void;
   onDelete?: (table: TableDto) => void;
@@ -276,9 +299,10 @@ interface MobileTablesProps {
 }
 
 /** Design M9: expandable rows with the QR, Share (Web Share API), Download and, with ordering on, the 30-minute block. */
-function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: MobileTablesProps) {
+function MobileTables({ tables, loading, canEdit, onAdd, onEdit, onDelete, onPrint }: MobileTablesProps) {
   const { restaurant } = useRestaurantContext();
   const ordering = useOrdering();
+  const { guard } = useGuard();
   const { download, share, busy } = useTableActions();
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -288,16 +312,20 @@ function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: Mob
         large
         title="Tables & QR"
         action={
-          <Button variant="accent-text" className="h-11 px-2" onClick={onAdd}>
-            Add table
-          </Button>
+          canEdit ? (
+            <Button variant="accent-text" className="h-11 px-2" icon={<LockGlyph />} onClick={onAdd}>
+              Add table
+            </Button>
+          ) : null
         }
       />
-      <div className="px-4 pb-3 pt-1">
-        <Button size="xl" block className="h-12 rounded-xl text-[15px]" icon={<Icon name="print" size={16} strokeWidth={1.8} />} onClick={onPrint} disabled={tables.length === 0}>
-          Print all <Badge>OPENS PDF</Badge>
-        </Button>
-      </div>
+      {canEdit ? (
+        <div className="px-4 pb-3 pt-1">
+          <Button size="xl" block className="h-12 rounded-xl text-[15px]" icon={<Icon name="print" size={16} strokeWidth={1.8} />} onClick={onPrint} disabled={tables.length === 0}>
+            Print all <Badge>OPENS PDF</Badge>
+          </Button>
+        </div>
+      ) : null}
       <div className="flex-1 border-t border-line-2 bg-surface">
         {loading ? (
           <div role="status" aria-busy="true" aria-label="Loading tables">
@@ -312,7 +340,7 @@ function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: Mob
             ))}
           </div>
         ) : tables.length === 0 ? (
-          <EmptyState variant="inline" title="No tables yet." actions={<Button size="sm" onClick={onAdd}>Add table</Button>} />
+          <EmptyState variant="inline" title="No tables yet." actions={canEdit ? <Button size="sm" onClick={onAdd}>Add table</Button> : undefined} />
         ) : (
           tables.map((table) => {
             const open = expanded === table.id;
@@ -349,21 +377,26 @@ function MobileTables({ tables, loading, onAdd, onEdit, onDelete, onPrint }: Mob
                       <Button variant="primary" size="xl" className="flex-1" icon={<Icon name="share" size={16} strokeWidth={1.8} />} onClick={() => void share(table)}>
                         Share
                       </Button>
-                      <Button size="xl" className="flex-1" icon={<Icon name="download" size={16} strokeWidth={1.8} />} loading={busy === `${table.id}-png`} onClick={() => void download(table, 'png')}>
-                        Download
-                      </Button>
-                    </div>
-                    {ordering.enabled ? <BlockControls table={table} /> : null}
-                    <div className="flex gap-4 text-[13px]">
-                      <button type="button" className="cursor-pointer font-medium text-accent" onClick={() => onEdit(table)}>
-                        Edit
-                      </button>
-                      {onDelete ? (
-                        <button type="button" className="cursor-pointer font-medium text-danger-text" onClick={() => onDelete(table)}>
-                          Delete
-                        </button>
+                      {canEdit ? (
+                        <Button size="xl" className="flex-1" icon={<Icon name="download" size={16} strokeWidth={1.8} />} loading={busy === `${table.id}-png`} onClick={guard(() => void download(table, 'png'))}>
+                          Download
+                        </Button>
                       ) : null}
                     </div>
+                    {ordering.enabled ? <BlockControls table={table} /> : null}
+                    {canEdit ? (
+                      <div className="flex gap-4 text-[13px]">
+                        <button type="button" className="inline-flex cursor-pointer items-center gap-1 font-medium text-accent" onClick={() => onEdit(table)}>
+                          <LockGlyph />
+                          Edit
+                        </button>
+                        {onDelete ? (
+                          <button type="button" className="cursor-pointer font-medium text-danger-text" onClick={() => onDelete(table)}>
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

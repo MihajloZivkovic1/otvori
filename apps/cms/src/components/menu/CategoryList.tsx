@@ -19,11 +19,15 @@ interface CategoryListProps {
   onToggleHidden: (category: CategoryDto) => void;
   onReorder: (ids: string[]) => void;
   onCreate: (name: string) => Promise<unknown>;
+  /** Staff (Phase 11): no drag, no hide/show, no "New category". */
+  readOnly?: boolean;
+  /** Owner-action wrapper (opens the PIN keypad first on a locked device). */
+  guard?: <A extends unknown[]>(fn: (...args: A) => void) => (...args: A) => void;
   className?: string;
 }
 
 /** Left column of the desktop menu editor: sortable categories + inline "New category" input. */
-export function CategoryList({ categories, selectedId, defaultLocale, onSelect, onToggleHidden, onReorder, onCreate, className }: CategoryListProps) {
+export function CategoryList({ categories, selectedId, defaultLocale, onSelect, onToggleHidden, onReorder, onCreate, readOnly = false, guard = (fn) => fn, className }: CategoryListProps) {
   const sensors = useListSensors();
   const [draft, setDraft] = useState('');
   const [creating, setCreating] = useState(false);
@@ -41,20 +45,19 @@ export function CategoryList({ categories, selectedId, defaultLocale, onSelect, 
     event.preventDefault();
     const name = draft.trim();
     if (!name) return;
-    setCreating(true);
-    try {
-      await onCreate(name);
-      setDraft('');
-    } finally {
-      setCreating(false);
-    }
+    guard(() => {
+      setCreating(true);
+      void onCreate(name)
+        .then(() => setDraft(''))
+        .finally(() => setCreating(false));
+    })();
   };
 
   return (
     <div className={cn('flex shrink-0 flex-col border-r border-line bg-surface', className)}>
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-line-2 pl-5 pr-4">
         <span className="text-xs font-semibold uppercase tracking-[.06em] text-muted">Categories</span>
-        <span className="text-xs text-faint">Drag to reorder</span>
+        {readOnly ? null : <span className="text-xs text-faint">Drag to reorder</span>}
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto p-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[verticalOnly]} onDragEnd={onDragEnd}>
@@ -66,13 +69,15 @@ export function CategoryList({ categories, selectedId, defaultLocale, onSelect, 
                   category={category}
                   name={text(category.name, defaultLocale) || 'Untitled'}
                   selected={category.id === selectedId}
+                  readOnly={readOnly}
                   onSelect={() => onSelect(category.id)}
-                  onToggleHidden={() => onToggleHidden(category)}
+                  onToggleHidden={guard(() => onToggleHidden(category))}
                 />
               ))}
             </ul>
           </SortableContext>
         </DndContext>
+        {readOnly ? null : (
         <form onSubmit={(e) => void submit(e)} className="flex gap-1.5 px-1.5 pb-0.5 pt-1.5">
           <Input
             aria-label="New category"
@@ -86,6 +91,7 @@ export function CategoryList({ categories, selectedId, defaultLocale, onSelect, 
             Add
           </Button>
         </form>
+        )}
       </div>
     </div>
   );
@@ -95,12 +101,13 @@ interface CategoryRowProps {
   category: CategoryDto;
   name: string;
   selected: boolean;
+  readOnly: boolean;
   onSelect: () => void;
   onToggleHidden: () => void;
 }
 
-function CategoryRow({ category, name, selected, onSelect, onToggleHidden }: CategoryRowProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+function CategoryRow({ category, name, selected, readOnly, onSelect, onToggleHidden }: CategoryRowProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: category.id, disabled: readOnly });
   return (
     <li
       ref={setNodeRef}
@@ -111,16 +118,20 @@ function CategoryRow({ category, name, selected, onSelect, onToggleHidden }: Cat
         isDragging && 'z-10 bg-surface shadow-[0_8px_24px_rgba(0,0,0,.12)]',
       )}
     >
-      <button
-        ref={setActivatorNodeRef}
-        type="button"
-        aria-label={`Reorder ${name}`}
-        className="grid w-4 cursor-grab touch-none place-items-center text-faint active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <Icon name="grip" size={16} />
-      </button>
+      {readOnly ? (
+        <span className="w-4" />
+      ) : (
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          aria-label={`Reorder ${name}`}
+          className="grid w-4 cursor-grab touch-none place-items-center text-faint active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <Icon name="grip" size={16} />
+        </button>
+      )}
       <button
         type="button"
         onClick={onSelect}
@@ -131,6 +142,7 @@ function CategoryRow({ category, name, selected, onSelect, onToggleHidden }: Cat
         {category.isHidden ? <Badge>HIDDEN</Badge> : null}
         <span className="text-xs tabular-nums text-faint">{category.itemCount}</span>
       </button>
+      {readOnly ? null : (
       <button
         type="button"
         onClick={onToggleHidden}
@@ -141,6 +153,7 @@ function CategoryRow({ category, name, selected, onSelect, onToggleHidden }: Cat
       >
         <Icon name={category.isHidden ? 'eyeOff' : 'eye'} size={15} />
       </button>
+      )}
     </li>
   );
 }

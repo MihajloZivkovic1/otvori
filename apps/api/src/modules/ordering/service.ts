@@ -36,6 +36,7 @@ import { sequelize } from '../../db/sequelize.js';
 import { moduleDisabled } from '../../middleware/modules.js';
 import { AppError, badRequest, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
+import * as audit from '../audit/service.js';
 import { toIso } from '../../utils/objects.js';
 import { startOfDayInZone } from '../../utils/time.js';
 import { loadPublishedRestaurant, orderableOnPos } from '../public/service.js';
@@ -504,6 +505,14 @@ export async function setOrderStatus(
   const fresh = await loadOrder(restaurantId, orderId);
   if (changed === 0) throw invalidTransition(fresh.status, input.status);
   publishOrder('order.updated', fresh);
+  const action = input.status === 'accepted' ? 'order.accept' : input.status === 'delivered' ? 'order.deliver' : 'order.reject';
+  await audit.record({
+    restaurantId,
+    action,
+    entity: { type: 'order', id: order.id, label: `#${order.number}` },
+    before: { status: order.status },
+    after: { status: input.status, tableNumber: order.tableNumber, totalCents: order.totalCents, ...(input.rejectedReason ? { rejectedReason: input.rejectedReason } : {}) },
+  });
   if (input.status === 'accepted') await runAcceptedHooks(fresh);
   return toOrderDto(fresh);
 }
@@ -533,6 +542,7 @@ export async function completeServiceRequest(restaurantId: string, requestId: st
   if (request.status === 'done') return toServiceRequestDto(request);
   await request.update({ status: 'done', doneAt: now });
   publishRequest('request.updated', request);
+  await audit.record({ restaurantId, action: 'request.done', entity: { type: 'request', id: request.id, label: `Table ${request.tableNumber}` }, after: { type: request.type, tableNumber: request.tableNumber } });
   return toServiceRequestDto(request);
 }
 

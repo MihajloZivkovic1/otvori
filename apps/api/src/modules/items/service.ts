@@ -15,6 +15,7 @@ import { processItemImage, processItemThumbnail } from '../../utils/images.js';
 import { definedOnly, toIso } from '../../utils/objects.js';
 import { deleteStoredUrl, storage } from '../../utils/storage.js';
 import { nextOccurrenceOfTime } from '../../utils/time.js';
+import * as audit from '../audit/service.js';
 import { applySortOrder } from '../shared/sort-order.js';
 import { touchRestaurant } from '../shared/touch-restaurant.js';
 
@@ -129,10 +130,33 @@ export async function createItem(restaurantId: string, input: CreateItemInput): 
     await touchRestaurant(restaurantId, transaction);
     return item.id;
   });
-  return getItem(restaurantId, id);
+  const dto = await getItem(restaurantId, id);
+  await audit.record({
+    restaurantId,
+    action: 'item.create',
+    entity: { type: 'item', id, label: audit.labelOf(dto.name) },
+    after: { ...auditShape(dto), categoryId: dto.categoryId },
+  });
+  return dto;
+}
+
+/** The fields the audit log compares for an item (variants reduced to name + price). */
+function auditShape(dto: MenuItemDto): Record<string, unknown> {
+  return {
+    name: dto.name,
+    description: dto.description,
+    priceCents: dto.priceCents,
+    variants: dto.variants.map((v) => ({ name: v.name, priceCents: v.priceCents })),
+    allergens: dto.allergens,
+    tags: dto.tags,
+    posProductCode: dto.posProductCode,
+    isAvailable: dto.isAvailable,
+    unavailableUntil: dto.unavailableUntil,
+  };
 }
 
 export async function updateItem(restaurantId: string, itemId: string, input: UpdateItemInput): Promise<MenuItemDto> {
+  const before = await getItem(restaurantId, itemId);
   await sequelize.transaction(async (transaction) => {
     const item = await loadItem(restaurantId, itemId, transaction);
     if (input.categoryId && input.categoryId !== item.categoryId) {
@@ -153,7 +177,12 @@ export async function updateItem(restaurantId: string, itemId: string, input: Up
     if (variants !== undefined) await replaceVariants(item.id, variants, transaction);
     await touchRestaurant(restaurantId, transaction);
   });
-  return getItem(restaurantId, itemId);
+  const after = await getItem(restaurantId, itemId);
+  const changes = audit.diff({ ...auditShape(before), categoryId: before.categoryId }, { ...auditShape(after), categoryId: after.categoryId });
+  if (changes) {
+    await audit.record({ restaurantId, action: 'item.update', entity: { type: 'item', id: itemId, label: audit.labelOf(after.name) }, ...changes });
+  }
+  return after;
 }
 
 export async function deleteItem(restaurantId: string, itemId: string): Promise<void> {
@@ -161,6 +190,12 @@ export async function deleteItem(restaurantId: string, itemId: string): Promise<
   await sequelize.transaction(async (transaction) => {
     await item.destroy({ transaction });
     await touchRestaurant(restaurantId, transaction);
+  });
+  await audit.record({
+    restaurantId,
+    action: 'item.delete',
+    entity: { type: 'item', id: itemId, label: audit.labelOf(item.name) },
+    before: { name: item.name, priceCents: item.priceCents },
   });
   await deleteStoredUrl(item.imageUrl);
   await deleteStoredUrl(item.thumbnailUrl);
@@ -171,6 +206,7 @@ export async function reorderItems(restaurantId: string, ids: string[]): Promise
     await applySortOrder('menu_items', restaurantId, ids, transaction);
     await touchRestaurant(restaurantId, transaction);
   });
+  await audit.record({ restaurantId, action: 'item.reorder', entity: { type: 'item' }, after: { ids } });
   return listItems(restaurantId, {});
 }
 
@@ -185,8 +221,10 @@ export async function setAvailability(
   itemId: string,
   input: AvailabilityInput,
 ): Promise<MenuItemDto> {
+  let before: { isAvailable: boolean; unavailableUntil: string | null; name: Record<string, string | undefined> } | null = null;
   await sequelize.transaction(async (transaction) => {
     const item = await loadItem(restaurantId, itemId, transaction);
+    before = { isAvailable: item.isAvailable, unavailableUntil: toIso(item.unavailableUntil), name: item.name };
     let patch: { isAvailable: boolean; unavailableUntil: Date | null };
     if (input.available) {
       patch = { isAvailable: true, unavailableUntil: null };
@@ -200,7 +238,15 @@ export async function setAvailability(
     await item.update(patch, { transaction });
     await touchRestaurant(restaurantId, transaction);
   });
-  return getItem(restaurantId, itemId);
+  const dto = await getItem(restaurantId, itemId);
+  const previous = before!;
+  const was = { isAvailable: previous.isAvailable, unavailableUntil: previous.unavailableUntil };
+  const now = { isAvailable: dto.isAvailable, unavailableUntil: dto.unavailableUntil };
+  // Both fields are always stored (not just the diff): "back at 06:00" reads as one state, not a lone timestamp.
+  if (audit.diff(was, now)) {
+    await audit.record({ restaurantId, action: 'item.availability', entity: { type: 'item', id: itemId, label: audit.labelOf(dto.name) }, before: was, after: now });
+  }
+  return dto;
 }
 
 export async function uploadItemImage(restaurantId: string, itemId: string, file: Buffer): Promise<MenuItemDto> {
@@ -217,5 +263,6 @@ export async function uploadItemImage(restaurantId: string, itemId: string, file
   });
   await deleteStoredUrl(previous.imageUrl);
   await deleteStoredUrl(previous.thumbnailUrl);
+  await audit.record({ restaurantId, action: 'item.image', entity: { type: 'item', id: itemId, label: audit.labelOf(item.name) }, after: { imageUrl: url } });
   return getItem(restaurantId, itemId);
 }

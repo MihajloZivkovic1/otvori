@@ -6,7 +6,7 @@ import * as controller from './controller.js';
 /** /api/admin/restaurants/:restaurantId/pos-config and …/pos/* — POS module on; writes and the sync are owner-only. */
 export const posConfigRouter = Router({ mergeParams: true });
 posConfigRouter.use(requireModule('pos'));
-posConfigRouter.get('/', controller.getPosConfig);
+posConfigRouter.get('/', requireOwner, controller.getPosConfig);
 posConfigRouter.patch('/', requireOwner, controller.updatePosConfig);
 posConfigRouter.post('/test', requireOwner, controller.testPosConnection);
 

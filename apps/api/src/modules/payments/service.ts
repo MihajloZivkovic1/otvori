@@ -20,6 +20,7 @@ import { moduleDisabled } from '../../middleware/modules.js';
 import { encryptSecret } from '../../utils/crypto.js';
 import { AppError, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
+import * as audit from '../audit/service.js';
 import { toIso } from '../../utils/objects.js';
 import { publishOrder, toOrderDto } from '../ordering/service.js';
 import { registerMismatch } from '../pos/service.js';
@@ -55,6 +56,17 @@ export async function updatePaymentConfig(restaurantId: string, input: UpdatePay
   };
   if (!next.tipPresets.includes(0)) next.tipPresets = [0, ...next.tipPresets];
   await restaurant.update({ paymentConfig: next });
+  const shape = (c: StoredPaymentConfig) => ({ provider: c.provider, merchantId: c.merchantId, tipPresets: c.tipPresets, receiptEmailEnabled: c.receiptEmailEnabled, hasSecret: c.secretEncrypted !== null });
+  const changes = audit.diff(shape(current), shape(next));
+  if (changes || input.secret !== undefined) {
+    await audit.record({
+      restaurantId,
+      action: 'payment_config.update',
+      entity: { type: 'restaurant', id: restaurantId, label: restaurant.name },
+      before: changes?.before ?? {},
+      after: { ...(changes?.after ?? {}), ...(input.secret !== undefined ? { secretChanged: true } : {}) },
+    });
+  }
   return toPaymentConfigDto(restaurant);
 }
 
@@ -327,6 +339,7 @@ export async function markOrderCash(restaurantId: string, orderId: string, now =
   await order.update({ paymentStatus: 'cash', paidAt: now, paidAmountCents: order.totalCents, tipCents: 0 });
   const fresh = await reloadOrder(order.id);
   publishOrder('order.updated', fresh);
+  await audit.record({ restaurantId, action: 'order.cash', entity: { type: 'order', id: order.id, label: `#${order.number}` }, after: { tableNumber: order.tableNumber, totalCents: order.totalCents } });
   return toOrderDto(fresh);
 }
 

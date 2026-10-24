@@ -10,6 +10,7 @@ import { MiniTag } from '../ui/Chip';
 import { EmptyState } from '../ui/EmptyState';
 import { Switch } from '../ui/Switch';
 import { useListSensors, verticalOnly } from './dnd';
+import { useElevation } from '../security/ElevationProvider';
 import { useRestaurantContext } from '../shell/RestaurantLayout';
 import { ItemThumb } from './ItemThumb';
 import { knownTags, TAG_LABELS } from './labels';
@@ -20,6 +21,8 @@ interface ItemsTableProps {
   items: MenuItemDto[];
   currency: string;
   defaultLocale: string;
+  /** Staff (Phase 11) only get the availability switch: no edit, no drag handle. */
+  canEdit?: boolean;
   canDelete: boolean;
   onReorder: (ids: string[]) => void;
   onToggleAvailable: (item: MenuItemDto, available: boolean) => void;
@@ -29,7 +32,7 @@ interface ItemsTableProps {
 }
 
 /** Desktop item rows for the selected category (design: 28/44/1fr/96/72/76 grid, 60px rows). */
-export function ItemsTable({ items, currency, defaultLocale, canDelete, onReorder, onToggleAvailable, onEdit, onDelete, onAdd }: ItemsTableProps) {
+export function ItemsTable({ items, currency, defaultLocale, canEdit = true, canDelete, onReorder, onToggleAvailable, onEdit, onDelete, onAdd }: ItemsTableProps) {
   const sensors = useListSensors();
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -60,7 +63,8 @@ export function ItemsTable({ items, currency, defaultLocale, canDelete, onReorde
                 name={text(item.name, defaultLocale) || 'Untitled item'}
                 description={text(item.description, defaultLocale)}
                 price={formatPrice(item.priceCents, currency)}
-                canDelete={canDelete}
+                canEdit={canEdit}
+                canDelete={canEdit && canDelete}
                 onToggle={(available) => onToggleAvailable(item, available)}
                 onEdit={() => onEdit(item)}
                 onDelete={() => onDelete(item)}
@@ -74,9 +78,11 @@ export function ItemsTable({ items, currency, defaultLocale, canDelete, onReorde
           variant="inline"
           title="No items in this category yet."
           actions={
-            <Button size="sm" onClick={onAdd}>
-              Add item
-            </Button>
+            canEdit ? (
+              <Button size="sm" onClick={onAdd}>
+                Add item
+              </Button>
+            ) : undefined
           }
         />
       ) : null}
@@ -89,16 +95,18 @@ interface ItemRowProps {
   name: string;
   description: string;
   price: string;
+  canEdit: boolean;
   canDelete: boolean;
   onToggle: (available: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, onDelete }: ItemRowProps) {
+function ItemRow({ item, name, description, price, canEdit, canDelete, onToggle, onEdit, onDelete }: ItemRowProps) {
   const { restaurant, hasModule } = useRestaurantContext();
+  const { locked } = useElevation();
   const missingPosCode = hasModule('pos') && restaurant.posConfig.sendOrdersToPos && !item.posProductCode;
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !canEdit });
   const available = item.isEffectivelyAvailable;
   return (
     <li
@@ -112,16 +120,20 @@ function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, 
         isDragging && 'relative z-10 shadow-[0_8px_24px_rgba(0,0,0,.12)]',
       )}
     >
-      <button
-        ref={setActivatorNodeRef}
-        type="button"
-        aria-label={`Reorder ${name}`}
-        className="grid cursor-grab touch-none place-items-center text-faint active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <Icon name="grip" size={16} />
-      </button>
+      {canEdit ? (
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          aria-label={`Reorder ${name}`}
+          className="grid cursor-grab touch-none place-items-center text-faint active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <Icon name="grip" size={16} />
+        </button>
+      ) : (
+        <span />
+      )}
       <ItemThumb src={item.thumbnailUrl ?? item.imageUrl} />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-2">
@@ -144,9 +156,11 @@ function ItemRow({ item, name, description, price, canDelete, onToggle, onEdit, 
       </div>
       <Switch checked={available} onChange={onToggle} label={`Available: ${name}`} />
       <div className="flex justify-end gap-1">
-        <IconButton label={`Edit ${name}`} variant="outline" onClick={onEdit}>
-          <Icon name="pencil" size={14} />
-        </IconButton>
+        {canEdit ? (
+          <IconButton label={locked ? `Edit ${name} (needs the owner PIN)` : `Edit ${name}`} variant="outline" onClick={onEdit}>
+            <Icon name={locked ? 'lock' : 'pencil'} size={14} />
+          </IconButton>
+        ) : null}
         {canDelete ? (
           <IconButton label={`Delete ${name}`} variant="outline" onClick={onDelete}>
             <Icon name="trash" size={14} />

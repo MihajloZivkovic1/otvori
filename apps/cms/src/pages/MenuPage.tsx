@@ -15,6 +15,8 @@ import { ItemThumb } from '../components/menu/ItemThumb';
 import { primaryLocale } from '../components/menu/LangTabs';
 import { MenuSkeleton, MobileMenuSkeleton } from '../components/menu/MenuSkeleton';
 import { SwipeRow } from '../components/menu/SwipeRow';
+import { LockGlyph } from '../components/security/LockStatus';
+import { useGuard } from '../components/security/ElevationProvider';
 import { MobileHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { Button, IconButton } from '../components/ui/Button';
@@ -141,6 +143,7 @@ function LoadError({ error, retry }: { error: unknown; retry: () => void }) {
 function DesktopMenu() {
   const state = useMenuState();
   const { restaurant, isOwner } = useRestaurantContext();
+  const { guard } = useGuard();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<CategoryDto | null>(null);
@@ -166,14 +169,18 @@ function DesktopMenu() {
           title="Your menu is empty"
           description="Start with a category like “Coffee” or “Mains”, then add items to it. Guests see changes the moment you publish."
           actions={
-            <>
-              <Button variant="primary" onClick={() => setCreating(true)}>
-                Add first category
-              </Button>
-              <Button disabled title="Coming soon">
-                Import from spreadsheet
-              </Button>
-            </>
+            isOwner ? (
+              <>
+                <Button variant="primary" icon={<LockGlyph />} onClick={guard(() => setCreating(true))}>
+                  Add first category
+                </Button>
+                <Button disabled title="Coming soon">
+                  Import from spreadsheet
+                </Button>
+              </>
+            ) : (
+              <span className="text-[13px] text-muted">The owner adds the first category.</span>
+            )
           }
         />
         {creating ? <CategoryModal category={null} onClose={() => setCreating(false)} onCreated={(c) => state.select(c.id)} /> : null}
@@ -195,6 +202,8 @@ function DesktopMenu() {
         onToggleHidden={state.toggleHidden}
         onReorder={state.reorderCategories}
         onCreate={state.createCategory}
+        readOnly={!isOwner}
+        guard={guard}
       />
       <section className="flex min-w-0 flex-1 flex-col" aria-labelledby="category-title">
         <div className="flex items-end justify-between gap-4 px-6 pb-4 pt-6">
@@ -203,27 +212,35 @@ function DesktopMenu() {
               <h1 id="category-title" className="truncate text-xl font-semibold leading-tight tracking-[-.01em]">
                 {selectedName}
               </h1>
-              <IconButton label="Rename category" size={28} onClick={() => setRenaming(selected)}>
-                <Icon name="pencil" size={14} />
-              </IconButton>
+              {isOwner ? (
+                <IconButton label="Rename category" size={28} onClick={guard(() => setRenaming(selected))}>
+                  <Icon name="pencil" size={14} />
+                </IconButton>
+              ) : null}
             </div>
             <div className="text-[13px] text-muted">{summaryOf(selected, state.categoryItems)}</div>
           </div>
-          <Button variant="primary" icon={<Icon name="plus" size={14} strokeWidth={2} />} onClick={() => state.openItem('new')}>
-            Add item
-          </Button>
+          {isOwner ? (
+            <Button variant="primary" icon={<LockGlyph className="text-on-accent" />} onClick={guard(() => state.openItem('new'))}>
+              <Icon name="plus" size={14} strokeWidth={2} />
+              Add item
+            </Button>
+          ) : (
+            <span className="text-[13px] text-muted">Staff can switch items on and off; the owner edits the menu.</span>
+          )}
         </div>
         <div className="px-6 pb-6">
           <ItemsTable
             items={state.categoryItems}
             currency={restaurant.currency}
             defaultLocale={restaurant.defaultLocale}
+            canEdit={isOwner}
             canDelete={isOwner}
             onReorder={state.reorderItems}
             onToggleAvailable={state.toggleAvailable}
-            onEdit={(item) => state.openItem(item.id)}
-            onDelete={setDeleting}
-            onAdd={() => state.openItem('new')}
+            onEdit={guard((item: MenuItemDto) => state.openItem(item.id))}
+            onDelete={guard((item: MenuItemDto) => setDeleting(item))}
+            onAdd={guard(() => state.openItem('new'))}
           />
         </div>
       </section>
@@ -264,6 +281,7 @@ function DesktopMenu() {
 function MobileMenu() {
   const state = useMenuState();
   const { restaurant, isOwner } = useRestaurantContext();
+  const { guard, locked } = useGuard();
   const toast = useToast();
   const [reorderMode, setReorderMode] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -277,8 +295,8 @@ function MobileMenu() {
       title="Menu"
       backTo={home}
       action={
-        state.categories.length > 0 ? (
-          <Button variant="accent-text" className="h-11 px-2" onClick={() => setReorderMode((v) => !v)} aria-pressed={reorderMode}>
+        state.categories.length > 0 && isOwner ? (
+          <Button variant="accent-text" className="h-11 px-2" icon={<LockGlyph />} onClick={reorderMode ? () => setReorderMode(false) : guard(() => setReorderMode(true))} aria-pressed={reorderMode}>
             {reorderMode ? 'Done' : 'Reorder'}
           </Button>
         ) : null
@@ -313,21 +331,25 @@ function MobileMenu() {
     return (
       <div className="flex flex-1 flex-col">
         {header}
-        <div className="flex gap-1.5 border-b border-line px-4 pb-2.5 pt-2">
-          <button type="button" onClick={() => setCreating(true)} className="h-9 cursor-pointer rounded-full border border-dashed border-line px-3 text-sm font-medium text-muted">
-            + Category
-          </button>
-        </div>
+        {isOwner ? (
+          <div className="flex gap-1.5 border-b border-line px-4 pb-2.5 pt-2">
+            <button type="button" onClick={guard(() => setCreating(true))} className="h-9 cursor-pointer rounded-full border border-dashed border-line px-3 text-sm font-medium text-muted">
+              + Category
+            </button>
+          </div>
+        ) : null}
         <EmptyState
           title="No menu yet"
-          description="Add a category, then your first item. Takes about a minute."
+          description={isOwner ? 'Add a category, then your first item. Takes about a minute.' : 'The owner has not added anything yet.'}
           actions={
-            <div className="flex flex-col items-center gap-1">
-              <Button variant="primary" size="xl" className="px-5 text-[15px]" onClick={() => setCreating(true)}>
-                Add category
-              </Button>
-              <span className="mt-1 text-sm text-muted">Or set up on desktop for the full editor.</span>
-            </div>
+            isOwner ? (
+              <div className="flex flex-col items-center gap-1">
+                <Button variant="primary" size="xl" className="px-5 text-[15px]" icon={<LockGlyph className="text-on-accent" />} onClick={guard(() => setCreating(true))}>
+                  Add category
+                </Button>
+                <span className="mt-1 text-sm text-muted">Or set up on desktop for the full editor.</span>
+              </div>
+            ) : undefined
           }
         />
         {creating ? <CategoryModal category={null} onClose={() => setCreating(false)} onCreated={(c) => state.select(c.id)} /> : null}
@@ -371,9 +393,11 @@ function MobileMenu() {
             </button>
           );
         })}
-        <button type="button" onClick={() => setCreating(true)} className="h-9 shrink-0 cursor-pointer rounded-full border border-dashed border-line px-3 text-sm font-medium text-muted">
-          + Category
-        </button>
+        {isOwner ? (
+          <button type="button" onClick={guard(() => setCreating(true))} className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-dashed border-line px-3 text-sm font-medium text-muted">
+            <LockGlyph />+ Category
+          </button>
+        ) : null}
       </div>
 
       <div className="flex flex-col pb-24">
@@ -387,36 +411,40 @@ function MobileMenu() {
                   name={text(item.name, restaurant.defaultLocale) || 'Untitled item'}
                   price={formatPrice(item.priceCents, restaurant.currency)}
                   reorderMode={reorderMode}
+                  canEdit={isOwner}
+                  locked={locked}
                   open={openRow === item.id}
                   onOpenChange={(open) => setOpenRow(open ? item.id : null)}
                   onToggle={(available) => state.toggleAvailable(item, available)}
-                  onEdit={() => {
+                  onEdit={guard(() => {
                     setOpenRow(null);
                     state.openItem(item.id);
-                  }}
-                  onDelete={isOwner ? () => setDeleting(item) : undefined}
+                  })}
+                  onDelete={isOwner ? guard(() => setDeleting(item)) : undefined}
                 />
               ))}
             </ul>
           </SortableContext>
         </DndContext>
         {state.categoryItems.length === 0 ? (
-          <EmptyState variant="inline" title="No items in this category yet." actions={<Button size="sm" onClick={() => state.openItem('new')}>Add item</Button>} />
+          <EmptyState variant="inline" title="No items in this category yet." actions={isOwner ? <Button size="sm" onClick={guard(() => state.openItem('new'))}>Add item</Button> : undefined} />
         ) : (
           <p className="p-4 text-center text-xs text-muted">
-            {reorderMode ? 'Drag the handles to reorder, then tap Done.' : 'Swipe left for Edit / Delete · hold the handle to reorder'}
+            {!isOwner ? 'Tap the switch to take an item off for today.' : reorderMode ? 'Drag the handles to reorder, then tap Done.' : 'Swipe left for Edit / Delete · hold the handle to reorder'}
           </p>
         )}
       </div>
 
-      <button
-        type="button"
-        aria-label="Add item"
-        onClick={() => state.openItem('new')}
-        className="fixed right-5 bottom-[calc(84px+env(safe-area-inset-bottom,0px))] z-30 grid size-14 cursor-pointer place-items-center rounded-full bg-accent text-on-accent shadow-[0_8px_20px_rgba(122,62,72,.35)]"
-      >
-        <Icon name="plus" size={22} strokeWidth={2.2} />
-      </button>
+      {isOwner ? (
+        <button
+          type="button"
+          aria-label={locked ? 'Add item (needs the owner PIN)' : 'Add item'}
+          onClick={guard(() => state.openItem('new'))}
+          className="fixed right-5 bottom-[calc(84px+env(safe-area-inset-bottom,0px))] z-30 grid size-14 cursor-pointer place-items-center rounded-full bg-accent text-on-accent shadow-[0_8px_20px_rgba(122,62,72,.35)]"
+        >
+          {locked ? <Icon name="lock" size={20} strokeWidth={2} /> : <Icon name="plus" size={22} strokeWidth={2.2} />}
+        </button>
+      ) : null}
 
       {state.editing ? (
         <ItemSheet
@@ -455,6 +483,8 @@ interface MobileItemRowProps {
   name: string;
   price: string;
   reorderMode: boolean;
+  canEdit: boolean;
+  locked: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onToggle: (available: boolean) => void;
@@ -462,34 +492,56 @@ interface MobileItemRowProps {
   onDelete?: () => void;
 }
 
-function MobileItemRow({ item, name, price, reorderMode, open, onOpenChange, onToggle, onEdit, onDelete }: MobileItemRowProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+function MobileItemRow({ item, name, price, reorderMode, canEdit, locked, open, onOpenChange, onToggle, onEdit, onDelete }: MobileItemRowProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !canEdit });
   const available = item.isEffectivelyAvailable;
+  const row = (
+    <div className={cn('flex min-h-16 items-center gap-3 bg-surface px-4 py-2', !available && 'opacity-50')}>
+      <ItemThumb src={item.imageUrl} />
+      {canEdit ? (
+        <button type="button" onClick={onEdit} className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px text-left">
+          <span className="flex items-center gap-1.5 truncate text-[15px] font-medium">
+            {name}
+            {locked ? <Icon name="lock" size={11} strokeWidth={2.2} className="shrink-0 text-muted" aria-label="Needs the owner PIN" /> : null}
+          </span>
+          <span className="text-[13px] tabular-nums text-muted">
+            {item.variants.length > 0 ? 'from ' : ''}
+            {price}
+          </span>
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-1 flex-col gap-px text-left">
+          <span className="truncate text-[15px] font-medium">{name}</span>
+          <span className="text-[13px] tabular-nums text-muted">
+            {item.variants.length > 0 ? 'from ' : ''}
+            {price}
+          </span>
+        </div>
+      )}
+      <Switch size="lg" checked={available} onChange={onToggle} label={`Available: ${name}`} />
+      {canEdit ? (
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          aria-label={`Reorder ${name}`}
+          className={cn('-mr-2 grid h-11 w-7 cursor-grab touch-none place-items-center active:cursor-grabbing', reorderMode ? 'text-ink' : 'text-muted')}
+          {...attributes}
+          {...listeners}
+        >
+          <Icon name="grip" size={19} />
+        </button>
+      ) : null}
+    </div>
+  );
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-10 shadow-[0_8px_24px_rgba(0,0,0,.14)]')}>
-      <SwipeRow open={open} onOpenChange={onOpenChange} disabled={reorderMode} onEdit={onEdit} onDelete={onDelete}>
-        <div className={cn('flex min-h-16 items-center gap-3 bg-surface px-4 py-2', !available && 'opacity-50')}>
-          <ItemThumb src={item.imageUrl} />
-          <button type="button" onClick={onEdit} className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px text-left">
-            <span className="truncate text-[15px] font-medium">{name}</span>
-            <span className="text-[13px] tabular-nums text-muted">
-              {item.variants.length > 0 ? 'from ' : ''}
-              {price}
-            </span>
-          </button>
-          <Switch size="lg" checked={available} onChange={onToggle} label={`Available: ${name}`} />
-          <button
-            ref={setActivatorNodeRef}
-            type="button"
-            aria-label={`Reorder ${name}`}
-            className={cn('-mr-2 grid h-11 w-7 cursor-grab touch-none place-items-center active:cursor-grabbing', reorderMode ? 'text-ink' : 'text-muted')}
-            {...attributes}
-            {...listeners}
-          >
-            <Icon name="grip" size={19} />
-          </button>
-        </div>
-      </SwipeRow>
+      {canEdit ? (
+        <SwipeRow open={open} onOpenChange={onOpenChange} disabled={reorderMode} onEdit={onEdit} onDelete={onDelete}>
+          {row}
+        </SwipeRow>
+      ) : (
+        row
+      )}
     </li>
   );
 }

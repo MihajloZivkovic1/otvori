@@ -4,6 +4,8 @@ import { env } from './config/env.js';
 import { features } from './config/features.js';
 import { runMigrations } from './db/migrate.js';
 import { sequelize } from './db/sequelize.js';
+import { startDigestJob } from './modules/audit/digest.js';
+import { startAuditRetentionJob } from './modules/audit/service.js';
 import { startOrderExpiryJob } from './modules/ordering/expiry.js';
 import { closeAllStreams } from './modules/ordering/sse.js';
 import { startPaymentReconcileJob } from './modules/payments/reconcile.js';
@@ -37,6 +39,9 @@ async function main(): Promise<void> {
   const stopReconcileJob = features.payments ? startPaymentReconcileJob() : () => undefined;
   // Calls to the register (open on accept, close + fiscal receipt on payment) with retries.
   const stopPosQueue = features.pos ? startPosQueue() : () => undefined;
+  // Audit log (Phase 11): 90-day retention and the opt-in morning digest.
+  const stopAuditRetention = startAuditRetentionJob();
+  const stopDigest = startDigestJob();
   logger.info({ features }, 'Feature flags');
 
   let shuttingDown = false;
@@ -47,6 +52,8 @@ async function main(): Promise<void> {
     stopExpiryJob();
     stopReconcileJob();
     stopPosQueue();
+    stopAuditRetention();
+    stopDigest();
     // SSE streams never end on their own; close them so server.close() can finish (clients reconnect).
     closeAllStreams();
     // Webhook results still being applied finish before the pool closes.

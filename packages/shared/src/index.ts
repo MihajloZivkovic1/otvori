@@ -17,4 +17,8 @@ export * from './schemas/analytics.js';
 export * from './schemas/public.js';
 export * from './schemas/superadmin.js';
 export * from './schemas/ordering.js';
+export * from './security.js';
+export * from './schemas/security.js';
+export * from './schemas/team.js';
+export * from './schemas/audit.js';
 export * from './dto.js';

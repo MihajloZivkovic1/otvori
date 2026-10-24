@@ -24,13 +24,13 @@ export async function requireSseToken(req: Request, _res: Response, next: NextFu
 
   const user = await User.findByPk(userId, { attributes: ['id', 'email', 'name', 'isSuperadmin'] });
   if (!user) throw unauthorized('User no longer exists');
-  req.user = { id: user.id, email: user.email, name: user.name, isSuperadmin: user.isSuperadmin };
+  req.user = { id: user.id, email: user.email, name: user.name, isSuperadmin: user.isSuperadmin, sessionId: null };
   if (user.isSuperadmin) {
-    req.membership = { restaurantId, role: 'owner', viaSuperadmin: true };
+    req.membership = { restaurantId, role: 'owner', viaSuperadmin: true, elevated: true };
   } else {
     const membership = await Membership.findOne({ where: { userId, restaurantId }, attributes: ['role'] });
     if (!membership) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
-    req.membership = { restaurantId, role: membership.role, viaSuperadmin: false };
+    req.membership = { restaurantId, role: membership.role, viaSuperadmin: false, elevated: false };
   }
   next();
 }

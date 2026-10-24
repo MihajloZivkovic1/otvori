@@ -1,4 +1,5 @@
 import type { AuthResponseDto } from '@qr-menu/shared';
+import { elevationStore, requestElevation, restaurantIdFromPath } from './elevation';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -111,10 +112,15 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, code, message, details);
 }
 
-async function send(path: string, init: RequestInit, auth: boolean, allowRetry: boolean): Promise<Response> {
+async function send(path: string, init: RequestInit, auth: boolean, allowRetry: boolean, allowUnlock = true): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = tokenStore.get();
   if (auth && token) headers.set('Authorization', `Bearer ${token}`);
+  // Owner PIN (Phase 11): owner requests carry the device's elevation token for that venue.
+  const rid = auth ? restaurantIdFromPath(path) : null;
+  const elevation = rid ? elevationStore.get(rid) : null;
+  if (elevation) headers.set('X-Elevation', elevation.token);
+  else headers.delete('X-Elevation');
 
   let response: Response;
   try {
@@ -125,14 +131,37 @@ async function send(path: string, init: RequestInit, auth: boolean, allowRetry: 
   }
 
   if (response.status === 401 && auth) {
+    // A wrong PIN or a wrong password confirmation is a 401 too, but it is about the credential just typed, not
+    // about the session: hand it to the caller instead of refreshing or signing out.
+    const code = await peekErrorCode(response);
+    if (code === 'PIN_INVALID' || code === 'INVALID_CREDENTIALS') return response;
     if (allowRetry) {
       const session = await refreshSession();
-      if (session) return send(path, init, auth, false);
+      if (session) return send(path, init, auth, false, allowUnlock);
     }
     tokenStore.set(null);
     unauthorizedHandler?.();
   }
+
+  // 403 PIN_REQUIRED: the venue has an owner PIN and this device is locked. Ask the keypad once; if the owner
+  // unlocks, replay the very same request with the fresh token. Cancelling leaves the 403 for the caller.
+  if (response.status === 403 && auth && rid && allowUnlock) {
+    const code = await peekErrorCode(response);
+    if (code === 'PIN_REQUIRED') {
+      elevationStore.clear(rid);
+      if (await requestElevation(rid)) return send(path, init, auth, allowRetry, false);
+    }
+  }
   return response;
+}
+
+async function peekErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.clone().json()) as { error?: { code?: unknown } } | null;
+    return typeof body?.error?.code === 'string' ? body.error.code : null;
+  } catch {
+    return null;
+  }
 }
 
 /** JSON request against the API; 401 → one refresh + retry; 204 → undefined. */

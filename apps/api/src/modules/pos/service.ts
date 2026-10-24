@@ -22,6 +22,7 @@ import { moduleDisabled } from '../../middleware/modules.js';
 import { encryptSecret } from '../../utils/crypto.js';
 import { AppError, badRequest, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
+import * as audit from '../audit/service.js';
 import { sendFiscalReceipt } from '../../utils/mailer.js';
 import { touchRestaurant } from '../shared/touch-restaurant.js';
 import { publishOrder, toOrderDto } from '../ordering/service.js';
@@ -66,6 +67,26 @@ export async function updatePosConfig(restaurantId: string, input: UpdatePosConf
       await touchRestaurant(restaurantId, transaction);
     }
   });
+  const shape = (c: StoredPosConfig) => ({
+    provider: c.provider,
+    baseUrl: c.baseUrl,
+    tableMapping: c.tableMapping,
+    sendOrdersToPos: c.sendOrdersToPos,
+    closeOnPayment: c.closeOnPayment,
+    printOnClose: c.printOnClose,
+    closeMode: c.closeMode,
+    hasApiKey: c.apiKeyEncrypted !== null,
+  });
+  const changes = audit.diff(shape(current), shape(next));
+  if (changes || input.apiKey !== undefined) {
+    await audit.record({
+      restaurantId,
+      action: 'pos_config.update',
+      entity: { type: 'restaurant', id: restaurantId, label: restaurant.name },
+      before: changes?.before ?? {},
+      after: { ...(changes?.after ?? {}), ...(input.apiKey !== undefined ? { apiKeyChanged: true } : {}) },
+    });
+  }
   return toPosConfigDto(restaurant);
 }
 
@@ -132,16 +153,21 @@ export async function applyPosSync(restaurantId: string, input: ApplyPosSyncInpu
   const products = (await posProvider(config.provider).fetchProducts(posCredentialsOf(restaurant))).filter((p) => wanted.has(p.code));
   const byCode = new Map(products.map((p) => [p.code, p]));
 
-  return sequelize.transaction(async (transaction) => {
+  const result = await sequelize.transaction(async (transaction) => {
     let categoryId: string | null = null;
     let created = 0;
     let updated = 0;
+    const priceChanges: { code: string; name: string | null; from: number; to: number }[] = [];
 
     for (const code of input.updateCodes) {
       const product = byCode.get(code);
       if (!product) continue;
+      const current = await MenuItem.findAll({ where: { restaurantId, posProductCode: code }, attributes: ['name', 'priceCents'], transaction });
       const [count] = await MenuItem.update({ priceCents: product.priceCents }, { where: { restaurantId, posProductCode: code }, transaction });
       updated += count;
+      for (const item of current) {
+        if (item.priceCents !== product.priceCents) priceChanges.push({ code, name: audit.labelOf(item.name), from: item.priceCents, to: product.priceCents });
+      }
     }
 
     const toCreate = input.createCodes.map((code) => byCode.get(code)).filter((p): p is PosProduct => Boolean(p));
@@ -189,8 +215,16 @@ export async function applyPosSync(restaurantId: string, input: ApplyPosSyncInpu
       }
     }
     if (created > 0 || updated > 0) await touchRestaurant(restaurantId, transaction);
-    return { created, updated, categoryId };
+    return { created, updated, categoryId, priceChanges };
   });
+  const { priceChanges, ...dto } = result;
+  await audit.record({
+    restaurantId,
+    action: 'pos.sync',
+    entity: { type: 'restaurant', id: restaurantId, label: restaurant.name },
+    after: { created: dto.created, updated: dto.updated, createCodes: input.createCodes, ...(priceChanges.length ? { priceChanges } : {}) },
+  });
+  return dto;
 }
 
 /* ------------------------------------------------------------------ jobs: open on accept, close on payment */
@@ -265,6 +299,7 @@ export async function retryPosJobs(restaurantId: string, orderId: string): Promi
   if (order.fiscalStatus === 'failed') await order.update({ fiscalStatus: 'pending', fiscalError: null });
   const fresh = (await Order.findByPk(order.id, { include: [ITEMS_INCLUDE] }))!;
   publishOrder('order.updated', fresh);
+  await audit.record({ restaurantId, action: 'order.fiscal_retry', entity: { type: 'order', id: order.id, label: `#${order.number}` } });
   return toOrderDto(fresh);
 }
 
@@ -430,6 +465,7 @@ export async function markFiscalManual(restaurantId: string, orderId: string): P
   await order.update({ fiscalStatus: 'manual', fiscalError: null });
   const fresh = (await Order.findByPk(order.id, { include: [ITEMS_INCLUDE] }))!;
   publishOrder('order.updated', fresh);
+  await audit.record({ restaurantId, action: 'order.fiscal_manual', entity: { type: 'order', id: order.id, label: `#${order.number}` } });
   return toOrderDto(fresh);
 }
 

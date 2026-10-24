@@ -18,6 +18,9 @@ export const routes: RouteObject[] = [
       { path: 'forgot', lazy: () => import('./pages/auth/ForgotPasswordPage').then((m) => ({ Component: m.ForgotPasswordPage })) },
       { path: 'auth/magic', lazy: () => import('./pages/auth/MagicLinkPage').then((m) => ({ Component: m.MagicLinkPage })) },
       { path: 'auth/reset', lazy: () => import('./pages/auth/ResetPasswordPage').then((m) => ({ Component: m.ResetPasswordPage })) },
+      // Team (Phase 11): the e-mail invite link and the waiter join code.
+      { path: 'auth/invite', lazy: () => import('./pages/auth/InvitePage').then((m) => ({ Component: m.InvitePage })) },
+      { path: 'join', lazy: () => import('./pages/auth/JoinPage').then((m) => ({ Component: m.JoinPage })) },
       {
         element: <RequireAuth />,
         children: [
@@ -44,6 +47,7 @@ export const routes: RouteObject[] = [
               { path: 'analytics', lazy: () => import('./pages/AnalyticsPage').then((m) => ({ Component: m.AnalyticsPage })) },
               { path: 'settings', lazy: () => import('./pages/SettingsPage').then((m) => ({ Component: m.SettingsPage })) },
               { path: 'settings/modules', lazy: () => import('./pages/ModulesPage').then((m) => ({ Component: m.ModulesPage })) },
+              { path: 'settings/history', lazy: () => import('./pages/AuditLogPage').then((m) => ({ Component: m.AuditLogPage })) },
               { path: 'more', lazy: () => import('./pages/MorePage').then((m) => ({ Component: m.MorePage })) },
             ],
           },

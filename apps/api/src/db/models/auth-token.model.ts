@@ -32,6 +32,14 @@ export class AuthToken extends Model<InferAttributes<AuthToken>, InferCreationAt
   @Column(DataType.DATE)
   usedAt!: CreationOptional<Date | null>;
 
+  /**
+   * Stable id of one sign-in: carried over when the refresh token rotates, embedded as `sid` in access tokens and
+   * what elevation tokens (owner PIN) are bound to. Null on one-time tokens.
+   */
+  @AllowNull(true)
+  @Column(DataType.UUID)
+  sessionId!: CreationOptional<string | null>;
+
   createdAt!: CreationOptional<Date>;
 
   @BelongsTo(() => User)

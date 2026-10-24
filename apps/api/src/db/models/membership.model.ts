@@ -25,6 +25,12 @@ export class Membership extends Model<InferAttributes<Membership>, InferCreation
   @Column(DataType.ENUM(...MEMBERSHIP_ROLES))
   role!: MembershipRole;
 
+  /** Morning e-mail with yesterday's changes (Phase 11). */
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  dailyDigest!: CreationOptional<boolean>;
+
   @BelongsTo(() => User)
   user?: NonAttribute<User>;
 

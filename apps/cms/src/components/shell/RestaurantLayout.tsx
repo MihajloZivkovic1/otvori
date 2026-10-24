@@ -9,6 +9,7 @@ import { useRestaurant } from '../../lib/queries';
 import { lastRestaurant } from '../../lib/storage';
 import { HomePage } from '../../pages/HomePage';
 import { OrderingProvider } from '../orders/OrderingProvider';
+import { ElevationProvider } from '../security/ElevationProvider';
 import { Button } from '../ui/Button';
 import { AppShell } from './AppShell';
 import { FullPageLoading } from './RequireAuth';
@@ -81,12 +82,15 @@ export function RestaurantLayout() {
         features,
       }}
     >
-      {/* Live orders/calls (SSE + polling fallback) for the nav badge, the title and the waiter screen; idle when ordering is off. */}
-      <OrderingProvider restaurant={query.data}>
-        <AppShell restaurant={query.data} role={role}>
-          <Outlet />
-        </AppShell>
-      </OrderingProvider>
+      {/* Owner PIN (Phase 11): this device's elevation, the keypad and the API client's retry hook. */}
+      <ElevationProvider restaurant={query.data} isOwner={role === 'owner'}>
+        {/* Live orders/calls (SSE + polling fallback) for the nav badge, the title and the waiter screen; idle when ordering is off. */}
+        <OrderingProvider restaurant={query.data}>
+          <AppShell restaurant={query.data} role={role}>
+            <Outlet />
+          </AppShell>
+        </OrderingProvider>
+      </ElevationProvider>
     </RestaurantContext.Provider>
   );
 }

@@ -14,3 +14,7 @@ authRouter.get('/magic-link/:token', controller.consumeMagicLink);
 authRouter.post('/forgot-password', authLimiter, controller.forgotPassword);
 authRouter.post('/reset-password', authLimiter, controller.resetPassword);
 authRouter.get('/me', requireAuth, controller.me);
+// Team (Phase 11): e-mail invites and the 6-digit join code both end in a signed-in session.
+authRouter.get('/invite/:token', authLimiter, controller.inviteInfo);
+authRouter.post('/invite', authLimiter, controller.acceptInvite);
+authRouter.post('/join', authLimiter, controller.joinWithCode);

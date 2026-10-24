@@ -31,7 +31,7 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 | `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
 | `deploy/` | Production stack for one 1 GB droplet: compose file, two Dockerfiles, Caddyfile, deploy/backup/restore scripts, README | Phase 4 (done) |
-| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos API does + open questions), `DEMO.md` (end-to-end demo script) | Phase 9 |
+| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos API does + open questions), `DEMO.md` (end-to-end demo script), `PERMISSIONS.md` (owner/service route matrix, Phase 11) | Phase 9–11 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
@@ -96,9 +96,13 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   403 `PLAN_REQUIRED`. `createRestaurantWithOwner()` in `modules/restaurants/service.ts` is shared with `POST /api/auth/register`.
 - Services take `restaurantId` as an explicit argument (from `restaurantIdOf(req)`), and **every query filters by it**.
   The restaurant id is never read from the request body.
-- Owner-only (`requireOwner`): PATCH restaurant settings, logo upload, publish, DELETE restaurant/category/item/table.
-  Staff can manage menu content, tables, availability, images and read analytics.
-- Superadmins pass membership checks as implicit owners (support use) and get `/api/superadmin/*`.
+- **Owner vs service routes (Phase 11, matrix in `docs/PERMISSIONS.md`)**: the single `requireOwner` guard answers
+  403 `ROLE_REQUIRED` to staff and, when the venue has an owner PIN, 403 `PIN_REQUIRED` to an owner request without a
+  valid `X-Elevation` token. Owner = prices, item/category create/edit/reorder/delete, images, tables create/edit/
+  delete, QR files, branding, settings, modules, payment/POS config (reads included), team, audit log, delete venue.
+  Service (both roles) = reading, `PATCH /items/:id/availability`, table block, orders, calls, SSE, cash, fiscal
+  retry/manual, analytics. `requireOwnerRole` (role only, no PIN) exists for `/security/*`.
+- Superadmins pass membership checks as implicit owners (support use), skip the PIN, and get `/api/superadmin/*`.
 
 ## Data conventions
 
@@ -211,6 +215,58 @@ Per-venue feature switches so the CMS stays a plain QR menu by default: `restaur
 - Tests: `apps/api/test/modules.test.ts`, `apps/cms/test/modules.test.tsx`, the module-off case in
   `apps/menu/test/ordering.test.tsx`; fixtures carry `modules`, and the CMS helpers `orderingMode()` / `liveOrdering()`
   switch the module on together with the mode.
+
+## Owner PIN, team and audit log (Phase 11)
+
+Reality: one shared phone/tablet at the bar, signed in as the owner, used by waiters. Everything lives in
+`apps/api/src/modules/{security,team,audit}/`, shared `packages/shared/src/security.ts` (+ `schemas/{security,team,audit}.ts`),
+CMS `components/security/`, `components/settings/{SecurityCard,TeamCard}.tsx`, `pages/AuditLogPage.tsx`,
+`pages/auth/{InvitePage,JoinPage}.tsx`, `lib/elevation.ts`. Tests: `apps/api/test/{permissions,pin,team,audit}.test.ts`,
+`apps/cms/test/{security,team}.test.tsx`.
+
+- **Owner PIN**: `restaurants.owner_pin_hash` (bcrypt; 4 digits; `weakPinReason()` rejects the 20 most common PINs
+  (`COMMON_PINS`), repeated digits and straight runs). Set/change/remove with the account password
+  (`PUT`/`DELETE …/security/pin`), never with the PIN itself. `RestaurantDto.pinSet`.
+- **Elevation**: `POST …/security/unlock { pin | password, window: '1'|'5'|'15'|'session' }` → `ElevationDto`
+  (`utils/jwt.ts` `signElevationToken`: `type:'elevation'`, `rid`, `sid`, `win`; TTL = window, capped at
+  `PIN_LIMITS.maxTokenMinutes` = 15; `session` tokens are renewed by `POST …/security/extend`). Bound to the sign-in:
+  `auth_tokens.session_id` is kept across refresh rotations and rides in the access token as `sid` (`req.user.sessionId`);
+  the elevation's `sid` must match. Sent as header `X-Elevation`. A password sign-in / reset returns
+  `AuthResponseDto.elevations` for every owned venue with a PIN (default window 5 min). Superadmins skip the gate.
+- **Lockout** (`modules/security/lockout.ts`, in-memory, single instance like the SSE bus): 5 wrong attempts per
+  sign-in **and** per venue → 15 min (`423 PIN_LOCKED { lockedUntil }`; `401 PIN_INVALID { attemptsLeft }` before);
+  every attempt and lockout is an audit row (`auth.pin_failed` / `auth.pin_lockout`); the second lockout within 24 h
+  (counted from the audit log) mails every owner (`sendPinLockoutAlert`). `resetPinLockouts()` for tests.
+- **CMS**: `lib/elevation.ts` keeps the token per venue in memory + `sessionStorage['tabla.cms.elevation.<rid>']`
+  (reload keeps it, closing the tab locks); `api()` adds `X-Elevation` for `/api/admin/restaurants/<rid>/…` and, on
+  403 `PIN_REQUIRED`, asks the `ElevationProvider` (mounted by `RestaurantLayout`) to open the `PinKeypad` and replays
+  the request once; 401 `PIN_INVALID` / `INVALID_CREDENTIALS` never trigger a refresh or sign-out. `useElevation()`
+  = `{ pinSet, locked, elevation, ensureElevated, lock }`, `useGuard()` = `{ locked, guard(fn) }` wraps owner entry
+  points (Add item, edit, reorder, categories, tables, print, Settings/Branding save) so the keypad opens before the
+  action; `LockGlyph` marks those controls while locked; `LockStatus` is the top-bar pill / phone strip with Lock /
+  Unlock. The keypad remembers the window in `localStorage['tabla.cms.unlockWindow']`; "Password" on the keypad
+  unlocks with the owner's password. Staff never see owner controls (menu = switches only, tables = share/copy/block).
+- **Team**: `team_invites` (kind `email` = one-time token hash, 7 days, mail `sendTeamInvite` → `APP_URL/auth/invite?token=`;
+  kind `code` = plain 6-digit join code, 24 h, one active per venue). `GET/POST/DELETE …/team/*` (owner, PIN-gated),
+  `GET /api/auth/invite/:token` (preview) + `POST /api/auth/invite { token, name?, password? }` and
+  `POST /api/auth/join { code, name, email?, password }` end in a session. Join without e-mail → synthetic sign-in
+  `<handle>@<slug>.staff.otvori.menu` (`STAFF_EMAIL_SUFFIX`; `TeamMemberDto.hasRealEmail`; such accounts get no mail).
+  The last owner can neither be demoted nor removed (`409 LAST_OWNER`). `memberships.daily_digest` is the per-member
+  digest opt-in (`PATCH …/security { dailyDigest }`). Seed: Kafeterija has staff `marko@kafeterija.rs` / `tabla1234`; no PIN is seeded.
+- **Audit log** `audit_log` (restaurant, user + name/e-mail snapshots, role, `elevated`, action, entity type/id/label,
+  `before`/`after` JSONB diff, ip). Actor comes from `AsyncLocalStorage` opened by `requireMembership()`
+  (`modules/audit/context.ts`); services call `audit.record()` (never throws) after the change commits, with
+  `audit.diff()` for changed keys only (availability stores both fields in full). Actions: `AUDIT_ACTIONS` (menu,
+  tables, settings, configs, `order.accept|reject|deliver|cash|fiscal_*`, `request.done`, `auth.login` per venue with
+  the method, PIN events, `team.*`). `GET …/audit-log` (owner) with `kind` (`AUDIT_KINDS`; `prices` = item rows whose
+  `after` has `priceCents`/`variants`/`priceChanges`), `action`, `userId`, `from`/`to`, pagination + the `users`
+  list; `priceChange` is derived (`isPriceChange()`). Retention `pruneAuditLog()` every 6 h (`AUDIT_LIMITS.retentionDays`
+  = 90). CMS: Settings → Protection card (PIN, digest switch, link) and `settings/history` (`AuditLogPage`: kind chips,
+  who, dates, price rows highlighted, PIN failures tinted).
+- **Daily digest** (`modules/audit/digest.ts`, every 15 min): per venue, once per local day at/after 07:00
+  (`restaurants.digest_sent_on`), to opted-in members with a real e-mail, only when yesterday had entries; subject
+  `"<venue> · Juče: 3 promene cena, 1 novi artikal, 2 pogrešna PIN-a"` (`digestSummary()`, Serbian plurals via
+  `srPlural()`) with the history link. `runDailyDigest(now)` is the testable entry point.
 
 ## Online payment (Phase 9c)
 
@@ -523,10 +579,12 @@ same origin); `APP_VERSION` (build env, the git short SHA in Docker) versions th
 ### Routing & active restaurant
 - `/` → `HomeRedirect`: last used venue (`localStorage['tabla.cms.lastRestaurant.<userId>']`) → first membership → `/superadmin`
   (superadmins) → `/no-venue`. `/r/:restaurantId/*` → `RestaurantLayout` checks the membership (superadmins pass as owners), loads
-  `GET /admin/restaurants/:id`, stores it as last used and provides `useRestaurantContext()` = `{ restaurant, role, isOwner, isMobile }`.
+  `GET /admin/restaurants/:id`, stores it as last used and provides `useRestaurantContext()` = `{ restaurant, role, isOwner, isMobile }`,
+  wrapped in the `ElevationProvider` (owner PIN, Phase 11) and the `OrderingProvider`.
 - Screens: `menu` (`?c=<categoryId>` selected category, `?item=<id>|new` opens the editor), `menu/unavailable`, `tables`,
-  `orders` (only while the ordering module is on and `orderingMode ≠ 'off'`), `settings/modules`, `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile),
-  index = Home on phones / redirect to `menu` otherwise.
+  `orders` (only while the ordering module is on and `orderingMode ≠ 'off'`), `settings/modules`, `settings/history` (audit log, owner),
+  `branding`, `analytics` (`?range=7d|14d|30d`), `settings`, `more` (mobile), index = Home on phones / redirect to `menu` otherwise.
+  Public: `/auth/invite?token=` (team invite) and `/join` (waiter join code, linked from `/login`).
   `/superadmin` lists every venue (`SuperadminLayout` keeps the last venue in the switcher); clicking a row opens `/r/:id/menu`.
 - Venue switcher (`Sidebar` dropdown, `VenueSheet` on phones): tile in the venue's `primaryColor`/logo, city as secondary text,
   and “+ Add a venue” at the end → `AddVenueModal` (name → `POST /api/admin/restaurants` → `refreshMe()` → `/r/:id/menu`).
@@ -688,7 +746,7 @@ the three static builds inside). **Images are built by `.github/workflows/deploy
   (drive it with `MockIntersectionObserver.instances[i].trigger(...)`), `scrollIntoView`/`scrollTo`, and clears storage;
   `mockFetch(handler)` replaces `fetch` per test and `renderMenu(route)` mounts the app in a `MemoryRouter` with a fresh QueryClient.
 - Seed credentials: superadmin `admin@otvori.menu` / `admin1234`; demo owner `ana@kafeterija.rs` / `tabla1234`
-  (restaurant "Kafeterija Dorćol", slug `kafeterija`); other demo owners use `tabla1234`.
+  (restaurant "Kafeterija Dorćol", slug `kafeterija`), demo staff `marko@kafeterija.rs` / `tabla1234`; other demo owners use `tabla1234`.
 
 ## When adding an endpoint
 

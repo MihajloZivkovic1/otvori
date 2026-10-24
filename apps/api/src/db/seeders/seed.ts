@@ -103,6 +103,8 @@ interface SeedRestaurant {
   trialEndsAt?: Date | null;
   publishedAt?: Date | null;
   owner: { name: string; email: string; password: string };
+  /** Staff accounts (Phase 11): service screens only, no PIN. */
+  staff?: { name: string; email: string; password: string }[];
   categories: SeedCategory[];
   tables: { number: number; label: string }[];
   /** Number of past days to generate scan events for. */
@@ -134,6 +136,7 @@ const kafeterija: SeedRestaurant = {
   trialEndsAt: null,
   publishedAt: daysAgo(40),
   owner: { name: 'Ana Petrović', email: 'ana@kafeterija.rs', password: 'tabla1234' },
+  staff: [{ name: 'Marko Konobar', email: 'marko@kafeterija.rs', password: 'tabla1234' }],
   categories: [
     {
       name: { sr: 'Kafa', en: 'Coffee' },
@@ -604,6 +607,10 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
     { transaction },
   );
   await Membership.create({ userId: owner.id, restaurantId: restaurant.id, role: 'owner' }, { transaction });
+  for (const member of def.staff ?? []) {
+    const staff = await User.create({ email: member.email, name: member.name, passwordHash: await hashPassword(member.password) }, { transaction });
+    await Membership.create({ userId: staff.id, restaurantId: restaurant.id, role: 'staff' }, { transaction });
+  }
 
   const viewableItems: { id: string; popularity: number }[] = [];
   const orderableItems: OrderableItem[] = [];
@@ -730,7 +737,10 @@ async function main(): Promise<void> {
   await sequelize.transaction(async (transaction) => {
     // Re-runnable: wipe whatever a previous seed created (FKs cascade).
     await Restaurant.destroy({ where: { slug: all.map((r) => r.slug) }, transaction });
-    await User.destroy({ where: { email: [SUPERADMIN.email, ...all.map((r) => r.owner.email)] }, transaction });
+    await User.destroy({
+      where: { email: [SUPERADMIN.email, ...all.map((r) => r.owner.email), ...all.flatMap((r) => (r.staff ?? []).map((m) => m.email))] },
+      transaction,
+    });
 
     await User.create(
       { email: SUPERADMIN.email, name: SUPERADMIN.name, passwordHash: await hashPassword(SUPERADMIN.password), isSuperadmin: true },
@@ -744,6 +754,7 @@ async function main(): Promise<void> {
     `Seed complete (${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')} ${TIMEZONE}).\n` +
       `  superadmin: ${SUPERADMIN.email} / ${SUPERADMIN.password}\n` +
       `  demo owner: ${kafeterija.owner.email} / ${kafeterija.owner.password} (restaurant "${kafeterija.name}", slug "${kafeterija.slug}")\n` +
+      `  demo staff: ${(kafeterija.staff ?? []).map((m) => m.email).join(', ')} / tabla1234 (service screens only; no owner PIN is seeded)\n` +
       `  other owners: ${others.map((r) => r.owner.email).join(', ')} / tabla1234`,
   );
 }

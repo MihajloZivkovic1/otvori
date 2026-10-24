@@ -3,6 +3,7 @@ import type { MembershipRole, RestaurantDto } from '@qr-menu/shared';
 import { useIsCompact, useIsMobile } from '../../hooks/useMediaQuery';
 import { screenTitle, useScreen } from '../../lib/screens';
 import { useOrdering } from '../orders/OrderingProvider';
+import { LockStatus } from '../security/LockStatus';
 import { InstallHint } from './InstallHint';
 import { MobileTabBar } from './MobileTabBar';
 import { Sidebar } from './Sidebar';
@@ -40,6 +41,7 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
   if (isMobile) {
     return (
       <div className="flex h-dvh flex-col bg-canvas">
+        <LockStatus variant="strip" />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
         <InstallHint />
         {restaurant ? <MobileTabBar restaurantId={restaurant.id} /> : null}

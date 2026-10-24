@@ -139,5 +139,15 @@ export const ERROR_CODES = [
   'TOO_MANY_OPEN_ORDERS',
   'ITEM_UNAVAILABLE',
   'INVALID_TRANSITION',
+  // owner PIN, permissions and team (Phase 11)
+  'ROLE_REQUIRED',
+  'PIN_REQUIRED',
+  'PIN_INVALID',
+  'PIN_LOCKED',
+  'PIN_WEAK',
+  'PIN_NOT_SET',
+  'INVITE_INVALID',
+  'JOIN_CODE_INVALID',
+  'LAST_OWNER',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

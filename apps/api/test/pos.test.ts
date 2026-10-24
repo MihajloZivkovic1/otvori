@@ -312,7 +312,8 @@ describe('POS integration (mock register)', () => {
     const { Membership } = await import('../src/db/models/index.js');
     await Membership.create({ userId: staff.user.id, restaurantId: v.owner.restaurantId, role: 'staff' });
     expect((await api.get(`${v.admin}/pos/products`).set(bearer(staff.accessToken))).status).toBe(403);
-    expect((await api.get(`${v.admin}/pos-config`).set(bearer(staff.accessToken))).status).toBe(200);
+    // Phase 11: the configuration is owner-level (it is settings), reading included.
+    expect((await api.get(`${v.admin}/pos-config`).set(bearer(staff.accessToken))).status).toBe(403);
     const plain = await registerUser();
     expect((await api.get(`/api/admin/restaurants/${plain.restaurantId}/pos-config`).set(bearer(plain.accessToken))).body.error.code).toBe('MODULE_DISABLED');
   });

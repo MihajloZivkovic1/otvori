@@ -1,12 +1,16 @@
 import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import {
+  type AcceptInviteInput,
+  type ElevationDto,
+  type JoinWithCodeInput,
   type LoginInput,
   type MembershipDto,
   type RegisterInput,
   type RestaurantSummaryDto,
   type UserDto,
 } from '@qr-menu/shared';
+import { randomUUID } from 'node:crypto';
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
 import { AuthToken, Membership, Restaurant, User } from '../../db/models/index.js';
@@ -17,7 +21,10 @@ import { sendMagicLink, sendPasswordReset } from '../../utils/mailer.js';
 import { toIso } from '../../utils/objects.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import { generateOpaqueToken, hashToken } from '../../utils/tokens.js';
+import * as audit from '../audit/service.js';
 import { createRestaurantWithOwner } from '../restaurants/service.js';
+import { elevationsAfterPasswordLogin } from '../security/service.js';
+import * as team from '../team/service.js';
 
 const MAGIC_LINK_TTL_MS = 15 * 60_000;
 const PASSWORD_RESET_TTL_MS = 60 * 60_000;
@@ -30,7 +37,11 @@ export interface Session {
   refreshExpiresAt: Date;
   user: UserDto;
   memberships: MembershipDto[];
+  /** Only after a password sign-in: owned venues with a PIN start unlocked for the default window (Phase 11). */
+  elevations?: ElevationDto[];
 }
+
+export type LoginMethod = 'password' | 'magic_link' | 'invite' | 'join_code' | 'password_reset';
 
 export function toUserDto(user: User): UserDto {
   return {
@@ -68,9 +79,12 @@ export async function listMemberships(userId: string): Promise<MembershipDto[]> 
     .map((m) => ({ id: m.id, role: m.role, restaurant: toRestaurantSummaryDto(m.restaurant!) }));
 }
 
-/** Issue an access token + a fresh refresh token (persisted as a hash). */
-export async function createSession(user: User): Promise<Session> {
-  const { token, expiresIn } = signAccessToken(user.id);
+/**
+ * Issue an access token + a fresh refresh token (persisted as a hash). `sessionId` identifies the sign-in across
+ * rotations (a refresh passes the old one on); it rides in the access token as `sid` and binds elevation tokens.
+ */
+export async function createSession(user: User, sessionId: string = randomUUID()): Promise<Session> {
+  const { token, expiresIn } = signAccessToken(user.id, sessionId);
   const refreshToken = generateOpaqueToken(48);
   const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_TTL_DAYS * DAY_MS);
   await AuthToken.create({
@@ -78,6 +92,7 @@ export async function createSession(user: User): Promise<Session> {
     tokenHash: hashToken(refreshToken),
     type: 'refresh',
     expiresAt: refreshExpiresAt,
+    sessionId,
   });
   return {
     accessToken: token,
@@ -87,6 +102,35 @@ export async function createSession(user: User): Promise<Session> {
     user: toUserDto(user),
     memberships: await listMemberships(user.id),
   };
+}
+
+/** A new sign-in: the session, the audit rows ("auth.login" per venue) and, after a password, the elevations. */
+async function openSession(user: User, method: LoginMethod, ip: string | null, restaurantIds?: string[]): Promise<Session> {
+  const session = await createSession(user);
+  const venues = restaurantIds ?? session.memberships.map((m) => m.restaurant.id);
+  const roleOf = (restaurantId: string) => session.memberships.find((m) => m.restaurant.id === restaurantId)?.role ?? null;
+  await Promise.all(
+    venues.map((restaurantId) =>
+      audit.record({
+        restaurantId,
+        action: 'auth.login',
+        after: { method },
+        actor: { userId: user.id, name: user.name, email: user.email, role: roleOf(restaurantId), elevated: () => false, ip },
+      }),
+    ),
+  );
+  if (method === 'password' || method === 'password_reset') {
+    const authUser = { id: user.id, email: user.email, name: user.name, isSuperadmin: user.isSuperadmin, sessionId: sessionIdOf(session) };
+    const elevations = await elevationsAfterPasswordLogin(authUser);
+    if (elevations.length > 0) session.elevations = elevations;
+  }
+  return session;
+}
+
+function sessionIdOf(session: Session): string | null {
+  // The session id is inside the access token; decode without verifying (we just signed it).
+  const payload = JSON.parse(Buffer.from(session.accessToken.split('.')[1] ?? '', 'base64url').toString('utf8')) as { sid?: string };
+  return payload.sid ?? null;
 }
 
 export async function register(input: RegisterInput): Promise<Session> {
@@ -108,14 +152,14 @@ function dummyHash(): Promise<string> {
   return dummyHashPromise;
 }
 
-export async function login(input: LoginInput): Promise<Session> {
+export async function login(input: LoginInput, ip: string | null = null): Promise<Session> {
   const user = await User.findOne({ where: { email: input.email } });
   // Always run a bcrypt comparison so unknown emails take the same time as wrong passwords.
   const valid = user?.passwordHash
     ? await verifyPassword(input.password, user.passwordHash)
     : (await bcrypt.compare(input.password, await dummyHash()), false);
   if (!user || !valid) throw unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
-  return createSession(user);
+  return openSession(user, 'password', ip);
 }
 
 async function pruneRefreshTokens(userId: string): Promise<void> {
@@ -146,7 +190,8 @@ export async function refresh(rawToken: string | undefined): Promise<Session> {
   if (!user) throw unauthorized('User no longer exists');
   await record.update({ usedAt: new Date() });
   await pruneRefreshTokens(user.id);
-  return createSession(user);
+  // Keep the sign-in's identity across the rotation so elevation tokens (owner PIN) stay valid.
+  return createSession(user, record.sessionId ?? undefined);
 }
 
 export async function logout(rawToken: string | undefined): Promise<void> {
@@ -185,9 +230,20 @@ export async function requestMagicLink(email: string): Promise<void> {
   );
 }
 
-export async function consumeMagicLink(raw: string): Promise<Session> {
+export async function consumeMagicLink(raw: string, ip: string | null = null): Promise<Session> {
   const user = await consumeOneTimeToken(raw, 'magic_link');
-  return createSession(user);
+  return openSession(user, 'magic_link', ip);
+}
+
+/** Phase 11: team invite (e-mail link) and the venue join code both end in a signed-in session. */
+export async function acceptInvite(input: AcceptInviteInput, ip: string | null = null): Promise<Session> {
+  const { user, restaurantId } = await team.acceptInvite(input);
+  return openSession(user, 'invite', ip, [restaurantId]);
+}
+
+export async function joinWithCode(input: JoinWithCodeInput, ip: string | null = null): Promise<Session> {
+  const { user, restaurantId } = await team.joinWithCode(input, ip);
+  return openSession(user, 'join_code', ip, [restaurantId]);
 }
 
 export async function forgotPassword(email: string): Promise<void> {
@@ -199,12 +255,12 @@ export async function forgotPassword(email: string): Promise<void> {
   );
 }
 
-export async function resetPassword(raw: string, password: string): Promise<Session> {
+export async function resetPassword(raw: string, password: string, ip: string | null = null): Promise<Session> {
   const user = await consumeOneTimeToken(raw, 'password_reset');
   await user.update({ passwordHash: await hashPassword(password) });
   // Changing the password signs out every other device.
   await AuthToken.update({ usedAt: new Date() }, { where: { userId: user.id, type: 'refresh', usedAt: null } });
-  return createSession(user);
+  return openSession(user, 'password_reset', ip);
 }
 
 export async function me(userId: string): Promise<{ user: UserDto; memberships: MembershipDto[] }> {

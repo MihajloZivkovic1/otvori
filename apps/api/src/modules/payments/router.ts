@@ -10,6 +10,6 @@ paymentWebhookRouter.post('/:provider', controller.webhook);
 /** /api/admin/restaurants/:restaurantId/payment-config (owner) and …/orders/:id/payment (both roles). */
 export const paymentConfigRouter = Router({ mergeParams: true });
 paymentConfigRouter.use(requireModule('payments'));
-paymentConfigRouter.get('/', controller.getPaymentConfig);
+paymentConfigRouter.get('/', requireOwner, controller.getPaymentConfig);
 paymentConfigRouter.patch('/', requireOwner, controller.updatePaymentConfig);
 paymentConfigRouter.post('/test', requireOwner, controller.testPaymentConnection);

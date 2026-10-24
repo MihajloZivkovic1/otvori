@@ -6,6 +6,7 @@ const SESSION = 'tabla.cms.session';
 const INSTALL_DISMISSED = 'tabla.cms.installDismissed';
 const ORDERS_MUTED = 'tabla.cms.ordersMuted';
 const NOTIFICATIONS_ASKED = 'tabla.cms.notificationsAsked';
+const UNLOCK_WINDOW = 'tabla.cms.unlockWindow';
 
 function read(storage: Storage, key: string): string | null {
   try {
@@ -60,4 +61,10 @@ export const ordersMuted = {
 export const notificationsAsked = {
   get: (): boolean => read(localStorage, NOTIFICATIONS_ASKED) === '1',
   set: (): void => write(localStorage, NOTIFICATIONS_ASKED, '1'),
+};
+
+/** Owner PIN keypad: the window picked last time on this device (1 / 5 / 15 minutes or until sign-out). */
+export const unlockWindow = {
+  get: (): string | null => read(localStorage, UNLOCK_WINDOW),
+  set: (value: string): void => write(localStorage, UNLOCK_WINDOW, value),
 };

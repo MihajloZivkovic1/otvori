@@ -27,6 +27,8 @@ import { featureFlagsSchema } from './features.js';
 import { restaurantModulesSchema } from './modules.js';
 import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
 import { posConfigDtoSchema } from './pos.js';
+import { auditActionSchema } from './schemas/audit.js';
+import { elevationWindowSchema } from './schemas/security.js';
 
 const isoString = z.string();
 
@@ -75,10 +77,24 @@ export const meDtoSchema = z.object({
 });
 export type MeDto = z.infer<typeof meDtoSchema>;
 
+/** A short-lived proof that the owner PIN (or password) was entered on this device (Phase 11). */
+export const elevationDtoSchema = z.object({
+  restaurantId: uuidSchema,
+  token: z.string(),
+  expiresAt: isoString,
+  window: elevationWindowSchema,
+});
+export type ElevationDto = z.infer<typeof elevationDtoSchema>;
+
 export const authResponseDtoSchema = meDtoSchema.extend({
   accessToken: z.string(),
   /** Seconds until the access token expires. */
   expiresIn: z.number(),
+  /**
+   * Only after a password sign-in (or reset): the password proves it is the owner, so every owned venue with a PIN
+   * starts unlocked for the default window on this device.
+   */
+  elevations: z.array(elevationDtoSchema).optional(),
 });
 export type AuthResponseDto = z.infer<typeof authResponseDtoSchema>;
 
@@ -133,6 +149,8 @@ export const restaurantDtoSchema = z.object({
   /** When true the public menu hides "+"/cart and shows `pausedMessage`; calls still work. */
   orderingPaused: z.boolean(),
   pausedMessage: z.string().nullable(),
+  /** Owner PIN (Phase 11): while set, owner actions need an elevation token (X-Elevation) on top of the owner role. */
+  pinSet: z.boolean(),
   createdAt: isoString,
   updatedAt: isoString,
 });
@@ -507,3 +525,95 @@ export const appConfigDtoSchema = z.object({
   features: featureFlagsSchema,
 });
 export type AppConfigDto = z.infer<typeof appConfigDtoSchema>;
+
+/* ------------------------------------------------------------------ owner PIN, team, audit log (Phase 11) */
+
+/** GET /admin/restaurants/:id/security */
+export const securityDtoSchema = z.object({
+  pinSet: z.boolean(),
+  /** The calling member's own preference: a morning e-mail summarising yesterday's changes. */
+  dailyDigest: z.boolean(),
+  /** While the caller's session is locked out of PIN attempts. */
+  lockedUntil: isoString.nullable(),
+});
+export type SecurityDto = z.infer<typeof securityDtoSchema>;
+
+export const teamMemberDtoSchema = z.object({
+  membershipId: uuidSchema,
+  userId: uuidSchema,
+  name: z.string(),
+  email: z.string(),
+  role: membershipRoleSchema,
+  /** True for the signed-in user's own row. */
+  isSelf: z.boolean(),
+  /** Accounts created with a join code and no e-mail get a synthetic sign-in address. */
+  hasRealEmail: z.boolean(),
+});
+export type TeamMemberDto = z.infer<typeof teamMemberDtoSchema>;
+
+export const teamInviteDtoSchema = z.object({
+  id: uuidSchema,
+  email: z.string(),
+  role: membershipRoleSchema,
+  invitedBy: z.string().nullable(),
+  createdAt: isoString,
+  expiresAt: isoString,
+});
+export type TeamInviteDto = z.infer<typeof teamInviteDtoSchema>;
+
+export const joinCodeDtoSchema = z.object({
+  code: z.string(),
+  expiresAt: isoString,
+});
+export type JoinCodeDto = z.infer<typeof joinCodeDtoSchema>;
+
+/** GET /admin/restaurants/:id/team */
+export const teamDtoSchema = z.object({
+  members: z.array(teamMemberDtoSchema),
+  invites: z.array(teamInviteDtoSchema),
+  /** The active 6-digit join code, if one was generated and has not expired. */
+  joinCode: joinCodeDtoSchema.nullable(),
+});
+export type TeamDto = z.infer<typeof teamDtoSchema>;
+
+/** GET /api/auth/invite/:token — what the invite page shows before the person accepts. */
+export const invitePreviewDtoSchema = z.object({
+  restaurantName: z.string(),
+  role: membershipRoleSchema,
+  email: z.string(),
+  /** True when an account with that e-mail already exists (no name/password needed). */
+  existingUser: z.boolean(),
+});
+export type InvitePreviewDto = z.infer<typeof invitePreviewDtoSchema>;
+
+export const auditEntryDtoSchema = z.object({
+  id: uuidSchema,
+  action: auditActionSchema.or(z.string()),
+  /** Who did it (null for system jobs); the name/e-mail are snapshots so removed members still read. */
+  user: z.object({ id: uuidSchema.nullable(), name: z.string(), email: z.string() }).nullable(),
+  role: membershipRoleSchema.or(z.literal('superadmin')).nullable(),
+  /** True when the action passed the owner-PIN gate (or the password) on a device. */
+  elevated: z.boolean(),
+  entityType: z.string().nullable(),
+  entityId: z.string().nullable(),
+  /** Human label of the entity at the time (item name, "Table 7", "#142"). */
+  entityLabel: z.string().nullable(),
+  before: z.record(z.string(), z.unknown()).nullable(),
+  after: z.record(z.string(), z.unknown()).nullable(),
+  /** Derived server-side: an item create/update whose price changed. */
+  priceChange: z.boolean(),
+  ip: z.string().nullable(),
+  createdAt: isoString,
+});
+export type AuditEntryDto = z.infer<typeof auditEntryDtoSchema>;
+
+/** GET /admin/restaurants/:id/audit-log */
+export const auditPageDtoSchema = z.object({
+  items: z.array(auditEntryDtoSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  /** Members (current and past) that appear in the log, for the "who" filter. */
+  users: z.array(z.object({ id: uuidSchema, name: z.string() })),
+});
+export type AuditPageDto = z.infer<typeof auditPageDtoSchema>;

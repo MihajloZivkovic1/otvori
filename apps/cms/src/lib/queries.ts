@@ -2,6 +2,18 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import type {
   AnalyticsDto,
   AnalyticsRange,
+  AuditPageDto,
+  CreateInviteInput,
+  ElevationDto,
+  JoinCodeDto,
+  ListAuditQuery,
+  RemovePinInput,
+  SecurityDto,
+  SetPinInput,
+  TeamDto,
+  UnlockInput,
+  UpdateMemberInput,
+  UpdateSecurityInput,
   AvailabilityInput,
   CategoryDto,
   CreateCategoryInput,
@@ -44,6 +56,9 @@ export const keys = {
   posConfig: (rid: string) => ['posConfig', rid] as const,
   requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
+  security: (rid: string) => ['security', rid] as const,
+  team: (rid: string) => ['team', rid] as const,
+  audit: (rid: string, query: Partial<ListAuditQuery>) => ['audit', rid, query] as const,
   superadminRestaurants: (query: Partial<SuperadminListRestaurantsQuery>) => ['superadmin', 'restaurants', query] as const,
 };
 
@@ -565,5 +580,116 @@ export function useSuperadminUpdateRestaurant() {
       void client.invalidateQueries({ queryKey: ['superadmin', 'restaurants'] });
       void client.invalidateQueries({ queryKey: keys.restaurant(restaurant.id) });
     },
+  });
+}
+
+/* ------------------------------------------------------------------ owner PIN, team, audit log (Phase 11) */
+
+export function useSecurity(rid: string, enabled = true) {
+  return useQuery({ queryKey: keys.security(rid), queryFn: () => api<SecurityDto>(`${base(rid)}/security`), enabled });
+}
+
+function setSecurity(client: QueryClient, rid: string, security: SecurityDto) {
+  client.setQueryData(keys.security(rid), security);
+  client.setQueryData<RestaurantDto>(keys.restaurant(rid), (prev) => (prev ? { ...prev, pinSet: security.pinSet } : prev));
+}
+
+export function useSetPin(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetPinInput) => api<SecurityDto>(`${base(rid)}/security/pin`, { method: 'PUT', body: input }),
+    onSuccess: (security) => setSecurity(client, rid, security),
+  });
+}
+
+export function useRemovePin(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RemovePinInput) => api<SecurityDto>(`${base(rid)}/security/pin`, { method: 'DELETE', body: input }),
+    onSuccess: (security) => setSecurity(client, rid, security),
+  });
+}
+
+export function useUpdateSecurity(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateSecurityInput) => api<SecurityDto>(`${base(rid)}/security`, { method: 'PATCH', body: input }),
+    onSuccess: (security) => setSecurity(client, rid, security),
+  });
+}
+
+/** POST …/security/unlock — the keypad (PIN) or the owner's password; the token goes to the elevation store. */
+export function unlockVenue(rid: string, input: UnlockInput): Promise<ElevationDto> {
+  return api<ElevationDto>(`${base(rid)}/security/unlock`, { method: 'POST', body: input });
+}
+
+/** POST …/security/extend — renews a `session` elevation while the app is open. */
+export function extendElevation(rid: string): Promise<ElevationDto> {
+  return api<ElevationDto>(`${base(rid)}/security/extend`, { method: 'POST' });
+}
+
+export function useTeam(rid: string, enabled = true) {
+  return useQuery({ queryKey: keys.team(rid), queryFn: () => api<TeamDto>(`${base(rid)}/team`), enabled });
+}
+
+export function useCreateInvite(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateInviteInput) => api<TeamDto>(`${base(rid)}/team/invites`, { method: 'POST', body: input }),
+    onSuccess: (team) => client.setQueryData(keys.team(rid), team),
+  });
+}
+
+export function useRevokeInvite(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (inviteId: string) => api<TeamDto>(`${base(rid)}/team/invites/${inviteId}`, { method: 'DELETE' }),
+    onSuccess: (team) => client.setQueryData(keys.team(rid), team),
+  });
+}
+
+export function useCreateJoinCode(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<JoinCodeDto>(`${base(rid)}/team/join-code`, { method: 'POST' }),
+    onSuccess: (joinCode) => client.setQueryData<TeamDto>(keys.team(rid), (prev) => (prev ? { ...prev, joinCode } : prev)),
+  });
+}
+
+export function useRevokeJoinCode(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<TeamDto>(`${base(rid)}/team/join-code`, { method: 'DELETE' }),
+    onSuccess: (team) => client.setQueryData(keys.team(rid), team),
+  });
+}
+
+export function useUpdateMember(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ membershipId, input }: { membershipId: string; input: UpdateMemberInput }) =>
+      api<TeamDto>(`${base(rid)}/team/${membershipId}`, { method: 'PATCH', body: input }),
+    onSuccess: (team) => client.setQueryData(keys.team(rid), team),
+  });
+}
+
+export function useRemoveMember(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (membershipId: string) => api<TeamDto>(`${base(rid)}/team/${membershipId}`, { method: 'DELETE' }),
+    onSuccess: (team) => client.setQueryData(keys.team(rid), team),
+  });
+}
+
+export function useAuditLog(rid: string, query: Partial<ListAuditQuery>, enabled = true) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+  }
+  return useQuery({
+    queryKey: keys.audit(rid, query),
+    queryFn: () => api<AuditPageDto>(`${base(rid)}/audit-log?${params.toString()}`),
+    placeholderData: (previous) => previous,
+    enabled,
   });
 }
