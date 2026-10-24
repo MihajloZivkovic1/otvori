@@ -12,6 +12,7 @@
     "migrate:undo": "tsx src/db/migrate.ts down",
     "migrate:status": "tsx src/db/migrate.ts pending",
     "seed": "tsx src/db/seeders/seed.ts",
+    "seed:drinks": "tsx src/scripts/seed-drinks.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
