@@ -13,6 +13,7 @@
     "migrate:status": "tsx src/db/migrate.ts pending",
     "seed": "tsx src/db/seeders/seed.ts",
     "seed:drinks": "tsx src/scripts/seed-drinks.ts",
+    "seed:venues": "tsx src/scripts/seed-venues.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
