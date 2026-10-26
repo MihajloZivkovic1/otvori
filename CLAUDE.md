@@ -31,7 +31,7 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 | `apps/cms` | Admin CMS (React 19 + Vite 8 + Tailwind v4, react-router data router, TanStack Query, react-hook-form) | Phase 3 (done) |
 | `apps/web` | Marketing site at the apex (Astro 7 static, Tailwind v4, no framework islands) | Phase 5 (done) |
 | `deploy/` | Production stack for one 1 GB droplet: compose file, two Dockerfiles, Caddyfile, deploy/backup/restore scripts, README | Phase 4 (done) |
-| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos API does + open questions), `DEMO.md` (end-to-end demo script), `PERMISSIONS.md` (owner/service route matrix, Phase 11) | Phase 9–11 |
+| `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos sandbox really does + open questions), `octopos/` (the WebOrder DOCX from Octopos + `openapi.json` from the sandbox Swagger), `octopos-production.md` (venue checklist), `DEMO.md` (end-to-end demo script), `PERMISSIONS.md` (owner/service route matrix, Phase 11) | Phase 9–12 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
 `modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
@@ -63,6 +63,7 @@ npm run dev                   # turbo: shared tsc --watch + api tsx watch (+ vit
 npm run typecheck             # all workspaces (apps/web runs `astro check`)
 npm run lint                  # eslint in shared, api, cms, menu; prettier --check in web
 npm test                      # every suite, turbo --concurrency=2 (api needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
+npm run gen:octopos -w @qr-menu/api            # regenerate the Octopos client types from docs/octopos/openapi.json
 ```
 
 `@qr-menu/shared` is a compiled package: consumers import `dist/`. After editing shared, rebuild it (or keep `npm run dev` running).
@@ -332,61 +333,74 @@ domain; `controller.ts` + `router.ts`; `simulator.ts` the dev "bank" page; `reco
   `paymentConfig.simulator`. Analytics card gains "paid online", amount and "tips" tiles. Tests
   `test/payments.test.tsx`. Query keys `['paymentConfig', rid]`.
 
-## POS integration — Octopos (Phase 9d)
+## POS / fiscal integration — Octopos (Phase 9d, rebuilt on the real sandbox in Phase 12)
 
-Accepted orders open on the venue's register; an online payment closes them with a fiscal receipt. What the Octopos
-API does (and what it leaves open) is in `docs/octopos.md`; the end-to-end demo script is `docs/DEMO.md`. Code:
-`apps/api/src/modules/pos/` (`providers/types.ts` interface, `octopos.ts`, `mock.ts`, `index.ts`; `config.ts`;
-`service.ts`; `queue.ts`; `controller.ts` + `router.ts`).
+Fiscal receipts for orders paid through otvori, via Octopos. **Everything Octopos does that its docs do not say is
+in `docs/octopos.md`** (verified on the sandbox, tenant "Otvori.Menu"); the venue checklist is
+`docs/octopos-production.md`; the demo is `docs/DEMO.md`. Code: `apps/api/src/modules/pos/` (`providers/types.ts`
+interface + `PosProviderError`, `providers/octopos/` = `generated.ts` (types from `docs/octopos/openapi.json`, written by
+`npm run gen:octopos -w @qr-menu/api`, never by hand) + `client.ts` (typed `OctoposClient`), `providers/octopos.ts`,
+`providers/mock.ts`; `config.ts`; `service.ts`; `queue.ts`; `receipt-pdf.ts`; `controller.ts` + `router.ts`).
 
-- **`PosProvider`**: `testConnection(credentials)`, `fetchProducts(credentials)` → `PosProduct[]` (code, name, group,
-  priceCents, taxLabel, active), `sendOrder({ order, lines, externalId, tableName })` (Octopos: `POST /weborder` with
-  `TableName` and no `Payments`), `closeOrder({ …, payment: { kind: instant | cash, amountCents }, closeMode, openRef })`
-  (`POST /weborder` with `Payments: [{ FiscalPaymentTypeId: 6 | 1, Amount }]`, `FiscalReceiptData.ReturnTextualRepresentation`,
-  `ExternalId` `otvori-<orderId>` — `otvori-dev-<orderId>` on mock / sandbox), `getFiscalReceipt(ref)`. Prices on the
-  wire are dinars, ours minor units. Every response is Zod-parsed and treated as untrusted. `posProvider('mock')` only
-  with `POS_MOCK=true` (production refuses to start with it). The mock register logs `[pos] would open/close …`,
-  keeps `mockPos.calls()` and returns fake receipts (`MOCKPFR0-MOCKPFR0-001`, a `sandbox.suf.purs.gov.rs` URL).
-- **Config** `restaurants.pos_config` JSONB `{ provider, baseUrl, apiKeyEncrypted, tableMapping { ourTableId: TableName },
-  sendOrdersToPos, closeOnPayment, printOnClose, closeMode: 'reuse-external-id' | 'new-receipt' }` (API key encrypted like
-  merchant secrets; DTO `posConfig` has `hasApiKey`). `GET/PATCH /admin/restaurants/:id/pos-config`, `POST …/test`
-  (owner; module `pos` → 403 `MODULE_DISABLED` otherwise). `closeMode` exists because the docs do not say how an order
-  opened on a table is closed (docs/octopos.md, open question 1).
-- **Menu ↔ POS**: `menu_items.pos_product_code` (`posProductCode` in item schemas/DTOs; the editor has the field with a
-  warning and the table a "NO POS CODE" tag). `GET …/pos/products` = preview (`create` = codes not in the menu,
-  `update` = mapped items whose register price differs, `missing`, `unmapped`), `POST …/pos/sync { createCodes,
-  updateCodes, categoryId? }` applies the reviewed rows (new items go to a hidden "Sa kase" category). With
-  `sendOrdersToPos` on, items without a code are `isAvailable: false` on the public menu and 409 `ITEM_UNAVAILABLE`
-  at order time (`orderableOnPos()` in `modules/public/service.ts`).
-- **Flow & queue**: `pos_jobs` (type `send_order | close_order`, status `queued | running | done | failed`, attempts,
-  next_run_at, last_error, payload). `onOrderAccepted` (`modules/ordering/hooks.ts`) → `send_order` when
-  `sendOrdersToPos`; `onOrderPaid` (`modules/payments/hooks.ts`) → `close_order` with the **pre-tip** amount when
-  `closeOnPayment` and `orders.fiscal_status = pending`. `startPosQueue()` (index.ts) runs `runDuePosJobs()` every 10 s:
-  jobs are claimed `FOR UPDATE SKIP LOCKED`, retried after 30 s / 2 m / 10 m / 30 m / 2 h (`POS_LIMITS.retryDelaysSeconds`),
-  then `failed` → `fiscal_status = failed` + `fiscal_error`; success stores `pos_ref`, `fiscal_invoice_number`,
-  `fiscal_verification_url`, `fiscal_receipt_text` and publishes `order.updated`. Failures never touch the paid state.
-  Staff `POST …/orders/:id/fiscal/retry` re-queues. Hooks are registered once by `registerPosHooks()` in `createApp()`.
-- **Guest**: `PublicOrderDto` carries `fiscalStatus`, `fiscalInvoiceNumber`, `fiscalVerificationUrl`,
-  `fiscalReceiptText`; `components/FiscalReceipt.tsx` shows the number, a QR of the verification URL, "Otvori račun"
-  and "Pošalji na mejl" (`POST …/orders/:id/receipt-email { email }` → `sendFiscalReceipt()` in the mailer; only
-  when `payments.receiptEmailEnabled`).
-- **CMS**: `components/orders/FiscalChip.tsx` (issued · last 8 chars / pending… / "Fiscal receipt pending — issue it
-  at the register" + Retry) on in-progress cards and Today rows; Settings → `components/settings/IntegrationsCard.tsx`
-  (provider, base URL, write-only API key, close mode, three switches, table mapping editor, Test connection, Sync
-  products → `PosSyncModal.tsx` review with checkboxes), MOCK REGISTER badge when `posConfig.simulator`.
-- **Mixed orders** (first round by phone, second typed at the register): the integration is one-way, so before a
-  payment attempt `registerMismatch()` (`modules/pos/service.ts`) reads the opened order back
-  (`PosProvider.getOrder()` = Octopos `GET /weborder/{id}`, BillItems resolved to codes through the product list; the
-  mock keeps what it received plus `mockPos.addLiveLines()`) and compares codes and quantities; any difference → 409
-  `POS_MISMATCH` with `details { extra, missing }` and the guest copy "plati ceo račun kod konobara". An unreachable
-  register does not block. A paid order can no longer be `rejected` (409 `PAYMENT_NOT_ALLOWED`; refunds happen at the
-  register). Staff `POST …/orders/:id/fiscal/manual` = "Receipt issued at the register": `fiscal_status = manual`,
-  the close job is marked done (no retry, no duplicate receipt), the guest sees no receipt block.
-- **Sandbox & tests**: the public sandbox token (`.env` `OCTOPOS_SANDBOX_AUTH`, base `https://sandbox.octopos.rs/api`)
-  can read `GET /product` but every `POST /weborder` answers 401, so `apps/api/test/pos.test.ts` runs `fetchProducts`
-  live when the auth is set and the write path only against the recorded samples in `test/fixtures/octopos/`
-  ("fixture-only"); the full accept → pay (simulator webhook) → close → receipt → e-mail flow runs against the mock
-  register. CMS `test/pos.test.tsx`, menu `test/payment.test.tsx` ("fiscal receipt").
+- **Two modes** per venue, `posConfig.mode` (shared `POS_MODES`):
+  - `esir` — Octopos fiscalises for the venue, no till. A paid order (online → `FiscalPaymentTypeId` 6 "Инстант
+    плаћање"; staff "Cash" → 1 "Готовина", via `onOrderCash` in `modules/payments/hooks.ts`) becomes **one**
+    `POST /WebOrder` with items, prices, payment and `FiscalReceiptData`; the answer is the receipt itself.
+    Items without a POS code get a stable generated code (`generatedProductCode()` = `OTV-<10 hex of the item id>`)
+    and the register creates the product on first sale (ProductName/GroupName/UnitMeasure `KOM`/`TaxLabel`). Those
+    create fields go **only** with generated codes (`PosLine.createIfMissing`): with a code the register knows,
+    Octopos overwrites that product's name and category (verified on the sandbox).
+    `sendOrdersToPos` is forced off. Production needs a Tax Authority certificate per venue; Octopos charges per receipt.
+  - `pos` — the venue's own till. `sendOrdersToPos` → accepted orders open on the mapped table
+    (`POST /WebOrder { TableName, Items }`, no payment); an online payment closes them. **Not confirmed by Octopos for
+    production** (works on the sandbox). `closeStrategy`: `reissue` (default) = `POST /WebOrder/{externalId}/Cancel` +
+    a fiscalised `POST /WebOrder` with ExternalId `…-r` (correct instant-payment line); `pay` =
+    `POST /WebOrder/{billCumulativeId}/Pay` with the register's internal `payPaymentTypeId` (the sandbox labels the
+    receipt by that internal id and ignores the fiscal type — only for a venue where Octopos mapped one to instant
+    payments). Before closing, the order is read back (`GET /WebOrder/{billId}`) and `GET /Table/Occupied` checked: a
+    free table with a non-storno order = the till already closed it → fail at once, staff mark "Issued at the register".
+    Cash in POS mode is the till's business (nothing queued).
+- **Config** `restaurants.pos_config` JSONB `{ provider, mode, baseUrl, apiKeyEncrypted, taxLabel (default Ђ),
+  taxNumber (PIB for the PDF), tableMapping, sendOrdersToPos, closeOnPayment, closeStrategy, payPaymentTypeId }`
+  (migration `20261029000000-pos-modes` converted old rows to `mode: 'pos'` and dropped `closeMode`/`printOnClose`).
+  DTO `posConfig` has `hasApiKey`, never the key. Each venue stores **its own** Octopos token; ours is sandbox-only.
+  Routes (owner, module `pos`): `GET/PATCH /pos-config`, `POST /pos-config/test` (= `GET /Currency/System` +
+  `GET /Table/Active`; `/Ping`, `/Tax`, `/Table/*`, `/Product` need no key on the sandbox, so they prove nothing),
+  `GET /pos/products` + `POST /pos/sync` (review → apply, new items into the hidden "Sa kase" category),
+  `GET /pos/tables` (table-mapping suggestions), `GET /pos/taxes` (the PFR's labels for the picker). Enabling the
+  module stays superadmin-only.
+- **Provider interface** (`PosProvider`): `testConnection`, `fetchProducts` (`GET /Product?active&isForSale`),
+  `fetchTables`, `fetchTaxLabels`, `createOrder({ externalId, lines, note, tableName, payment, lineWidth })`,
+  `closeOrder({ externalId, receiptExternalId, posRef, lines, payment, strategy, payPaymentTypeId })`, `getOrder`
+  (lines with codes, `billCumulativeId`, `tableName`, `revoked`, `occupied`), `getFiscalReceipt(billId)`,
+  `cancelOrder(externalId)`. `PosLine.taxLabel` comes from `posConfig.taxLabel` (one per venue for now). Prices on the
+  wire are dinars. `FiscalReceipt.issuedAt` = `SdcDateTime` parsed as Europe/Belgrade wall time → `orders.fiscal_issued_at`
+  (`fiscalIssuedAt` in both order DTOs). `ExternalId` = `otvori-<orderId>` (`otvori-dev-…` when the base URL contains
+  `sandbox.` or on the mock, `isSandbox()`); the register refuses a repeat, and a duplicate on `send_order` counts as done.
+- **Errors**: `OctoposClient` turns every answer into `PosProviderError(kind)` — `auth` (401, empty body), `rejected`
+  (400 `Success:false`; `reason` from `OCTOPOS_ERROR_CODES`: duplicateExternalId, alreadyClosed, unknownProduct,
+  invalidTable, amountMismatch, invalidTaxLabel), `not_found` ("Resource not found", 404 `{ Message }`), `server`
+  ("Server error" + .NET stack, 5xx text), `timeout` (20 s), `unreachable`, `shape`. **The queue retries only
+  timeout/unreachable/server** (30 s / 2 m / 10 m / 30 m / 2 h); everything else fails the job at once with the
+  message on the waiter card (`fiscalStatus = failed` + `fiscalError`, Retry / "Issued at the register").
+- **Receipt for the guest**: `renderFiscalReceiptPdf()` (`receipt-pdf.ts`, pdfkit, 80 mm wide, one page): venue name,
+  PIB, address, order/table, PFR time, the PFR text verbatim in DejaVu Sans Mono (Cyrillic, double-font lines
+  enlarged), the verification QR (`qrPng` from `tables/qr.ts`), the invoice number and the otvori mark.
+  `GET /api/public/:slug/orders/:id/receipt.pdf` (session-bound; `requireSessionOrQuery` also takes `?s=<session>`
+  because the guest's browser opens it directly), `POST …/receipt-email` mails it as an attachment
+  (`MailMessage.attachments`, Resend `attachments` base64). Menu app: `FiscalReceipt` shows "Preuzmi PDF"
+  (`receiptPdfUrl()`), "Otvori račun", the e-mail form — for `paid` and (ESIR) `cash` orders. CMS: `FiscalChip`
+  on paid and cash orders; Settings → `IntegrationsCard` (mode cards with the explanation, provider, base URL,
+  write-only key, PIB, tax label picker, the switches, POS-mode close strategy + table mapping with the register's
+  tables as suggestions, ESIR per-receipt-cost note, Test connection, Sync products → `PosSyncModal`).
+- **Mixed orders** (POS mode): before a payment attempt `registerMismatch()` compares the opened order on the register
+  with ours (codes + quantities) → 409 `POS_MISMATCH { extra, missing }`; an unreachable register does not block.
+- **Tests**: `apps/api/test/octopos-client.test.ts` (client + provider against the sanitised sandbox recordings in
+  `test/fixtures/octopos/*.json`: each file is `{ _note, request, response }`), `octopos-live.test.ts` (reads whenever
+  `OCTOPOS_API_URL` + `OCTOPOS_API_KEY` are in `apps/api/.env`; receipts, a table order and the full API chain in both
+  modes only with `OCTOPOS_LIVE_WRITE=1` — on the sandbox the item label must be `F`, the PFR refuses Ђ), `pos.test.ts`
+  (the whole flow with the mock register in both modes, retry/refusal, PDF, mail), CMS `test/pos.test.tsx`,
+  menu `test/payment.test.tsx`. Never print, commit or fixture the Octopos key.
 
 ## Table ordering (Phase 6)
 

@@ -1,0 +1,41 @@
+{
+  "_note": "Payments must add up to the items.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "ExternalId": "otvori-dev-probe-err-amount",
+      "ValidateOnly": true,
+      "Items": [
+        {
+          "ProductCode": "686",
+          "Quantity": 1,
+          "Price": 250
+        }
+      ],
+      "Payments": [
+        {
+          "FiscalPaymentTypeId": 6,
+          "Amount": 200
+        }
+      ],
+      "FiscalReceiptData": {
+        "ReturnTextualRepresentation": true,
+        "LineWidth": 40
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "Success": false,
+      "Errors": [
+        "Total payment amount is not the same as total items amount"
+      ],
+      "Warnings": [],
+      "Data": 0
+    }
+  }
+}

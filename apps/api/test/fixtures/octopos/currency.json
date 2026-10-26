@@ -1,0 +1,22 @@
+{
+  "_note": "Needs the key (401 otherwise): used by testConnection.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/Currency/System"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 1,
+        "Code": "RSD",
+        "Name": "Dinar"
+      }
+    }
+  }
+}

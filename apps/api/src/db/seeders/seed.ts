@@ -3,13 +3,14 @@ import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'sequelize';
 import {
   DEFAULT_MODULES,
+  DEFAULT_TAX_LABEL,
   RESTAURANT_DEFAULTS,
   type OrderStatus,
   tipCentsFor,
   type OrderingMode,
   type PaymentProviderKey,
   type PaymentStatus,
-  type PosCloseMode,
+  type PosMode,
   type PosProviderKey,
   type RestaurantModules,
   type Plan,
@@ -118,7 +119,7 @@ interface SeedRestaurant {
   /** Online payment set-up (Phase 9c); the secret is encrypted at seed time. */
   paymentConfig?: { provider: PaymentProviderKey; merchantId: string; secret: string; tipPresets: number[]; receiptEmailEnabled: boolean };
   /** POS integration (Phase 9d): mock register for the demo venue; table ids are mapped after the tables exist. */
-  posConfig?: { provider: PosProviderKey; baseUrl: string | null; apiKey: string; sendOrdersToPos: boolean; closeOnPayment: boolean; closeMode: PosCloseMode };
+  posConfig?: { provider: PosProviderKey; mode: PosMode; baseUrl: string | null; apiKey: string; taxNumber: string | null; sendOrdersToPos: boolean; closeOnPayment: boolean };
 }
 
 const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
@@ -248,7 +249,7 @@ const kafeterija: SeedRestaurant = {
   // Mock provider: scanning a payment QR opens the simulator page (PAYMENTS_MOCK=true), see docs/DEMO.md.
   paymentConfig: { provider: 'mock', merchantId: 'DEMO-KAFETERIJA', secret: 'demo-secret', tipPresets: [0, 5, 10, 15], receiptEmailEnabled: true },
   // Mock register (POS_MOCK=true): accepted orders are "opened", paid ones "closed" with a fake fiscal receipt.
-  posConfig: { provider: 'mock', baseUrl: null, apiKey: 'demo-pos-key', sendOrdersToPos: true, closeOnPayment: true, closeMode: 'reuse-external-id' },
+  posConfig: { provider: 'mock', mode: 'pos', baseUrl: null, apiKey: 'demo-pos-key', taxNumber: '112832835', sendOrdersToPos: true, closeOnPayment: true },
 };
 
 const smallMenu = (a: [string, string], b: [string, string], base: number): SeedCategory[] => [
@@ -707,14 +708,17 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
       {
         posConfig: {
           provider: def.posConfig.provider,
+          mode: def.posConfig.mode,
           baseUrl: def.posConfig.baseUrl,
           apiKeyEncrypted: encryptSecret(def.posConfig.apiKey),
+          taxLabel: DEFAULT_TAX_LABEL,
+          taxNumber: def.posConfig.taxNumber,
           // Our table ids → the register's table names (here simply the table number).
           tableMapping: Object.fromEntries(tables.map((table) => [table.id, String(table.number)])),
           sendOrdersToPos: def.posConfig.sendOrdersToPos,
           closeOnPayment: def.posConfig.closeOnPayment,
-          printOnClose: false,
-          closeMode: def.posConfig.closeMode,
+          closeStrategy: 'reissue',
+          payPaymentTypeId: null,
         },
       },
       { transaction },

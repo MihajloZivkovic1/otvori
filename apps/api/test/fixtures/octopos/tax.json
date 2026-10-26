@@ -1,0 +1,97 @@
+{
+  "_note": "Tax labels of this PFR. The sandbox PFR runs the test label set (F = 11 %, A = 10 %, …) as well as the Serbian production labels Ђ/Е/Г/А, but only labels the PFR accepts can be used on a receipt (see weborder-newcode-rejected.json).",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/Tax"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": [
+        {
+          "Id": 1,
+          "Name": "Ђ (20% na jed. cenu)",
+          "Value": 20.0,
+          "FiscalLabel": "Ђ"
+        },
+        {
+          "Id": 2,
+          "Name": "Е (10% na jed. cenu)",
+          "Value": 10.0,
+          "FiscalLabel": "Е"
+        },
+        {
+          "Id": 3,
+          "Name": "А (0% na jed. cenu)",
+          "Value": 0.0,
+          "FiscalLabel": "А"
+        },
+        {
+          "Id": 4,
+          "Name": "Г (0% na jed. cenu)",
+          "Value": 0.0,
+          "FiscalLabel": "Г"
+        },
+        {
+          "Id": 5,
+          "Name": "A (10% na jed. cenu)",
+          "Value": 10.0,
+          "FiscalLabel": "A"
+        },
+        {
+          "Id": 6,
+          "Name": "B (0% na jed. cenu)",
+          "Value": 0.0,
+          "FiscalLabel": "B"
+        },
+        {
+          "Id": 7,
+          "Name": "C (0% na jed. cenu)",
+          "Value": 0.0,
+          "FiscalLabel": "C"
+        },
+        {
+          "Id": 8,
+          "Name": "E (6% na jed. cenu)",
+          "Value": 6.0,
+          "FiscalLabel": "E"
+        },
+        {
+          "Id": 9,
+          "Name": "F (11% na jed. cenu)",
+          "Value": 11.0,
+          "FiscalLabel": "F"
+        },
+        {
+          "Id": 10,
+          "Name": "N (0% na jed. cenu)",
+          "Value": 0.0,
+          "FiscalLabel": "N"
+        },
+        {
+          "Id": 11,
+          "Name": "P (0.5 RSD na cenu)",
+          "Value": 0.5,
+          "FiscalLabel": "P"
+        },
+        {
+          "Id": 12,
+          "Name": "T (2% na iznos)",
+          "Value": 2.0,
+          "FiscalLabel": "T"
+        },
+        {
+          "Id": 13,
+          "Name": "Ж (19% na jed. cenu)",
+          "Value": 19.0,
+          "FiscalLabel": "Ж"
+        }
+      ]
+    }
+  }
+}

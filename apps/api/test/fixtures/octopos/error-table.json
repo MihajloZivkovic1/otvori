@@ -1,0 +1,32 @@
+{
+  "_note": "Unknown or inactive table name.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "ExternalId": "otvori-dev-probe-err-table",
+      "ValidateOnly": true,
+      "TableName": "NO-SUCH-TABLE",
+      "Items": [
+        {
+          "ProductCode": "686",
+          "Quantity": 1,
+          "Price": 250
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "Success": false,
+      "Errors": [
+        "Invalid table, check if this table is active"
+      ],
+      "Warnings": [],
+      "Data": 0
+    }
+  }
+}

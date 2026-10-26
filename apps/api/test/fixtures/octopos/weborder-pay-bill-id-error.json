@@ -1,0 +1,30 @@
+{
+  "_note": "/Pay with the bill id → NullReferenceException in BillCumulativeController.GetById: the route wants the BillCumulative id.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder/66871/Pay",
+    "body": {
+      "Payments": [
+        {
+          "FiscalPaymentTypeId": 6,
+          "Amount": 250
+        }
+      ],
+      "ReturnTextualRepresentation": true,
+      "LineWidth": 40
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "Success": false,
+      "Errors": [
+        "Server error",
+        "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at Fusion.Octopos.Web.Api.Controller.BillCumulativeController.GetById(Int64 id)\r\n   at Fusion.Octopos.Web.Api.Controller.BillCumulativeController.<Print>d__104.MoveNext()"
+      ],
+      "Warnings": []
+    }
+  }
+}

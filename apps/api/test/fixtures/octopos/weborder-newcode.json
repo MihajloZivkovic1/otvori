@@ -1,0 +1,70 @@
+{
+  "_note": "Unknown product code with a label the sandbox PFR accepts (F = 11 %): the register creates the product (GET /Product?keyword=otvori then lists it, Id 5557) and issues the receipt.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "ExternalId": "otvori-dev-probe-1793025948-newcode-f",
+      "Info": "otvori sandbox probe (new product, sandbox label F)",
+      "Items": [
+        {
+          "ProductCode": "OTV-TEST-1793025948",
+          "ProductName": "otvori test artikal",
+          "GroupName": "otvori test",
+          "TaxLabel": "F",
+          "UnitMeasure": "KOM",
+          "Quantity": 1,
+          "Price": 120
+        }
+      ],
+      "Payments": [
+        {
+          "FiscalPaymentTypeId": 6,
+          "Amount": 120
+        }
+      ],
+      "FiscalReceiptData": {
+        "ReturnTextualRepresentation": true,
+        "LineWidth": 40
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 57695,
+        "TextTop": "=============ФИСКАЛНИ РАЧУН=============\r\n              RS112832835               \r\n          Octopos Software doo          \r\n          Octopos Software doo          \r\n           Vojvode Stepe 101            \r\n                Вождовац                \r\n----------------------------------------\r\nКасир:                     Otvori.Menu .\r\nЕСИР број:                       602/1.0\r\n-------------ПРОМЕТ ПРОДАЈА-------------\r\n                Артикли                 \r\n========================================\r\nНазив    Цена        Кол.         Укупно\r\n----------------------------------------\r\notvori test artikal (F)                 \r\n       120,00           1         120,00\r\n----------------------------------------\r\nУкупан износ:                     120,00\r\nИнстант плаћање:                  120,00\r\n========================================\r\nОзнака    Име       Стопа          Порез\r\nF        ECAL      11,00%          11,89\r\n----------------------------------------\r\nУкупан износ пореза:               11,89\r\n========================================\r\nПФР време:          26.10.2026. 15:47:17\r\nПФР број рачуна: SEU257EZ-Dt1Ov2o0-10371\r\nБројач рачуна:              8990/10371ПП\r\n========================================\r\n",
+        "TextBottom": "=========КРАЈ ФИСКАЛНОГ РАЧУНА==========\r\nYour order number is: 66872             \r\n    @@@@@     @@@@@    @@@@@@   @@@@@@@@\r\n   @@@@@@                               \r\n  @@        @@        @@    @@       @@ \r\n  @@    @@                              \r\n  @@        @@        @@    @@      @@  \r\n        @@                              \r\n  @@@@@@    @@@@@@      @@@@       @@   \r\n      @@                                \r\n  @@    @@  @@    @@  @@    @@    @@    \r\n    @@                                  \r\n  @@    @@  @@    @@  @@    @@   @@     \r\n  @@                                    \r\n    @@@@      @@@@     @@@@@@   @@      \r\n  @@@@@@@@                              \r\n",
+        "ImageBottom": "iVBORw0KGgoAAAANSUhEUgAAAQ0AAACz…(base64 PNG of the verification QR, truncated in the fixture)",
+        "VerificationUrl": "https://sandbox.suf.purs.gov.rs/v/?vl=A1NFVTI1N0VaRHQxT3YybzCDKAAAHiMAAIBPEgAAAAAAAAABoXiuFigAAABagigfzZ4VCAUmGwAIU2sMvETRlh67P9LHooqv%2B5rc6GjNUsv0cTEbPms%2BEy8UIiX1Iaitis%2F2WvlL%2FUCt39IcusY2neFV%2Bc3JfZ9ltQ9bbYVfwjhCY4cqI3YX%2B3yej5YdXa2zoEaGUdFXiRN4xELA6KpwmeGPKNvi6cIWKNrRMX1UaTcas3%2BNrh7GHV9TIwiuLWO6qCU9p2q2vUlF2jqSaPUZrPgIN9BuEUuoKRJvEQfJNbJ5iD77MOcZPgzYBbiSQs3%2FvFnvpdK%2BpJygN%2BQpIt7uDx%2BZsXiwHPUvdP4M04tYv8sXB9hFeMEQYymh7ilFgbq6RdvN6571UXgQ4Oc8qxXiFcsXA1GJrXNZHRDPkZ0qXpV%2Fv%2FE8CHuhYPYBWEhi%2BRNnaCF4tdqq%2FiGxz%2FrTZ8yTq4ptUHHKlL5KPApOqVmhjhdpoGe%2FMfLWIqn8GTDTFHDVF7JRVjY3%2BGhoNpqvAWQzB6x15D6zzRIF%2BmahsKHIVC3UPa9Iq4GrVs1OCC22wBQXi2RxgeJn47us5rVo58QL9va7UXrlZbpGiiCoWZJRpsoTFTmzC8dIEDliaQwEBn9wiQW0htGgvOtJpfdrUgH2bNt0BXoTXsb8BbaD%2F7EIuLcQBDMOew5yceb%2FWi9TVzEyE9zc%2FKo%2B%2BvDCRlMNQJ2bCeGLoD7Wpitubf0eECimVQ%2FKQwi1VSPMZwI7ea8%3D",
+        "InvoiceNumber": "SEU257EZ-Dt1Ov2o0-10371",
+        "DoubleFontLineIndexes": [],
+        "TextBeforeLineIndexes": [],
+        "TextAfterLineIndexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "SdcDateTime": "2026-10-26T15:47:17.287"
+      }
+    }
+  }
+}

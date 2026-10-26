@@ -147,6 +147,13 @@ export function fetchPayment(slug: string | null, orderId: string, ref: string, 
   );
 }
 
+/** The fiscal receipt PDF; the session rides in `?s=` because the browser opens this link directly. */
+export function receiptPdfUrl(slug: string | null, orderId: string): string {
+  const url = publicUrl(slug, `orders/${encodeURIComponent(orderId)}/receipt.pdf`);
+  url.searchParams.set('s', getSessionId());
+  return url.toString();
+}
+
 export function sendReceiptEmail(slug: string | null, orderId: string, email: string): Promise<{ ok: true }> {
   return request<{ ok: true }>(publicUrl(slug, `orders/${encodeURIComponent(orderId)}/receipt-email`), jsonInit('POST', { email }));
 }

@@ -1,0 +1,31 @@
+{
+  "_note": "POS mode: TableName + no Payments opens the order on the table; Data is the bill id. Table 01 then shows up in GET /Table/Occupied with 250 RSD.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "ExternalId": "otvori-dev-probe-1793025949-table",
+      "TableName": "01",
+      "Info": "otvori sandbox probe (open on table)",
+      "Items": [
+        {
+          "ProductCode": "686",
+          "Quantity": 1,
+          "Price": 250,
+          "Info": "bez leda"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": 66871
+    }
+  }
+}

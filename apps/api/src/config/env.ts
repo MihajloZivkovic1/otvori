@@ -75,9 +75,17 @@ const envSchema = z.object({
   OTP_ECOM_BASE_URL: z.url().optional(),
   /** POS integration (Phase 9d). POS_MOCK=true enables the mock register (logs + fake fiscal receipts). */
   POS_MOCK: boolFlag,
-  /** Octopos sandbox for the live integration tests only (never printed, never used by the app itself). */
+  /**
+   * Octopos sandbox credentials for the live integration tests (apps/api/test/octopos-live.test.ts) and the seed of
+   * the demo venue — never printed, never shared across venues in production (each venue stores its own key).
+   * OCTOPOS_SANDBOX_URL / OCTOPOS_SANDBOX_AUTH are the older names of the same pair.
+   */
+  OCTOPOS_API_URL: z.string().optional(),
+  OCTOPOS_API_KEY: z.string().optional(),
   OCTOPOS_SANDBOX_URL: z.string().optional(),
   OCTOPOS_SANDBOX_AUTH: z.string().optional(),
+  /** Set to 1 to let the live test suite create orders/receipts on the sandbox tenant (writes). */
+  OCTOPOS_LIVE_WRITE: boolFlag,
 
   /** Build identifier reported by GET /api/health (the git short SHA baked into the Docker image). */
   APP_VERSION: z.string().optional(),

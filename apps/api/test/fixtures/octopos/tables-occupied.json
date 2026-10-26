@@ -1,0 +1,26 @@
+{
+  "_note": "GET /Table/Occupied right after weborder-table-open.json (table 01 holds our 250 RSD order). Unauthenticated on the sandbox.",
+  "recordedAt": "2026-10-26",
+  "request": {
+    "method": "GET",
+    "path": "/Table/Occupied"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": [
+        {
+          "Id": 1,
+          "Name": "01",
+          "UserId": 138,
+          "UserFullName": "Otvori.Menu .",
+          "Amount": 250.0,
+          "HasHold": false
+        }
+      ]
+    }
+  }
+}

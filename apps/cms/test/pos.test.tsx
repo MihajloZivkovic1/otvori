@@ -21,7 +21,7 @@ function posVenue(fiscal: Partial<OrderDto> = {}, config: Partial<RestaurantDto[
     modules: { ordering: true, payments: true, pos: true },
     orderingMode: 'order',
     paymentConfig: { provider: 'mock', merchantId: 'DEMO-1', hasSecret: true, tipPresets: [0, 5, 10, 15], receiptEmailEnabled: true, simulator: true },
-    posConfig: { provider: 'mock', baseUrl: null, hasApiKey: true, tableMapping: { [ids.table7]: 'B1' }, sendOrdersToPos: true, closeOnPayment: true, printOnClose: false, closeMode: 'reuse-external-id', simulator: true, ...config },
+    posConfig: { provider: 'mock', mode: 'pos', baseUrl: null, hasApiKey: true, taxLabel: 'Ђ', taxNumber: null, tableMapping: { [ids.table7]: 'B1' }, sendOrdersToPos: true, closeOnPayment: true, closeStrategy: 'reissue', payPaymentTypeId: null, simulator: true, ...config },
   };
   const handler: FetchHandler = (request) => {
     const path = request.url.pathname;
@@ -48,6 +48,14 @@ describe('waiter screen → fiscal receipt', () => {
     const progress = await screen.findByRole('region', { name: /In progress/ });
     const order141 = within(progress).getByRole('article', { name: 'Order #141, table 11' });
     expect(within(order141).getByText('Paid · IPS')).toBeInTheDocument();
+    expect(within(order141).getByText('Fiscal receipt · PFR0-007')).toHaveAttribute('data-fiscal', 'issued');
+  });
+
+  it('shows the chip on a cash order Octopos fiscalised for the venue (ESIR mode)', async () => {
+    mockApi({ session: sessionFor(user) }, posVenue({ paymentStatus: 'cash', tipCents: 0 }, { mode: 'esir', sendOrdersToPos: false }).handler);
+    renderApp(`/r/${ids.restaurant}/orders`, { viewport: 'mobile' });
+    const progress = await screen.findByRole('region', { name: /In progress/ });
+    const order141 = within(progress).getByRole('article', { name: 'Order #141, table 11' });
     expect(within(order141).getByText('Fiscal receipt · PFR0-007')).toHaveAttribute('data-fiscal', 'issued');
   });
 
@@ -102,7 +110,10 @@ describe('menu editor → POS code', () => {
     const drawer = await screen.findByRole('dialog');
     const field = within(drawer).getByLabelText('POS product code');
     expect(within(drawer).getByText('No POS code: guests cannot order this item while orders go to the register.')).toBeInTheDocument();
+    // The focus trap moves focus to the name field on the next animation frame; typing before that loses keystrokes.
+    await waitFor(() => expect(document.activeElement?.hasAttribute('data-autofocus')).toBe(true));
     await typist.type(field, 'ESP');
+    expect(field).toHaveValue('ESP');
     await typist.click(within(drawer).getByRole('button', { name: /^Save/ }));
     await waitFor(() => {
       const patch = requests(spy).find((r) => r.method === 'PATCH' && r.url.pathname.endsWith(`/items/${ids.espresso}`));
@@ -112,31 +123,37 @@ describe('menu editor → POS code', () => {
 });
 
 describe('settings → Integrations', () => {
-  it('shows the mock-register badge, saves the mapping and switches, tests the connection and runs a reviewed sync', async () => {
+  it('shows the mock-register badge, saves the mode, mapping and switches, tests the connection and runs a reviewed sync', async () => {
     const spy = mockApi({ session: sessionFor(user) }, posVenue().handler);
     renderApp(`/r/${ids.restaurant}/settings`);
     const typist = userEvent.setup();
     const card = await screen.findByRole('region', { name: 'Integrations · Octopos' });
     expect(await within(card).findByText('MOCK REGISTER')).toBeInTheDocument();
+    expect(within(card).getByRole('radio', { name: /The venue’s own Octopos till/ })).toHaveAttribute('aria-checked', 'true');
     expect(within(card).getByLabelText('POS table name for Table 7')).toHaveValue('B1');
     expect(within(card).getByRole('switch', { name: 'Send orders to the register' })).toHaveAttribute('aria-checked', 'true');
     expect(within(card).getByRole('button', { name: 'Save' })).toBeDisabled();
+    // The register's tables feed the mapping suggestions (a datalist, so no accessible role in jsdom).
+    await waitFor(() => expect(card.querySelector('datalist option[value="B2"]')).not.toBeNull());
 
     await typist.clear(within(card).getByLabelText('POS table name for Table 7'));
     await typist.type(within(card).getByLabelText('POS table name for Table 7'), 'Bašta 1');
-    await typist.click(within(card).getByRole('switch', { name: 'Close on payment' }));
-    await typist.selectOptions(within(card).getByLabelText('Closing an opened order'), 'new-receipt');
+    await typist.click(within(card).getByRole('switch', { name: 'Issue the fiscal receipt on payment' }));
+    await typist.type(within(card).getByLabelText('PIB'), '112832835');
     await typist.click(within(card).getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       const patch = requests(spy).find((r) => r.method === 'PATCH' && r.url.pathname.endsWith('/pos-config'));
       expect(patch?.body).toEqual({
         provider: 'mock',
+        mode: 'pos',
         baseUrl: null,
+        taxLabel: 'Ђ',
+        taxNumber: '112832835',
         tableMapping: { [ids.table7]: 'Bašta 1' },
         sendOrdersToPos: true,
         closeOnPayment: false,
-        printOnClose: false,
-        closeMode: 'new-receipt',
+        closeStrategy: 'reissue',
+        payPaymentTypeId: null,
       });
     });
     expect(await screen.findByText('Integration settings saved')).toBeInTheDocument();
@@ -148,7 +165,6 @@ describe('settings → Integrations', () => {
     const modal = await screen.findByRole('dialog', { name: 'Sync from the register' });
     expect(await within(modal).findByText('Kapućino')).toBeInTheDocument();
     expect(within(modal).getByText(/2 menu items have no POS code/)).toBeInTheDocument();
-    // Untick the price change, apply only the new product.
     await typist.click(within(modal).getByRole('checkbox', { name: /Espresso/ }));
     await typist.click(within(modal).getByRole('button', { name: /^Apply/ }));
     await waitFor(() => {
@@ -156,6 +172,23 @@ describe('settings → Integrations', () => {
       expect(sync?.body).toEqual({ createCodes: ['CAP'], updateCodes: [] });
     });
     expect(await screen.findByText('1 new, 0 prices updated')).toBeInTheDocument();
+  });
+
+  it('switching to ESIR mode hides the till options, shows the per-receipt note and the tax label picker from the register', async () => {
+    const spy = mockApi({ session: sessionFor(user) }, posVenue().handler);
+    renderApp(`/r/${ids.restaurant}/settings`);
+    const typist = userEvent.setup();
+    const card = await screen.findByRole('region', { name: 'Integrations · Octopos' });
+    await typist.click(await within(card).findByRole('radio', { name: /Octopos issues the fiscal receipts/ }));
+    expect(within(card).queryByRole('switch', { name: 'Send orders to the register' })).toBeNull();
+    expect(within(card).queryByLabelText('POS table name for Table 7')).toBeNull();
+    expect(within(card).getByText(/Every order paid by phone and every order staff mark as cash becomes one fiscal receipt/)).toBeInTheDocument();
+    await typist.selectOptions(await within(card).findByLabelText('Tax label'), 'Е');
+    await typist.click(within(card).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      const patch = requests(spy).find((r) => r.method === 'PATCH' && r.url.pathname.endsWith('/pos-config'));
+      expect(patch?.body).toMatchObject({ mode: 'esir', taxLabel: 'Е', sendOrdersToPos: false });
+    });
   });
 
   it('is absent without the POS module', async () => {

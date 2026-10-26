@@ -32,6 +32,7 @@ function order(overrides: Partial<PublicOrderDto> = {}): PublicOrderDto {
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalIssuedAt: null,
     fiscalReceiptText: null,
     ...overrides,
   };
@@ -177,6 +178,7 @@ describe('fiscal receipt', () => {
         fiscalStatus: 'issued',
         fiscalInvoiceNumber: 'MOCKPFR0-MOCKPFR0-001',
         fiscalVerificationUrl: 'https://sandbox.suf.purs.gov.rs/v/?vl=MOCK1',
+        fiscalIssuedAt: null,
         fiscalReceiptText: '=== ФИСКАЛНИ РАЧУН ===',
       })).handler(url, init),
     );
@@ -186,6 +188,12 @@ describe('fiscal receipt', () => {
     expect(within(section).getByText('MOCKPFR0-MOCKPFR0-001')).toBeInTheDocument();
     expect(within(section).getByRole('img', { name: 'Fiskalni račun' })).toBeInTheDocument();
     expect(within(section).getByRole('link', { name: 'Otvori račun' })).toHaveAttribute('href', 'https://sandbox.suf.purs.gov.rs/v/?vl=MOCK1');
+    // The PDF link opens the API route directly, so the guest session rides in the query string.
+    const pdf = within(section).getByRole('link', { name: 'Preuzmi PDF' });
+    expect(pdf).toHaveAttribute('target', '_blank');
+    const pdfUrl = new URL(pdf.getAttribute('href')!);
+    expect(pdfUrl.pathname).toBe(`/api/public/kafeterija/orders/${ORDER_ID}/receipt.pdf`);
+    expect(pdfUrl.searchParams.get('s')).toBe(sessionStorage.getItem('tabla.session'));
     await user.click(within(section).getByRole('button', { name: 'Pošalji' }));
     expect(await within(section).findByRole('alert')).toHaveTextContent('Upiši ispravnu adresu.');
     await user.type(within(section).getByLabelText('Pošalji na mejl'), 'gost@example.com');
@@ -193,6 +201,18 @@ describe('fiscal receipt', () => {
     expect(await within(section).findByText('Poslato. Proveri sanduče.')).toBeInTheDocument();
     const mail = requests(spy).find((r) => r.url.pathname.endsWith('/receipt-email'));
     expect(JSON.parse(String(mail?.init?.body))).toEqual({ email: 'gost@example.com' });
+  });
+
+  it('shows the receipt for a cash order Octopos fiscalised for the venue (ESIR mode)', async () => {
+    mockFetch(
+      paymentApi(
+        order({ paymentStatus: 'cash', paidAmountCents: 60000, paidAt: '2026-10-22T11:50:00.000Z', fiscalStatus: 'issued', fiscalInvoiceNumber: 'CASH-RCPT-2', fiscalVerificationUrl: 'https://sandbox.suf.purs.gov.rs/v/?vl=CASH2' }),
+      ).handler,
+    );
+    renderMenu(`/r/kafeterija/order/${ORDER_ID}`);
+    const section = await screen.findByRole('region', { name: 'Fiskalni račun' });
+    expect(within(section).getByText('CASH-RCPT-2')).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: 'Preuzmi PDF' })).toBeInTheDocument();
   });
 
   it('hides the e-mail form when the venue turned receipt mails off', async () => {

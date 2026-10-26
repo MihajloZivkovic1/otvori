@@ -122,6 +122,7 @@ export function toOrderDto(order: Order): OrderDto {
     fiscalStatus: order.fiscalStatus,
     fiscalInvoiceNumber: order.fiscalInvoiceNumber,
     fiscalVerificationUrl: order.fiscalVerificationUrl,
+    fiscalIssuedAt: toIso(order.fiscalIssuedAt),
     fiscalError: order.fiscalError,
     posRef: order.posRef,
   };
@@ -171,6 +172,7 @@ export function toPublicOrderDto(
     fiscalStatus: order.fiscalStatus,
     fiscalInvoiceNumber: order.fiscalInvoiceNumber,
     fiscalVerificationUrl: order.fiscalVerificationUrl,
+    fiscalIssuedAt: toIso(order.fiscalIssuedAt),
     fiscalReceiptText: order.fiscalReceiptText,
   };
 }

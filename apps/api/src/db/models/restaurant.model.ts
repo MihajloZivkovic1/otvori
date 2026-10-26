@@ -1,6 +1,6 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, Column, DataType, Default, HasMany, Model, PrimaryKey, Table, Unique } from 'sequelize-typescript';
-import type { PaymentProviderKey, PosCloseMode, PosProviderKey } from '@qr-menu/shared';
+import type { PaymentProviderKey, PosCloseStrategy, PosMode, PosProviderKey } from '@qr-menu/shared';
 import {
   DEFAULT_MODULES,
   ORDERING_MODES,
@@ -34,13 +34,18 @@ export interface StoredPaymentConfig {
 /** What `restaurants.pos_config` holds (Phase 9d). */
 export interface StoredPosConfig {
   provider: PosProviderKey | null;
+  /** esir = Octopos fiscalises for the venue (no till); pos = the venue's own Octopos till. */
+  mode: PosMode;
   baseUrl: string | null;
   apiKeyEncrypted: string | null;
+  /** Fiscal label sent when the register creates a product (Ђ = 20 % in production). */
+  taxLabel: string;
+  taxNumber: string | null;
   tableMapping: Record<string, string>;
   sendOrdersToPos: boolean;
   closeOnPayment: boolean;
-  printOnClose: boolean;
-  closeMode: PosCloseMode;
+  closeStrategy: PosCloseStrategy;
+  payPaymentTypeId: number | null;
 }
 
 @Table({ tableName: 'restaurants', timestamps: true, underscored: true })

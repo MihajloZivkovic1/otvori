@@ -141,6 +141,7 @@ export interface PaymentCopy {
   receiptPending: string;
   receiptNumber: string;
   openReceipt: string;
+  downloadReceipt: string;
   emailReceipt: string;
   emailPlaceholder: string;
   emailSend: string;
@@ -272,6 +273,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       receiptPending: 'The fiscal receipt is being issued at the register…',
       receiptNumber: 'Receipt no.',
       openReceipt: 'Open the receipt',
+      downloadReceipt: 'Download the PDF',
       emailReceipt: 'Send to e-mail',
       emailPlaceholder: 'you@example.com',
       emailSend: 'Send',
@@ -416,6 +418,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       receiptPending: 'Fiskalni račun se izdaje na kasi…',
       receiptNumber: 'Broj računa',
       openReceipt: 'Otvori račun',
+      downloadReceipt: 'Preuzmi PDF',
       emailReceipt: 'Pošalji na mejl',
       emailPlaceholder: 'ti@primer.rs',
       emailSend: 'Pošalji',

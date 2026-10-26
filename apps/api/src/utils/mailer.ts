@@ -1,10 +1,17 @@
 import { env } from '../config/env.js';
 import { logger } from './logger.js';
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  attachments?: MailAttachment[];
 }
 
 /** In test mode every message is captured here so tests can read links out of it. */
@@ -17,7 +24,11 @@ export interface MailProvider {
 /** Development/test provider: the message only goes to the log. */
 export const logProvider: MailProvider = {
   async send(message) {
-    logger.info({ mail: { from: env.MAIL_FROM, ...message } }, `[mail] "${message.subject}" → ${message.to}`);
+    const { attachments, ...rest } = message;
+    logger.info(
+      { mail: { from: env.MAIL_FROM, ...rest, attachments: (attachments ?? []).map((a) => `${a.filename} (${a.contentType}, ${a.content.length} bytes)`) } },
+      `[mail] "${message.subject}" → ${message.to}`,
+    );
   },
 };
 
@@ -30,7 +41,15 @@ export function resendProvider(apiKey: string, from = env.MAIL_FROM, fetchImpl: 
       const response = await fetchImpl(RESEND_ENDPOINT, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [message.to], subject: message.subject, text: message.text }),
+        body: JSON.stringify({
+          from,
+          to: [message.to],
+          subject: message.subject,
+          text: message.text,
+          ...(message.attachments?.length
+            ? { attachments: message.attachments.map((a) => ({ filename: a.filename, content: a.content.toString('base64'), content_type: a.contentType })) }
+            : {}),
+        }),
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
@@ -65,18 +84,19 @@ export function sendMagicLink(email: string, url: string): Promise<void> {
   });
 }
 
-/** The fiscal receipt of an order paid online (Phase 9d): text + the tax authority's verification link. */
+/** The fiscal receipt of an order paid online (Phase 9d/12): the PDF attached, the text and the verification link in the body. */
 export function sendFiscalReceipt(
   email: string,
-  receipt: { venue: string; orderNumber: number; invoiceNumber: string; verificationUrl: string; text: string },
+  receipt: { venue: string; orderNumber: number; invoiceNumber: string; verificationUrl: string; text: string; pdf: Buffer | null },
 ): Promise<void> {
   return sendMail({
     to: email,
     subject: `${receipt.venue} · fiskalni račun ${receipt.invoiceNumber}`,
     text:
       `Hvala na poseti — u prilogu je fiskalni račun za narudžbinu #${receipt.orderNumber} (${receipt.venue}).\n` +
-      `Thank you for your visit — this is the fiscal receipt for order #${receipt.orderNumber} (${receipt.venue}).\n\n` +
+      `Thank you for your visit — the fiscal receipt for order #${receipt.orderNumber} (${receipt.venue}) is attached.\n\n` +
       `Proveri račun / verify: ${receipt.verificationUrl}\n\n${receipt.text}\n\n— otvori.menu`,
+    ...(receipt.pdf ? { attachments: [{ filename: `fiskalni-racun-${receipt.invoiceNumber}.pdf`, content: receipt.pdf, contentType: 'application/pdf' }] } : {}),
   });
 }
 
