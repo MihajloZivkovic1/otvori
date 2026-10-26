@@ -13,7 +13,7 @@ import './styles.css';
 // Re-apply the last known theme + accent for this tenant before the first paint, so returning guests
 // never see a light flash on a dark menu.
 const cachedTenant = readCachedTenant(tenantKeyFor(resolveTenant(pathSlugFromLocation(window.location.pathname)).slug));
-if (cachedTenant) applyTheme(cachedTenant.theme, cachedTenant.primaryColor);
+if (cachedTenant) applyTheme(cachedTenant.theme, cachedTenant.primaryColor, cachedTenant.backgroundColor);
 
 const queryClient = new QueryClient({
   defaultOptions: {

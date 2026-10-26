@@ -33,6 +33,7 @@ export function toRestaurantDto(r: Restaurant): RestaurantDto {
     menuNote: r.menuNote,
     logoUrl: r.logoUrl,
     primaryColor: r.primaryColor,
+    backgroundColor: r.backgroundColor,
     theme: r.theme,
     currency: r.currency,
     defaultLocale: r.defaultLocale,

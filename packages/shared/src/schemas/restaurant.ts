@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { LOCALES, ORDERING_LIMITS } from '../constants.js';
 import {
   hexColorSchema,
+  lightHexColorSchema,
   localeSchema,
   optionalTextSchema,
   slugSchema,
@@ -18,6 +19,7 @@ export const updateRestaurantSchema = z
     tagline: optionalTextSchema(160),
     menuNote: optionalTextSchema(500),
     primaryColor: hexColorSchema,
+    backgroundColor: lightHexColorSchema,
     theme: themeSchema,
     currency: z.string().trim().min(1).max(8),
     defaultLocale: localeSchema,

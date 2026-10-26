@@ -86,6 +86,8 @@ export type AvailabilityUntilPreset = (typeof AVAILABILITY_UNTIL_PRESETS)[number
 
 export const RESTAURANT_DEFAULTS = {
   primaryColor: '#7A3E48',
+  /** Page background of the light appearance (the cream of the design); dark stays as designed. */
+  backgroundColor: '#F7F2EB',
   theme: 'light',
   currency: 'RSD',
   defaultLocale: 'sr',
@@ -95,6 +97,7 @@ export const RESTAURANT_DEFAULTS = {
   orderingMode: 'off',
 } as const satisfies {
   primaryColor: string;
+  backgroundColor: string;
   theme: Theme;
   currency: string;
   defaultLocale: Locale;

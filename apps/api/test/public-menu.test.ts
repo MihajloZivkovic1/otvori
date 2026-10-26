@@ -170,3 +170,30 @@ describe('public menu', () => {
     expect(tables.body[0].lastScanAt).toBeTypeOf('string');
   });
 });
+
+describe('branding — background color', () => {
+  it('defaults to the cream, accepts a light color and rejects a dark one', async () => {
+    const owner = await registerUser();
+    await seedMenu(owner);
+    const published = await publish(owner);
+    expect(published.backgroundColor).toBe('#F7F2EB');
+
+    const white = await api
+      .patch(`/api/admin/restaurants/${owner.restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ backgroundColor: '#FFFFFF' });
+    expect(white.status).toBe(200);
+    expect(white.body.backgroundColor).toBe('#FFFFFF');
+
+    const menu = await api.get(`/api/public/${published.slug}/menu`);
+    expect(menu.status).toBe(200);
+    expect(menu.body.restaurant).toMatchObject({ backgroundColor: '#FFFFFF', primaryColor: '#7A3E48', theme: 'light' });
+
+    const dark = await api
+      .patch(`/api/admin/restaurants/${owner.restaurantId}`)
+      .set(bearer(owner.accessToken))
+      .send({ backgroundColor: '#1B1816' });
+    expect(dark.status).toBe(400);
+    expect(dark.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});

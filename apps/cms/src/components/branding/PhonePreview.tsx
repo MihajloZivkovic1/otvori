@@ -1,19 +1,22 @@
-import type { CategoryDto, MenuItemDto, Theme } from '@qr-menu/shared';
+import { lightSurfaces, type CategoryDto, type MenuItemDto, type Theme } from '@qr-menu/shared';
 import { usePrefersDark } from '../../hooks/useMediaQuery';
 import { cn } from '../../lib/cn';
 import { textOn } from '../../lib/color';
 import { formatPrice, text } from '../../lib/format';
 import { LogoTile } from '../LogoTile';
 
-/** Guest-menu palettes from design/Tabla Guest Menu.html (the preview mimics the public menu, not the CMS). */
-const PALETTE = {
-  light: { bg: '#F7F2EB', ink: '#1F1A17', muted: '#6E645C', line: 'rgba(31,26,23,.1)', chip: '#EEE6DB', placeholder: '#E8DCCB' },
-  dark: { bg: '#1B1816', ink: '#F3EDE6', muted: '#ABA198', line: 'rgba(243,237,230,.12)', chip: '#2E2927', placeholder: '#3A322D' },
-};
+/**
+ * Guest-menu palettes from design/Tabla Guest Menu.html (the preview mimics the public menu, not the CMS). The light
+ * surfaces follow the venue's background color exactly like apps/menu/src/lib/theme.ts (shared `lightSurfaces`).
+ */
+const LIGHT_TEXT = { ink: '#1F1A17', muted: '#6E645C', line: 'rgba(31,26,23,.1)' };
+const DARK = { bg: '#1B1816', ink: '#F3EDE6', muted: '#ABA198', line: 'rgba(243,237,230,.12)', chip: '#2E2927', placeholder: '#3A322D' };
 
 interface PhonePreviewProps {
   name: string;
   color: string;
+  /** Light-appearance page background (#rrggbb); anything invalid falls back to the cream default. */
+  background: string;
   theme: Theme;
   logoUrl: string | null;
   categories: CategoryDto[];
@@ -25,10 +28,10 @@ interface PhonePreviewProps {
 }
 
 /** Live preview of the guest menu header + first category, rendered from the *unsaved* branding form state. */
-export function PhonePreview({ name, color, theme, logoUrl, categories, items, currency, defaultLocale, variant }: PhonePreviewProps) {
+export function PhonePreview({ name, color, background, theme, logoUrl, categories, items, currency, defaultLocale, variant }: PhonePreviewProps) {
   const prefersDark = usePrefersDark();
   const dark = theme === 'dark' || (theme === 'auto' && prefersDark);
-  const palette = dark ? PALETTE.dark : PALETTE.light;
+  const palette = dark ? DARK : { ...LIGHT_TEXT, ...lightSurfaces(/^#[0-9a-f]{6}$/i.test(background) ? background : null) };
   const accent = /^#[0-9a-f]{6}$/i.test(color) ? color : '#7A3E48';
   const onAccent = textOn(accent);
   const visible = categories.filter((c) => !c.isHidden);

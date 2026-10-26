@@ -28,14 +28,15 @@
 
 :root {
   color-scheme: light;
-  --bg: #f7f2eb;
-  --surface: #fffdf9;
+  /* The light page background is the venue's backgroundColor (lib/theme.ts); the cream is the design default. */
+  --bg: var(--bg-light, #f7f2eb);
+  --surface: var(--surface-light, #fffdf9);
   --ink: #1f1a17;
   --muted: #6e645c;
   --line: rgba(31, 26, 23, 0.1);
   --line-strong: rgba(31, 26, 23, 0.14);
-  --chip: #eee6db;
-  --placeholder: #e8dccb;
+  --chip: var(--chip-light, #eee6db);
+  --placeholder: var(--placeholder-light, #e8dccb);
   --scrim: rgba(31, 26, 23, 0.45);
   --accent: var(--accent-light, #7a3e48);
   --on-accent: var(--on-accent-light, #ffffff);

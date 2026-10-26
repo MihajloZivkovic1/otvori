@@ -1,10 +1,12 @@
-import { RESTAURANT_DEFAULTS, type Theme } from '@qr-menu/shared';
+import { RESTAURANT_DEFAULTS, lightSurfaces, type Theme } from '@qr-menu/shared';
 
 /**
  * Theming: restaurant.theme picks light / dark / auto (device preference). The tenant accent (primaryColor)
  * is exposed as --accent-light together with a readable text color; styles.css derives the dark-surface
  * accent from it in CSS (OKLCH relative color, see the @supports block) so the burgundy of the design turns
- * into the same dusty pink the dark frame uses.
+ * into the same dusty pink the dark frame uses. The light appearance additionally takes the venue's
+ * backgroundColor (--bg-light plus the derived --surface-light, --chip-light, --placeholder-light);
+ * dark surfaces are never customised.
  */
 
 const WHITE = '#FFFFFF';
@@ -34,7 +36,11 @@ export function normalizeTheme(theme: string | null | undefined): Theme {
   return theme === 'dark' || theme === 'auto' ? theme : 'light';
 }
 
-export function applyTheme(theme: string | null | undefined, primaryColor: string | null | undefined): void {
+export function applyTheme(
+  theme: string | null | undefined,
+  primaryColor: string | null | undefined,
+  backgroundColor?: string | null | undefined,
+): void {
   const root = document.documentElement;
   const mode = normalizeTheme(theme);
   if (mode === 'auto') delete root.dataset.theme;
@@ -43,4 +49,10 @@ export function applyTheme(theme: string | null | undefined, primaryColor: strin
   const accent = normalizeHex(primaryColor) ?? RESTAURANT_DEFAULTS.primaryColor;
   root.style.setProperty('--accent-light', accent);
   root.style.setProperty('--on-accent-light', readableOn(accent));
+
+  const surfaces = lightSurfaces(backgroundColor ?? RESTAURANT_DEFAULTS.backgroundColor);
+  root.style.setProperty('--bg-light', surfaces.bg);
+  root.style.setProperty('--surface-light', surfaces.surface);
+  root.style.setProperty('--chip-light', surfaces.chip);
+  root.style.setProperty('--placeholder-light', surfaces.placeholder);
 }

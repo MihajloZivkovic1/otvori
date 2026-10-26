@@ -94,6 +94,7 @@ export const restaurant: RestaurantDto = {
   menuNote: 'Kitchen until 16:00',
   logoUrl: null,
   primaryColor: '#7A3E48',
+  backgroundColor: '#F7F2EB',
   theme: 'light',
   currency: 'RSD',
   defaultLocale: 'sr',

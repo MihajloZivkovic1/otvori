@@ -51,6 +51,7 @@ export interface CachedTenant {
   name: string;
   logoUrl: string | null;
   primaryColor: string;
+  backgroundColor: string;
   theme: string;
 }
 
@@ -64,6 +65,7 @@ export function readCachedTenant(tenantKey: string): CachedTenant | null {
       name: value.name,
       logoUrl: typeof value.logoUrl === 'string' ? value.logoUrl : null,
       primaryColor: typeof value.primaryColor === 'string' ? value.primaryColor : RESTAURANT_DEFAULTS.primaryColor,
+      backgroundColor: typeof value.backgroundColor === 'string' ? value.backgroundColor : RESTAURANT_DEFAULTS.backgroundColor,
       theme: typeof value.theme === 'string' ? value.theme : RESTAURANT_DEFAULTS.theme,
     };
   } catch {
@@ -71,9 +73,9 @@ export function readCachedTenant(tenantKey: string): CachedTenant | null {
   }
 }
 
-export function writeCachedTenant(tenantKey: string, { name, logoUrl, primaryColor, theme }: CachedTenant): void {
+export function writeCachedTenant(tenantKey: string, { name, logoUrl, primaryColor, backgroundColor, theme }: CachedTenant): void {
   try {
-    localStorage.setItem(CACHE_PREFIX + tenantKey, JSON.stringify({ name, logoUrl, primaryColor, theme }));
+    localStorage.setItem(CACHE_PREFIX + tenantKey, JSON.stringify({ name, logoUrl, primaryColor, backgroundColor, theme }));
   } catch {
     // storage unavailable (private mode / quota) — purely a nicety
   }

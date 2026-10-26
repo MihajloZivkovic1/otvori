@@ -76,6 +76,12 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Column(DataType.TEXT)
   primaryColor!: CreationOptional<string>;
 
+  /** Page background of the light appearance; dark mode keeps the designed palette. */
+  @AllowNull(false)
+  @Default(RESTAURANT_DEFAULTS.backgroundColor)
+  @Column(DataType.TEXT)
+  backgroundColor!: CreationOptional<string>;
+
   @AllowNull(false)
   @Default(RESTAURANT_DEFAULTS.theme)
   @Column(DataType.ENUM(...THEMES))

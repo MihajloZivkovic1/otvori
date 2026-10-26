@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { hexColorSchema, themeSchema, type RestaurantDto } from '@qr-menu/shared';
+import { hexColorSchema, lightHexColorSchema, themeSchema, type RestaurantDto } from '@qr-menu/shared';
 import { PhonePreview } from '../components/branding/PhonePreview';
 import { LogoTile } from '../components/LogoTile';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
@@ -20,11 +20,20 @@ import { useCategories, useItems, useUpdateRestaurant, useUploadLogo } from '../
 const brandingSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100),
   primaryColor: hexColorSchema,
+  backgroundColor: lightHexColorSchema,
   theme: themeSchema,
 });
 type BrandingValues = z.infer<typeof brandingSchema>;
 
 const SWATCHES = ['#7A3E48', '#B5421F', '#2F5D50', '#8A5A2B', '#3B5BA5', '#18181B'];
+/** Light-appearance page backgrounds: the design's cream first, then pure white and a few quiet neutrals. */
+const BACKGROUND_SWATCHES = [
+  { hex: '#F7F2EB', label: 'Cream (default)' },
+  { hex: '#FFFFFF', label: 'White' },
+  { hex: '#FBF8F1', label: 'Ivory' },
+  { hex: '#F3F2EF', label: 'Stone' },
+  { hex: '#EEF1F4', label: 'Mist' },
+];
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
@@ -32,7 +41,12 @@ const THEME_OPTIONS = [
 ] as const;
 
 function defaultsOf(restaurant: RestaurantDto): BrandingValues {
-  return { name: restaurant.name, primaryColor: restaurant.primaryColor.toUpperCase(), theme: restaurant.theme };
+  return {
+    name: restaurant.name,
+    primaryColor: restaurant.primaryColor.toUpperCase(),
+    backgroundColor: restaurant.backgroundColor.toUpperCase(),
+    theme: restaurant.theme,
+  };
 }
 
 export function BrandingPage() {
@@ -56,7 +70,11 @@ export function BrandingPage() {
 
   const save = form.handleSubmit(async (input) => {
     try {
-      const saved = await update.mutateAsync({ ...input, primaryColor: input.primaryColor.toUpperCase() });
+      const saved = await update.mutateAsync({
+        ...input,
+        primaryColor: input.primaryColor.toUpperCase(),
+        backgroundColor: input.backgroundColor.toUpperCase(),
+      });
       form.reset(defaultsOf(saved));
       void refreshMe();
       toast.success('Branding saved');
@@ -85,6 +103,7 @@ export function BrandingPage() {
       variant={isMobile ? 'card' : 'phone'}
       name={values.name}
       color={values.primaryColor}
+      background={values.backgroundColor}
       theme={values.theme}
       logoUrl={restaurant.logoUrl}
       categories={categories.data ?? []}
@@ -143,6 +162,55 @@ export function BrandingPage() {
     />
   );
 
+  const backgroundField = (
+    <Controller
+      control={form.control}
+      name="backgroundColor"
+      render={({ field, fieldState }) => (
+        <div className="flex flex-col gap-2">
+          <span className={cn('font-medium', isMobile ? 'text-[15px]' : 'text-[13px]')}>Background color</span>
+          <div className={cn('flex flex-wrap items-center', isMobile ? 'gap-2.5' : 'gap-2')} role="radiogroup" aria-label="Background color">
+            {BACKGROUND_SWATCHES.map(({ hex, label }) => {
+              const selected = field.value.toUpperCase() === hex;
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-label={label}
+                  title={`${label} · ${hex}`}
+                  disabled={!isOwner}
+                  onClick={() => field.onChange(hex)}
+                  className={cn('cursor-pointer rounded-full border-none disabled:cursor-default', isMobile ? 'size-10' : 'size-8')}
+                  style={{ background: hex, boxShadow: selected ? '0 0 0 2px var(--surface), 0 0 0 4px var(--ink)' : 'inset 0 0 0 1px var(--swatch-ring)' }}
+                />
+              );
+            })}
+            <Input
+              aria-label="Background color hex"
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+              onBlur={field.onBlur}
+              disabled={!isOwner}
+              invalid={Boolean(fieldState.error)}
+              maxLength={7}
+              spellCheck={false}
+              className={cn('font-mono font-medium', isMobile ? 'h-10 min-w-[90px] flex-1 rounded-[10px] text-sm' : 'ml-2 h-8 w-[110px] text-[13px]')}
+            />
+          </div>
+          {fieldState.error ? (
+            <span role="alert" className="text-xs text-danger-text">
+              {fieldState.error.message}
+            </span>
+          ) : (
+            <span className="text-xs text-faint">Page background of the light appearance. Dark keeps its own palette.</span>
+          )}
+        </div>
+      )}
+    />
+  );
+
   const logoInput = (
     <input
       ref={fileRef}
@@ -189,6 +257,7 @@ export function BrandingPage() {
             <Input id="brand-name" controlSize="lg" disabled={!isOwner} invalid={Boolean(form.formState.errors.name)} {...form.register('name')} />
           </Field>
           {colorField}
+          {backgroundField}
           <Controller
             control={form.control}
             name="theme"
@@ -252,6 +321,7 @@ export function BrandingPage() {
           <Input id="brand-name" disabled={!isOwner} invalid={Boolean(form.formState.errors.name)} {...form.register('name')} />
         </Field>
         {colorField}
+        {backgroundField}
         <Controller
           control={form.control}
           name="theme"

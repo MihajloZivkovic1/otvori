@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isLightBackground } from '../color.js';
 import {
   ALLERGENS,
   ANALYTICS_RANGES,
@@ -35,6 +36,11 @@ export const hexColorSchema = z
   .string()
   .trim()
   .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a hex color like #7A3E48');
+
+/** A hex color light enough to carry the dark ink of the light appearance (page background). */
+export const lightHexColorSchema = hexColorSchema.refine((hex) => isLightBackground(hex), {
+  message: 'Choose a light color so the text stays readable',
+});
 
 /** Subdomains that are not venues (app, api, marketing, mail, …): a venue must never take one of these as its slug. */
 export const RESERVED_SLUGS = new Set([

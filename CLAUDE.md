@@ -500,8 +500,12 @@ and run `npx lighthouse <that url>` (mobile is Lighthouse's default).
   --chip --placeholder --scrim --accent --on-accent` — dark values under `:root[data-theme="dark"]` and, for `theme: auto`,
   under `@media (prefers-color-scheme: dark) :root:not([data-theme="light"])`. `@theme inline` maps them to utilities
   (`bg-canvas text-ink text-muted border-line border-line-strong bg-chip bg-surface bg-placeholder bg-scrim bg-accent text-on-accent`).
-  `applyTheme(theme, primaryColor)` sets `data-theme` (removed for auto) plus `--accent-light` = primaryColor and `--on-accent-light`
-  (white vs dark ink by luminance). On dark surfaces CSS lifts the accent with `oklch(from …)` (50 % toward white, 85 % chroma), which
+  `applyTheme(theme, primaryColor, backgroundColor)` sets `data-theme` (removed for auto) plus `--accent-light` = primaryColor and `--on-accent-light`
+  (white vs dark ink by luminance), and the light-appearance surfaces `--bg-light --surface-light --chip-light --placeholder-light`
+  from `restaurant.backgroundColor` (shared `lightSurfaces()` in `packages/shared/src/color.ts`: the default cream `#F7F2EB` keeps the
+  designed palette, any other light background derives card/chip/placeholder tones from itself; `lightHexColorSchema` refuses
+  backgrounds below 0.6 luminance so the dark ink stays readable). Dark mode never changes with it. The CMS Branding page has the
+  "Background color" swatches (cream, white, ivory, stone, mist + hex) and `PhonePreview` uses the same helper. On dark surfaces CSS lifts the accent with `oklch(from …)` (50 % toward white, 85 % chroma), which
   reproduces the design's light/dark accent pairs. The accent is only used for chips, the logo tile, the retry button and focus rings,
   never for body text. Light/dark palettes, type sizes and spacing come from `design/Tabla Guest Menu.html`.
 - **Fonts**: Google Fonts (Figtree 400/500/600, Libre Baskerville 400/700, `display=swap`) via preconnect + a non-blocking stylesheet

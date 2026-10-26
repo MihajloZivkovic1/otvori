@@ -83,4 +83,18 @@ describe('theme', () => {
     expect(root.style.getPropertyValue('--accent-light')).toBe('#7A3E48');
     expect(root.dataset.theme).toBeUndefined();
   });
+  it('exposes the venue background for the light appearance and derives its surfaces', () => {
+    const root = document.documentElement;
+    applyTheme('light', '#7A3E48', '#FFFFFF');
+    expect(root.style.getPropertyValue('--bg-light')).toBe('#FFFFFF');
+    expect(root.style.getPropertyValue('--surface-light')).toBe('#FFFFFF');
+    // chips and placeholders turn into soft greys instead of the cream ones
+    expect(root.style.getPropertyValue('--chip-light')).toBe('#F2F1F1');
+    expect(root.style.getPropertyValue('--placeholder-light')).toBe('#E9E8E8');
+    // the default cream keeps the hand-tuned palette of the design; a missing value means the default
+    applyTheme('light', '#7A3E48');
+    expect(root.style.getPropertyValue('--bg-light')).toBe('#F7F2EB');
+    expect(root.style.getPropertyValue('--surface-light')).toBe('#FFFDF9');
+    expect(root.style.getPropertyValue('--chip-light')).toBe('#EEE6DB');
+  });
 });

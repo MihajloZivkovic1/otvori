@@ -18,7 +18,7 @@ export function useTenant(pathSlug: string | undefined) {
 export function useTenantTheme(restaurant: (CachedTenant & { theme: string }) | null, tenantKey: string): void {
   useEffect(() => {
     if (!restaurant) return;
-    applyTheme(restaurant.theme, restaurant.primaryColor);
+    applyTheme(restaurant.theme, restaurant.primaryColor, restaurant.backgroundColor);
     writeCachedTenant(tenantKey, restaurant);
   }, [restaurant, tenantKey]);
 }

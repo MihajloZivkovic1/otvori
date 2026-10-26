@@ -84,6 +84,7 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       menuNote: restaurant.menuNote,
       logoUrl: restaurant.logoUrl,
       primaryColor: restaurant.primaryColor,
+      backgroundColor: restaurant.backgroundColor,
       theme: restaurant.theme,
       currency: restaurant.currency,
       defaultLocale: restaurant.defaultLocale,

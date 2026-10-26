@@ -1,4 +1,5 @@
 export * from './constants.js';
+export * from './color.js';
 export * from './i18n.js';
 export * from './availability.js';
 export * from './ordering.js';
