@@ -85,7 +85,7 @@ export const sr: Dictionary = {
       },
       { title: 'Srpski i engleski sa jednog koda', text: 'Gost bira jezik. Isti kod, iste cene.' },
       { title: 'Alergeni i oznake (vegansko, ljuto, novo)', text: 'Po stavci, bez pitanja konobaru.' },
-      { title: 'Tvoj logo i boje', text: 'Meni izgleda kao tvoj lokal, ne kao naš softver.' },
+      { title: 'Tvoj logo i boje', text: 'Meni izgleda kao tvoj lokal, ne kao naš softver.', badge: 'Pro' },
       { title: 'Ko šta gleda i naručuje, po stolu', text: 'Vidiš koji sto skenira, šta se naručuje i kad je gužva.' },
     ],
     payments: {
@@ -125,15 +125,17 @@ export const sr: Dictionary = {
       'Srpski + engleski',
       'Osnovna statistika',
     ],
+    proVenues: 'Do 3 lokala pod jednim nalogom',
+    proExtraVenue: { monthly: 'svaki sledeći +{price} RSD/mes', yearly: 'svaki sledeći +{price} RSD/god' },
     proList: [
-      'Više lokala pod jednim nalogom',
       'Više jezika',
       'Brending: tvoj logo i boje',
       'Napredna statistika po stolu i satu',
       'Prioritetna podrška',
     ],
     trialNote: '30 dana besplatno, bez kartice.',
-    setupLine: 'Unos menija i QR kartice za stolove: od 6.000 RSD jednokratno, zavisi od broja stolova.',
+    setupLine:
+      'Unos menija i QR kartice za stolove: od 6.000 RSD jednokratno, zavisi od broja stolova. Dodatni lokal sa istim menijem: 3.000 RSD.',
     toggleLabel: 'Period naplate',
   },
   faq: {
@@ -154,7 +156,7 @@ export const sr: Dictionary = {
       },
       {
         q: 'Mogu li da imam više lokala?',
-        a: 'Da, na Pro paketu. Svi lokali su pod jednim nalogom, svaki sa svojim menijem, kodovima i statistikom.',
+        a: 'Da. Pro uključuje do 3 lokala pod jednim nalogom, svaki sledeći je 990 RSD mesečno. Svaki lokal ima svoj meni, kodove i statistiku. Ako dodatni lokal ima isti meni, unos menija za njega je 3.000 RSD jednokratno.',
       },
       {
         q: 'Kako menjam cene i šta kad nešto nestane?',

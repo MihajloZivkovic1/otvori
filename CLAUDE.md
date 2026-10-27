@@ -677,8 +677,8 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
 ```
 
 - `src/config.ts` holds **every outbound link** (sign in, register, demo menu `kafeterija.otvori.menu/t/1`, quote mailto
-  `zdravo@otvori.menu`, terms/privacy), contact, brand constants and the RSD prices (`pricing.starter|pro.monthly|yearly`).
-  Change links there only.
+  `zdravo@otvori.menu`, terms/privacy), contact, brand constants and the RSD prices (`pricing.starter|pro.monthly|yearly`;
+  Pro includes 3 venues, `pricing.pro.extraVenue` is each one after that). Change links there only.
 - **Concept: opening.** Copy (`i18n/sr.ts` is the source of truth, `en.ts` the translation; `tagline` = "Skeniraj. Otvori. Naruči.")
   follows the guest's three steps Skeniraj → Otvori → Naruči (`How.astro`, step 3 has a `sub` line "or just browse"); the hero
   (`HeroVisual.astro`) is one large phone mock in order mode (+ badges, cart bar) rising out of the paper frame — no QR card or

@@ -5,7 +5,17 @@ interface Props {
   t: Dictionary;
 }
 const { t } = Astro.props;
-const plans = [
+// A bullet is plain text, or text + a price in parentheses that follows the billing toggle (same contract as the plan prices).
+type Bullet = string | { text: string; monthly: string; yearly: string };
+const extraVenue = (template: string, amount: number) => `(${template.replace('{price}', formatRsd(amount))})`;
+const plans: {
+  key: string;
+  name: string;
+  tagline: string;
+  list: Bullet[];
+  prices: { monthly: number; yearly: number };
+  featured: boolean;
+}[] = [
   {
     key: 'starter',
     name: 'Starter',
@@ -14,7 +24,21 @@ const plans = [
     prices: pricing.starter,
     featured: false,
   },
-  { key: 'pro', name: 'Pro', tagline: t.pricing.proFor, list: t.pricing.proList, prices: pricing.pro, featured: true },
+  {
+    key: 'pro',
+    name: 'Pro',
+    tagline: t.pricing.proFor,
+    list: [
+      {
+        text: t.pricing.proVenues,
+        monthly: extraVenue(t.pricing.proExtraVenue.monthly, pricing.pro.extraVenue.monthly),
+        yearly: extraVenue(t.pricing.proExtraVenue.yearly, pricing.pro.extraVenue.yearly),
+      },
+      ...t.pricing.proList,
+    ],
+    prices: pricing.pro,
+    featured: true,
+  },
 ];
 ---
 
@@ -113,7 +137,16 @@ const plans = [
               >
                 <path d="M5 12l5 5L20 7" />
               </svg>
-              {item}
+              {typeof item === 'string' ? (
+                item
+              ) : (
+                <span>
+                  {item.text}
+                  <span data-price={`${plan.key}-extra`} data-monthly={item.monthly} data-yearly={item.yearly}>
+                    {item.monthly}
+                  </span>
+                </span>
+              )}
             </li>
           ))}
         </ul>

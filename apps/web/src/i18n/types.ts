@@ -10,6 +10,8 @@ export interface Step {
 export interface Feature {
   title: string;
   text: string;
+  /** Plan pill next to the title ("Pro" on branding). */
+  badge?: string;
 }
 
 export interface Faq {
@@ -88,6 +90,10 @@ export interface Dictionary {
     starterFor: string;
     proFor: string;
     starterList: string[];
+    /** First Pro bullet, followed by the extra-venue price in parentheses. */
+    proVenues: string;
+    /** That price follows the billing toggle; `{price}` is filled from `pricing.pro.extraVenue` (config). */
+    proExtraVenue: { monthly: string; yearly: string };
     proList: string[];
     trialNote: string;
     setupLine: string;

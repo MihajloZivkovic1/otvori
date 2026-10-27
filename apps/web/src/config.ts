@@ -25,9 +25,9 @@ export const brand = {
   foundingYear: 2026,
 } as const;
 
-/** Prices in RSD; yearly = 10 × monthly ("2 meseca gratis"). */
+/** Prices in RSD; yearly = 10 × monthly ("2 meseca gratis"). Pro includes 3 venues; `extraVenue` is each one after that. */
 export const pricing = {
   currency: 'RSD',
   starter: { monthly: 1490, yearly: 14900 },
-  pro: { monthly: 2990, yearly: 29900 },
+  pro: { monthly: 2990, yearly: 29900, extraVenue: { monthly: 990, yearly: 9900 } },
 } as const;

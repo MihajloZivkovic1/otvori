@@ -158,7 +158,14 @@ const icons = [
           </svg>
         </span>
         <div class="flex flex-col gap-1 lg:gap-1.5">
-          <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">{f.title}</h3>
+          <h3 class="text-[17px] font-semibold lg:text-lg lg:tracking-[-.01em]">
+            {f.title}
+            {f.badge && (
+              <span class="ml-1.5 inline-flex h-5 items-center rounded-full bg-plum-soft px-2 align-middle text-[10px] font-semibold tracking-normal text-plum lg:text-[11px]">
+                {f.badge}
+              </span>
+            )}
+          </h3>
           <p class="text-sm text-muted lg:text-base">{f.text}</p>
         </div>
       </li>

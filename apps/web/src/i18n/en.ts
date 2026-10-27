@@ -88,7 +88,7 @@ export const en: Dictionary = {
       },
       { title: 'Serbian and English from one code', text: 'Guests pick the language. Same code, same prices.' },
       { title: 'Allergens and labels (vegan, spicy, new)', text: 'Per item, so nobody has to ask the waiter.' },
-      { title: 'Your logo and colours', text: 'The menu looks like your place, not like our software.' },
+      { title: 'Your logo and colours', text: 'The menu looks like your place, not like our software.', badge: 'Pro' },
       {
         title: 'Who looks and who orders, per table',
         text: 'See which tables scan, what gets ordered and when it gets busy.',
@@ -131,15 +131,17 @@ export const en: Dictionary = {
       'Serbian + English',
       'Basic statistics',
     ],
+    proVenues: 'Up to 3 venues under one account',
+    proExtraVenue: { monthly: 'each additional +{price} RSD/mo', yearly: 'each additional +{price} RSD/yr' },
     proList: [
-      'Several venues under one account',
       'More languages',
       'Branding: your logo and colours',
       'Advanced statistics by table and hour',
       'Priority support',
     ],
     trialNote: '30 days free, no card needed.',
-    setupLine: 'Menu entry and QR table cards: from 6,000 RSD one-off, depending on the number of tables.',
+    setupLine:
+      'Menu entry and QR table cards: from 6,000 RSD one-off, depending on the number of tables. An additional venue with the same menu: 3,000 RSD.',
     toggleLabel: 'Billing period',
   },
   faq: {
@@ -160,7 +162,7 @@ export const en: Dictionary = {
       },
       {
         q: 'Can I have more than one venue?',
-        a: 'Yes, on the Pro plan. All venues sit under one account, each with its own menu, codes and statistics.',
+        a: 'Yes. Pro includes up to 3 venues under one account; each additional venue is 990 RSD a month. Every venue has its own menu, codes and statistics. If an additional venue has the same menu, entering it costs 3,000 RSD one-off.',
       },
       {
         q: 'How do I change prices, and what happens when something runs out?',
