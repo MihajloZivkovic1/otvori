@@ -96,7 +96,8 @@ interface BannerProps {
   onOpen: () => void;
 }
 
-/** Fixed bottom bar: title + "View"; X collapses it to a pill in the bottom corner that reopens it. */
+/** Fixed bottom bar: title + "View"; X collapses it to a pill in the bottom corner. Tapping the pill opens the promotion
+ *  straight away (no second step); the banner stays collapsed afterwards. */
 export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: BannerProps) {
   const [collapsed, setCollapsed] = useState(() => isBannerCollapsed(promotion.id));
   const chrome = promotionChrome(promotion, primaryColor);
@@ -112,7 +113,7 @@ export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: 
       <div className={`pointer-events-none fixed inset-x-4 z-30 mx-auto flex max-w-[608px] transition-[bottom] ${chrome.pillPosition === 'left' ? 'justify-start' : 'justify-end'} ${raised ? 'bottom-[92px]' : 'safe-bottom-bar'}`}>
         <button
           type="button"
-          onClick={() => collapse(false)}
+          onClick={onOpen}
           aria-label={`${t.promo.expand}: ${promotion.title}`}
           style={style}
           className="pointer-events-auto flex h-10 max-w-[180px] items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold shadow-[0_8px_24px_rgba(31,26,23,.24)]"

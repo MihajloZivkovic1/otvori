@@ -107,7 +107,7 @@ describe('promotions on the guest menu', () => {
     expect(await screen.findByRole('region', { name: 'Promocija: Cocktail Menu' })).toBeInTheDocument();
   });
 
-  it('collapses the banner to a pill that reopens it, and remembers that for the tab', async () => {
+  it('collapses the banner to a pill that opens the promotion directly, and stays collapsed for the tab', async () => {
     mockFetch(serve([cocktail]));
     renderMenu();
     const user = userEvent.setup();
@@ -117,8 +117,13 @@ describe('promotions on the guest menu', () => {
     const pill = screen.getByRole('button', { name: 'Prikaži promociju: Cocktail Menu' });
     expect(sessionStorage.getItem(`tabla.promo.collapsed.${cocktail.id}`)).toBe('1');
     await user.click(pill);
-    expect(screen.getByRole('region', { name: 'Promocija: Cocktail Menu' })).toBeInTheDocument();
-    expect(sessionStorage.getItem(`tabla.promo.collapsed.${cocktail.id}`)).toBeNull();
+    // One tap opens the full view; closing it brings the pill back, not the bar.
+    expect(await screen.findByRole('dialog', { name: 'Cocktail Menu' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('region', { name: 'Promocija: Cocktail Menu' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Prikaži promociju: Cocktail Menu' })).toBeInTheDocument();
+    expect(sessionStorage.getItem(`tabla.promo.collapsed.${cocktail.id}`)).toBe('1');
   });
 
   it('shows the modal ~600 ms after the menu, closes on the backdrop and stays dismissed for 24 h', async () => {

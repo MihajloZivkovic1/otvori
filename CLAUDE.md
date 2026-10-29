@@ -378,7 +378,7 @@ routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/
   the menu painted unless another overlay is open or it was dismissed; closing (X, scrim tap, Escape, swipe down ≥ 72 px) records
   `localStorage['tabla.promo.dismissed']` keyed `${id}:${updatedAt}` for 24 h (an owner edit resets it). `banner` = fixed bar above
   the cart bar (`raised`) with title, one-line summary and "Pogledaj"; X collapses it to a pill in the bottom corner
-  (`sessionStorage['tabla.promo.collapsed.<id>']`) that reopens it. `card` = `PromotionCard` above the first category (hidden while
+  (`sessionStorage['tabla.promo.collapsed.<id>']`); tapping the pill opens the full view directly and the banner stays collapsed. `card` = `PromotionCard` above the first category (hidden while
   searching). Banner / card open the full view with `?promo=<id>` (pushed with `state.sheet` like `?item=`; "See in menu" swaps it for
   `?item=`). `PromotionModal` is a centred dialog (`aria-modal`, focus trap, body lock); the templates ship as their own chunk,
   prefetched once promotions exist. Accent = `accentColor ?? primaryColor` via `--promo-accent` on `.promo-root`; chrome strings in
