@@ -164,6 +164,7 @@ export const items: MenuItemDto[] = [
     isEffectivelyAvailable: true,
     sortOrder: 0,
     variants: [],
+    variantLabel: null,
     ...stamps,
   },
   {
@@ -183,6 +184,7 @@ export const items: MenuItemDto[] = [
     isEffectivelyAvailable: true,
     sortOrder: 1,
     variants: [],
+    variantLabel: null,
     ...stamps,
   },
   {
@@ -202,6 +204,7 @@ export const items: MenuItemDto[] = [
     isEffectivelyAvailable: false,
     sortOrder: 0,
     variants: [],
+    variantLabel: null,
     ...stamps,
   },
 ];
@@ -677,6 +680,8 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
   if (path === `${base}/team/join-code` && method === 'DELETE') return { body: team };
   if (path === `${base}/audit-log` && method === 'GET') return { body: { items: [], total: 0, page: 1, pageSize: 50, users: [] } };
   if (path === '/api/superadmin/restaurants') return { body: { items: superadminRows, total: superadminRows.length, page: 1, pageSize: 50 } };
+  if (path.endsWith('/qr.png')) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { headers: { 'Content-Type': 'image/png' } });
+  if (path.endsWith('/qr-card.pdf')) return new Response('%PDF-1.4', { headers: { 'Content-Type': 'application/pdf' } });
   if (path.endsWith('/qr.svg')) return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', { headers: { 'Content-Type': 'image/svg+xml' } });
   return { status: 404, body: { error: { code: 'NOT_FOUND', message: `No mock for ${method} ${path}` } } };
 }

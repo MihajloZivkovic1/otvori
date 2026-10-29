@@ -63,6 +63,7 @@ npm run dev                   # turbo: shared tsc --watch + api tsx watch (+ vit
 npm run typecheck             # all workspaces (apps/web runs `astro check`)
 npm run lint                  # eslint in shared, api, cms, menu; prettier --check in web
 npm test                      # every suite, turbo --concurrency=2 (api needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
+OWNER_PASSWORD=… npm run seed:fabrika -w @qr-menu/api -- --logo logo.png   # the real Fabrika Kafeterija venue (scripts/fabrika-menu.ts); replaces slug "fabrika"
 ```
 
 `@qr-menu/shared` is a compiled package: consumers import `dist/`. After editing shared, rebuild it (or keep `npm run dev` running).
@@ -118,7 +119,9 @@ npm test                      # every suite, turbo --concurrency=2 (api needs Po
   `PATCH /items/:id/availability`: `{available:true}` clears, `{available:false}` is indefinite,
   `{available:false, until}` sets `isAvailable=true` + `unavailableUntil` (`'tomorrow-06:00'` = next 06:00 in the restaurant time zone).
 - `restaurants.updated_at` is bumped (`touchRestaurant()`) by every service that changes categories, items, variants or tables.
-- Item variants are nested in item create/update payloads with replace-all semantics.
+- Item variants are nested in item create/update payloads with replace-all semantics. `variantLabel` (translated, nullable,
+  migration `20261030000000-item-variant-label`) names the group on the guest's sheet ("Vrsta kafe", "Ukus"); null = the
+  menu app's default "Veličina / Size". The CMS shows the field (with preset chips) under the variants table once a variant exists.
 - Reorder endpoints (`PUT .../reorder`) accept `{ ids: [...] }` or a bare array; send the complete ordered list
   (for items: all items of one category).
 - Timestamps in DTOs are ISO strings. Time-zone math uses `utils/time.ts` (Intl based, no date library).
@@ -460,7 +463,9 @@ guard, `expiry.ts` interval job); guest routes are mounted in `modules/public/ro
   venue can never shadow a service subdomain.
 - `utils/storage.ts`: S3 driver (AWS when `S3_ENDPOINT` is empty, any S3-compatible service otherwise) when `S3_BUCKET` + keys are set, otherwise local
   `UPLOADS_DIR` served at `API_URL/uploads`. Keys: `restaurants/<id>/logo-<ts>.png`, `restaurants/<id>/items/<itemId>-<ts>.webp`.
-- QR: `qrcode` (PNG/SVG); A4 QR sheet via pdfkit with DejaVu Sans (needed for č/ć/đ/š/ž).
+- QR: `qrcode` (PNG/SVG); A4 QR sheet via pdfkit with DejaVu Sans (needed for č/ć/đ/š/ž). The venue also has a universal
+  QR without a table (`GET /admin/restaurants/:id/qr.png|qr.svg|qr-card.pdf`, owner; the card is one cell of the sheet
+  labelled "Meni"/"Menu") — CMS Tables → "Menu QR" (`components/tables/MenuQrModal.tsx`, test `tables-qr.test.tsx`).
 
 ## Public menu app (`apps/menu`)
 

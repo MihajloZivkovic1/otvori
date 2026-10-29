@@ -43,7 +43,7 @@ describe('menu items', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(within(dialog).getByRole('heading', { level: 2, name: 'Espresso' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Veličina')).toBeInTheDocument();
+    expect(within(dialog).getByText('Vrsta kafe')).toBeInTheDocument(); // the item's own heading instead of "Veličina"
     expect(within(dialog).getByText('Double')).toBeInTheDocument();
     expect(within(dialog).getByText('220 RSD')).toBeInTheDocument();
     expect(within(dialog).getByText('Bez deklarisanih alergena')).toBeInTheDocument();

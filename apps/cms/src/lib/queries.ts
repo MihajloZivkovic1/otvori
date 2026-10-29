@@ -56,6 +56,7 @@ export const keys = {
   posConfig: (rid: string) => ['posConfig', rid] as const,
   requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
+  menuQr: (rid: string, format: 'png' | 'svg') => ['qr', rid, 'menu', format] as const,
   security: (rid: string) => ['security', rid] as const,
   team: (rid: string) => ['team', rid] as const,
   audit: (rid: string, query: Partial<ListAuditQuery>) => ['audit', rid, query] as const,
@@ -367,9 +368,22 @@ export function useQrBlob(rid: string, tableId: string, format: 'png' | 'svg', e
   });
 }
 
+/** The venue's universal QR (plain menu URL, no table). */
+export function useMenuQrBlob(rid: string, format: 'png' | 'svg', enabled = true) {
+  return useQuery({
+    queryKey: keys.menuQr(rid, format),
+    queryFn: () => apiBlob(`${base(rid)}/qr.${format}`),
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+    enabled,
+  });
+}
+
 export const downloads = {
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => apiBlob(`${base(rid)}/tables/${tableId}/qr.${format}`),
   qrSheet: (rid: string) => apiBlob(`${base(rid)}/tables/qr-sheet.pdf`),
+  menuQr: (rid: string, format: 'png' | 'svg') => apiBlob(`${base(rid)}/qr.${format}`),
+  menuQrCard: (rid: string) => apiBlob(`${base(rid)}/qr-card.pdf`),
 };
 
 /* ------------------------------------------------------------------ ordering */

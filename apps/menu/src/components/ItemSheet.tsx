@@ -28,6 +28,7 @@ const LABEL = 'text-xs font-semibold tracking-[0.06em] text-muted uppercase';
 export function ItemSheet({ item, currency, locale, t, onClose, onAdd = null }: Props) {
   const titleId = `sheet-title-${item.id}`;
   const sizeId = useId();
+  const variantLabel = item.variantLabel ?? t.size;
   const noteId = useId();
   const [variantId, setVariantId] = useState<string | null>(item.variants[0]?.id ?? null);
   const [quantity, setQuantity] = useState(1);
@@ -70,7 +71,7 @@ export function ItemSheet({ item, currency, locale, t, onClose, onAdd = null }: 
           (onAdd ? (
             <div className="flex flex-col gap-2" role="radiogroup" aria-labelledby={sizeId}>
               <h3 id={sizeId} className={LABEL}>
-                {t.size}
+                {variantLabel}
               </h3>
               {item.variants.map((candidate) => {
                 const selected = candidate.id === variantId;
@@ -96,7 +97,7 @@ export function ItemSheet({ item, currency, locale, t, onClose, onAdd = null }: 
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <h3 className={LABEL}>{t.size}</h3>
+              <h3 className={LABEL}>{variantLabel}</h3>
               <ul className="flex flex-col gap-2">
                 {item.variants.map((candidate) => (
                   <li key={candidate.id} className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-line px-3.5">

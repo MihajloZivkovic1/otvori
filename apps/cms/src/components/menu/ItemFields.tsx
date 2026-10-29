@@ -9,7 +9,7 @@ import { ALLERGEN_LABELS, TAG_LABELS } from './labels';
 import { PhotoField } from './PhotoField';
 import { PriceInput, priceError } from './PriceInput';
 import type { ItemEditor } from './useItemForm';
-import { VariantsTable } from './VariantsTable';
+import { VariantLabelField, VariantsTable } from './VariantsTable';
 
 interface ItemFieldsProps {
   editor: ItemEditor;
@@ -59,6 +59,7 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
         </div>
         {nameField}
         {descriptionField}
+        {(form.watch('variants') ?? []).length > 0 ? <VariantLabelField form={form} lang={lang} large={large} /> : null}
       </>
     );
   }
@@ -234,7 +235,7 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
         {nameField}
         {descriptionField}
         {price}
-        <VariantsTable form={form} currency={currency} layout="sheet" />
+        <VariantsTable form={form} currency={currency} layout="sheet" lang={lang} />
         {allergens}
         {tags}
         {posCode}
@@ -252,7 +253,7 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
         {availability}
       </div>
       {photo}
-      <VariantsTable form={form} currency={currency} layout="drawer" />
+      <VariantsTable form={form} currency={currency} layout="drawer" lang={lang} />
       {allergens}
       {tags}
       {posCode}

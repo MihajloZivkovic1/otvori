@@ -167,6 +167,31 @@ async function loadLogo(logoUrl: string | null): Promise<Buffer | null> {
   return storage.get(key);
 }
 
+/** The venue's universal QR (no table): the plain menu URL, for venues that do not use per-table codes. */
+export async function menuQrPng(restaurantId: string): Promise<Buffer> {
+  const restaurant = await loadRestaurant(restaurantId);
+  return qrPng(buildMenuUrl(restaurant.slug));
+}
+
+export async function menuQrSvg(restaurantId: string): Promise<string> {
+  const restaurant = await loadRestaurant(restaurantId);
+  return qrSvg(buildMenuUrl(restaurant.slug));
+}
+
+/** One printable card (same layout as the table sheet) with the universal menu QR. */
+export async function menuQrCardPdf(restaurantId: string): Promise<{ pdf: Buffer; filename: string }> {
+  const restaurant = await loadRestaurant(restaurantId);
+  const url = buildMenuUrl(restaurant.slug);
+  const pdf = await renderQrSheet({
+    restaurantName: restaurant.name,
+    primaryColor: restaurant.primaryColor,
+    logo: await loadLogo(restaurant.logoUrl),
+    footer: url.replace(/^https?:\/\//, ''),
+    cards: [{ label: restaurant.defaultLocale === 'en' ? 'Menu' : 'Meni', url }],
+  });
+  return { pdf, filename: `qr-${restaurant.slug}-meni.pdf` };
+}
+
 export async function qrSheetPdf(restaurantId: string): Promise<{ pdf: Buffer; filename: string }> {
   const restaurant = await loadRestaurant(restaurantId);
   const tables = await listTables(restaurantId);

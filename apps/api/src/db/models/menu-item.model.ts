@@ -41,6 +41,11 @@ export class MenuItem extends Model<InferAttributes<MenuItem>, InferCreationAttr
   @Column(DataType.JSONB)
   description!: CreationOptional<TranslatedText | null>;
 
+  /** Heading of the variant group shown to guests ("Vrsta kafe"); null = the app's default "Size". */
+  @AllowNull(true)
+  @Column(DataType.JSONB)
+  variantLabel!: CreationOptional<TranslatedText | null>;
+
   /** Integer minor units (e.g. 25000 = 250,00 RSD). */
   @AllowNull(false)
   @Column(DataType.INTEGER)

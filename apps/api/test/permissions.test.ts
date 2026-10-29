@@ -35,6 +35,8 @@ describe('permission matrix (Phase 11)', () => {
       ['delete', `${base}/categories/${category.id}`],
       ['post', `${base}/tables`, { number: 1 }],
       ['get', `${base}/tables/qr-sheet.pdf`],
+      ['get', `${base}/qr.png`],
+      ['get', `${base}/qr-card.pdf`],
       ['patch', base, { name: 'X' }],
       ['post', `${base}/logo`],
       ['post', `${base}/publish`],

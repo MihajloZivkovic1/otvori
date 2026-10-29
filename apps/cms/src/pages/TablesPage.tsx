@@ -6,6 +6,7 @@ import { useGuard } from '../components/security/ElevationProvider';
 import { LockGlyph } from '../components/security/LockStatus';
 import { MobileHeader, PageHeader } from '../components/shell/PageHeader';
 import { useRestaurantContext } from '../components/shell/RestaurantLayout';
+import { MenuQrModal } from '../components/tables/MenuQrModal';
 import { PrintAllModal } from '../components/tables/PrintAllModal';
 import { QrImage } from '../components/tables/QrImage';
 import { TableFormModal } from '../components/tables/TableFormModal';
@@ -120,6 +121,7 @@ export function TablesPage() {
   const [editing, setEditing] = useState<TableDto | null | 'new'>(null);
   const [deleting, setDeleting] = useState<TableDto | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [menuQr, setMenuQr] = useState(false);
   const tables = query.data ?? [];
   const grid = ordering.enabled ? GRID_ORDERING : GRID;
 
@@ -127,6 +129,7 @@ export function TablesPage() {
     <>
       {editing !== null ? <TableFormModal table={editing === 'new' ? null : editing} onClose={() => setEditing(null)} /> : null}
       {printing ? <PrintAllModal tables={tables} onClose={() => setPrinting(false)} /> : null}
+      {menuQr ? <MenuQrModal onClose={() => setMenuQr(false)} /> : null}
       <ConfirmModal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
@@ -160,6 +163,7 @@ export function TablesPage() {
           onEdit={guard((table: TableDto) => setEditing(table))}
           onDelete={isOwner ? guard((table: TableDto) => setDeleting(table)) : undefined}
           onPrint={guard(() => setPrinting(true))}
+          onMenuQr={guard(() => setMenuQr(true))}
         />
         {modals}
       </>
@@ -170,10 +174,13 @@ export function TablesPage() {
     <div className="flex flex-col gap-4 p-6">
       <PageHeader
         title="Tables & QR codes"
-        subtitle="Each code opens the menu with the table pre-selected."
+        subtitle="Each code opens the menu with the table pre-selected. The menu QR is one code for the whole venue."
         actions={
           isOwner ? (
             <>
+              <Button icon={<LockGlyph />} onClick={guard(() => setMenuQr(true))}>
+                Menu QR
+              </Button>
               <Button icon={<LockGlyph />} onClick={guard(() => setEditing('new'))}>
                 Add table
               </Button>
@@ -296,10 +303,11 @@ interface MobileTablesProps {
   onEdit: (table: TableDto) => void;
   onDelete?: (table: TableDto) => void;
   onPrint: () => void;
+  onMenuQr: () => void;
 }
 
 /** Design M9: expandable rows with the QR, Share (Web Share API), Download and, with ordering on, the 30-minute block. */
-function MobileTables({ tables, loading, canEdit, onAdd, onEdit, onDelete, onPrint }: MobileTablesProps) {
+function MobileTables({ tables, loading, canEdit, onAdd, onEdit, onDelete, onPrint, onMenuQr }: MobileTablesProps) {
   const { restaurant } = useRestaurantContext();
   const ordering = useOrdering();
   const { guard } = useGuard();
@@ -320,9 +328,12 @@ function MobileTables({ tables, loading, canEdit, onAdd, onEdit, onDelete, onPri
         }
       />
       {canEdit ? (
-        <div className="px-4 pb-3 pt-1">
+        <div className="flex flex-col gap-2 px-4 pb-3 pt-1">
           <Button size="xl" block className="h-12 rounded-xl text-[15px]" icon={<Icon name="print" size={16} strokeWidth={1.8} />} onClick={onPrint} disabled={tables.length === 0}>
             Print all <Badge>OPENS PDF</Badge>
+          </Button>
+          <Button size="xl" block className="h-12 rounded-xl text-[15px]" icon={<Icon name="download" size={16} strokeWidth={1.8} />} onClick={onMenuQr}>
+            Menu QR <Badge>NO TABLE</Badge>
           </Button>
         </div>
       ) : null}
