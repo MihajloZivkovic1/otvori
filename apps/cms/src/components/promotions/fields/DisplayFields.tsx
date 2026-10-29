@@ -1,8 +1,9 @@
-import { PROMOTION_DISPLAYS, PROMOTION_LIMITS, WEEKDAYS, hexColorSchema, type PromotionDisplay } from '@qr-menu/shared';
+import { PROMOTION_DISPLAYS, PROMOTION_LIMITS, WEEKDAYS, hexColorSchema, type PillPosition, type PromotionDisplay } from '@qr-menu/shared';
 import { cn } from '../../../lib/cn';
 import { useRestaurantContext } from '../../shell/RestaurantLayout';
 import { Chip } from '../../ui/Chip';
 import { Field, Input } from '../../ui/Field';
+import { Segmented } from '../../ui/Segmented';
 import { Switch } from '../../ui/Switch';
 import { DISPLAY_META, type DraftErrors, type PromotionDraft } from '../draft';
 
@@ -15,6 +16,15 @@ interface Props {
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 /** Accent presets next to the venue colour: the reference red, a green, a blue, a gold, ink. */
 const PRESETS = ['#E8453C', '#1F6F5B', '#2F5DA8', '#B8860B', '#1F1A17'];
+/** Background presets: paper, white, warm, mint, ink, charcoal. */
+const BACKGROUNDS = ['#F6EEE6', '#FFFFFF', '#FFF4E6', '#E8F1EC', '#1F1A17', '#2B2522'];
+/** Text presets: ink, white, warm grey, plum. */
+const TEXTS = ['#1F1A17', '#FFFFFF', '#6A5F5A', '#7A3E48'];
+
+function hexOrKeep(next: string, current: string | null): string | null {
+  if (next === '') return null;
+  return hexColorSchema.safeParse(next).success ? next.toUpperCase() : current;
+}
 
 /** Step 3: how, when and how prominently the promotion shows. */
 export function DisplayFields({ value, onChange, errors }: Props) {
@@ -59,6 +69,52 @@ export function DisplayFields({ value, onChange, errors }: Props) {
           />
         </div>
       </Field>
+
+      <Field label="Background" hint="Behind the promotion, the banner and the pill. Default = the template's own (paper for the drink list, the menu surface otherwise)." error={errors.style}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Swatch color="transparent" label="Default background" selected={value.style.backgroundColor === null} onClick={() => onChange({ style: { ...value.style, backgroundColor: null } })} outline />
+          {BACKGROUNDS.map((color) => (
+            <Swatch key={color} color={color} label={`Background ${color}`} selected={value.style.backgroundColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, backgroundColor: color } })} />
+          ))}
+          <Input
+            aria-label="Custom background colour"
+            placeholder="#RRGGBB"
+            className="w-28"
+            value={value.style.backgroundColor && !BACKGROUNDS.includes(value.style.backgroundColor.toUpperCase()) ? value.style.backgroundColor : ''}
+            onChange={(event) => onChange({ style: { ...value.style, backgroundColor: hexOrKeep(event.target.value.trim(), value.style.backgroundColor) } })}
+          />
+        </div>
+      </Field>
+
+      <Field label="Text colour" hint="Body text inside the promotion and on the banner. Default = readable on the background.">
+        <div className="flex flex-wrap items-center gap-2">
+          <Swatch color="transparent" label="Automatic text colour" selected={value.style.textColor === null} onClick={() => onChange({ style: { ...value.style, textColor: null } })} outline />
+          {TEXTS.map((color) => (
+            <Swatch key={color} color={color} label={`Text ${color}`} selected={value.style.textColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, textColor: color } })} />
+          ))}
+          <Input
+            aria-label="Custom text colour"
+            placeholder="#RRGGBB"
+            className="w-28"
+            value={value.style.textColor && !TEXTS.includes(value.style.textColor.toUpperCase()) ? value.style.textColor : ''}
+            onChange={(event) => onChange({ style: { ...value.style, textColor: hexOrKeep(event.target.value.trim(), value.style.textColor) } })}
+          />
+        </div>
+      </Field>
+
+      {value.display === 'banner' ? (
+        <Field label="Collapsed pill" hint="Where the small pill sits after a guest closes the banner.">
+          <Segmented<PillPosition>
+            label="Pill position"
+            value={value.style.pillPosition ?? 'right'}
+            onChange={(pillPosition) => onChange({ style: { ...value.style, pillPosition } })}
+            options={[
+              { value: 'right', label: 'Bottom right' },
+              { value: 'left', label: 'Bottom left' },
+            ]}
+          />
+        </Field>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Priority" htmlFor="promo-priority" hint="Higher shows first; the pop-up with the highest priority wins." error={errors.priority}>
@@ -136,15 +192,17 @@ export function DisplayFields({ value, onChange, errors }: Props) {
   );
 }
 
-function Swatch({ color, label, selected, onClick }: { color: string; label: string; selected: boolean; onClick: () => void }) {
+function Swatch({ color, label, selected, onClick, outline = false }: { color: string; label: string; selected: boolean; onClick: () => void; outline?: boolean }) {
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={selected}
       onClick={onClick}
-      style={{ background: color }}
-      className={cn('size-8 rounded-full ring-2 ring-offset-2 ring-offset-surface', selected ? 'ring-ink' : 'ring-transparent hover:ring-line-strong')}
-    />
+      style={{ background: color, boxShadow: 'inset 0 0 0 1px var(--swatch-ring)' }}
+      className={cn('size-8 rounded-full ring-2 ring-offset-2 ring-offset-surface', outline && 'border border-dashed border-line-strong', selected ? 'ring-ink' : 'ring-transparent hover:ring-line-strong')}
+    >
+      {outline ? <span className="sr-only">{label}</span> : null}
+    </button>
   );
 }

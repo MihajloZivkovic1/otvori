@@ -13,20 +13,25 @@ export function DrinkList({ promotion, copy }: TemplateProps<'drink_list'>) {
   const split = two ? Math.ceil(content.entries.length / 2) : content.entries.length;
   const columns = two ? [content.entries.slice(0, split), content.entries.slice(split)] : [content.entries];
   const logo = content.logoText?.trim() || '';
+  const variant = content.variant ?? 'poster';
+  const showIcons = variant !== 'simple' && (content.icons ?? 'cocktails') !== 'none';
+  const className = `promo promo-drinks is-${variant}${showIcons ? '' : ' no-icons'}`;
 
   return (
-    <article className="promo promo-drinks" aria-label={promotion.title}>
+    <article className={className} data-variant={variant} aria-label={promotion.title}>
       <div className="promo-dl-side">
         {logo ? <div className={`promo-dl-logo${logo.length <= 3 ? ' is-mark' : ''}`}>{logo}</div> : <div />}
         <h2 className="promo-dl-title" style={{ margin: 0 }}>
           <span>{promotion.title}</span>
         </h2>
       </div>
-      <div className="promo-dl-icons">
-        <MargaritaIcon />
-        <SpritzIcon />
-        <HighballIcon />
-      </div>
+      {showIcons && (
+        <div className="promo-dl-icons">
+          <MargaritaIcon />
+          <SpritzIcon />
+          <HighballIcon />
+        </div>
+      )}
       <div className="promo-dl-panel">
         <div className={`promo-dl-columns${two ? ' is-two' : ''}`}>
           {columns.map((entries, column) => (

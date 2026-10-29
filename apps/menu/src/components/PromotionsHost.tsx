@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { PROMOTION_LIMITS, type PublicPromotionDto } from '@qr-menu/shared';
 import type { Dictionary, UiLocale } from '../lib/i18n';
-import { dismissPromotion, isBannerCollapsed, isPromotionDismissed, promotionAccent, promotionSummary, setBannerCollapsed } from '../lib/promotions';
-import { readableOn } from '../lib/theme';
+import { dismissPromotion, isBannerCollapsed, isPromotionDismissed, promotionChrome, promotionSummary, setBannerCollapsed } from '../lib/promotions';
 import { CloseIcon } from './icons';
 import { loadPromotionView } from '../lib/promotion-view';
 import { PromotionModal } from './PromotionModal';
@@ -100,8 +99,8 @@ interface BannerProps {
 /** Fixed bottom bar: title + "View"; X collapses it to a pill in the bottom corner that reopens it. */
 export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: BannerProps) {
   const [collapsed, setCollapsed] = useState(() => isBannerCollapsed(promotion.id));
-  const accent = promotionAccent(promotion, primaryColor);
-  const style = { background: accent, color: readableOn(accent) } as CSSProperties;
+  const chrome = promotionChrome(promotion, primaryColor);
+  const style = { background: chrome.background, color: chrome.text } as CSSProperties;
   const summary = promotionSummary(promotion);
   const collapse = (next: boolean) => {
     setBannerCollapsed(promotion.id, next);
@@ -110,7 +109,7 @@ export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: 
 
   if (collapsed) {
     return (
-      <div className={`pointer-events-none fixed inset-x-4 z-30 mx-auto flex max-w-[608px] justify-end transition-[bottom] ${raised ? 'bottom-[92px]' : 'safe-bottom-bar'}`}>
+      <div className={`pointer-events-none fixed inset-x-4 z-30 mx-auto flex max-w-[608px] transition-[bottom] ${chrome.pillPosition === 'left' ? 'justify-start' : 'justify-end'} ${raised ? 'bottom-[92px]' : 'safe-bottom-bar'}`}>
         <button
           type="button"
           onClick={() => collapse(false)}
@@ -138,7 +137,7 @@ export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: 
             <span className="truncate text-[15px] leading-tight font-semibold">{promotion.title}</span>
             {summary ? <span className="truncate text-xs leading-tight opacity-80">{summary}</span> : null}
           </span>
-          <span className="flex-none rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold">{t.promo.view}</span>
+          <span className="flex-none rounded-full px-3 py-1.5 text-[13px] font-semibold" style={{ background: 'color-mix(in oklab, currentColor 18%, transparent)' }}>{t.promo.view}</span>
         </button>
         <button type="button" onClick={() => collapse(true)} aria-label={t.promo.collapse} className="grid size-9 flex-none place-items-center rounded-full opacity-80">
           <CloseIcon />
@@ -157,7 +156,8 @@ interface CardProps {
 
 /** Inline card above the first category; tapping opens the full view. */
 export function PromotionCard({ promotion, primaryColor, t, onOpen }: CardProps) {
-  const accent = promotionAccent(promotion, primaryColor);
+  const chrome = promotionChrome(promotion, primaryColor);
+  const accent = chrome.accent;
   const summary = promotionSummary(promotion);
   const image = promotion.imageUrl ?? (promotion.template === 'featured_items' || promotion.template === 'deal' ? (promotion.items[0]?.thumbnailUrl ?? promotion.items[0]?.imageUrl ?? null) : null);
   return (
@@ -166,13 +166,13 @@ export function PromotionCard({ promotion, primaryColor, t, onOpen }: CardProps)
         type="button"
         onClick={onOpen}
         aria-label={`${t.promo.promotion}: ${promotion.title}`}
-        style={{ borderLeftColor: accent } as CSSProperties}
+        style={{ borderLeftColor: accent, ...(promotion.style?.backgroundColor ? { background: chrome.background, color: chrome.text } : {}) } as CSSProperties}
         className="flex w-full items-center gap-3.5 rounded-2xl border border-line border-l-[3px] bg-surface p-3.5 text-left text-ink shadow-[0_1px_2px_rgba(31,26,23,.04)]"
       >
         {image ? (
           <img src={image} alt="" width={56} height={56} loading="lazy" className="size-14 flex-none rounded-xl bg-placeholder object-cover" />
         ) : (
-          <span className="grid size-11 flex-none place-items-center rounded-xl" style={{ background: accent, color: readableOn(accent) }} aria-hidden="true">
+          <span className="grid size-11 flex-none place-items-center rounded-xl" style={{ background: accent, color: chrome.text === accent ? '#fff' : readableOnAccent(accent) }} aria-hidden="true">
             <SparkIcon />
           </span>
         )}
@@ -189,6 +189,12 @@ export function PromotionCard({ promotion, primaryColor, t, onOpen }: CardProps)
       </button>
     </div>
   );
+}
+
+function readableOnAccent(hex: string): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return lum > 0.55 ? '#1B1816' : '#FFFFFF';
 }
 
 function SparkIcon() {

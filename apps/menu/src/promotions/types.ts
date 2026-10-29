@@ -1,4 +1,4 @@
-import type { PromotionBody, PublicPromotionItemDto } from '@qr-menu/shared';
+import type { PromotionBody, PromotionStyle, PublicPromotionItemDto } from '@qr-menu/shared';
 import type { PromotionCopy, UiLocale } from '../lib/i18n';
 
 /** What a template needs to render: the body plus the title, image and the resolved menu items it refers to. */
@@ -6,6 +6,8 @@ export type PromotionLike = PromotionBody & {
   title: string;
   imageUrl: string | null;
   items: PublicPromotionItemDto[];
+  /** Colour overrides (text, background); the pill position is only read by the banner. */
+  style?: PromotionStyle | null;
 };
 
 export interface TemplateProps<T extends PromotionLike['template'] = PromotionLike['template']> {

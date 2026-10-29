@@ -60,9 +60,10 @@ export function PromotionModal({ promotion, primaryColor, currency, locale, t, o
           tabIndex={-1}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
+          style={promotion.style?.backgroundColor ? { background: promotion.style.backgroundColor, color: promotion.style.textColor ?? undefined } : undefined}
           className="sheet-enter no-scrollbar pointer-events-auto relative max-h-[94dvh] w-full max-w-[440px] overflow-y-auto overscroll-contain rounded-t-[28px] bg-surface text-ink outline-none sm:max-h-[90vh] sm:rounded-[28px]"
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface px-5 pt-3 pb-2">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 pt-3 pb-2" style={{ background: promotion.style?.backgroundColor ?? 'var(--surface)' }}>
             <span className="h-1 w-10 rounded-sm bg-line sm:hidden" aria-hidden="true" />
             <h2 id={titleId} className="sr-only">
               {promotion.title}

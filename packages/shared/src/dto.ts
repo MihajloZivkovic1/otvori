@@ -28,7 +28,7 @@ import { restaurantModulesSchema } from './modules.js';
 import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
 import { posConfigDtoSchema } from './pos.js';
 import { auditActionSchema } from './schemas/audit.js';
-import { promotionBodySchema, promotionDisplaySchema, promotionRecurrenceSchema } from './schemas/promotions.js';
+import { promotionBodySchema, promotionDisplaySchema, promotionRecurrenceSchema, promotionStyleSchema } from './schemas/promotions.js';
 import { elevationWindowSchema } from './schemas/security.js';
 
 const isoString = z.string();
@@ -888,6 +888,7 @@ const promotionDtoFields = z.object({
   startsAt: isoString.nullable(),
   endsAt: isoString.nullable(),
   recurrence: promotionRecurrenceSchema.nullable(),
+  style: promotionStyleSchema.nullable(),
   imageUrl: z.string().nullable(),
   /** Computed server-side in the venue's time zone: active flag, date range and recurrence window. */
   isActiveNow: z.boolean(),
@@ -916,6 +917,7 @@ export const publicPromotionDtoSchema = z.intersection(
     title: z.string(),
     display: promotionDisplaySchema,
     accentColor: z.string().nullable(),
+    style: promotionStyleSchema.nullable(),
     priority: z.number().int(),
     imageUrl: z.string().nullable(),
     updatedAt: isoString,

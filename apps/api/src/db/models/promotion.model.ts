@@ -1,6 +1,6 @@
 import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
 import { AllowNull, BelongsTo, Column, DataType, Default, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import type { PromotionBody, PromotionDisplay, PromotionRecurrence, PromotionTemplate } from '@qr-menu/shared';
+import type { PromotionBody, PromotionDisplay, PromotionRecurrence, PromotionStyle, PromotionTemplate } from '@qr-menu/shared';
 import { Restaurant } from './restaurant.model.js';
 
 export type PromotionContent = PromotionBody['content'];
@@ -62,6 +62,11 @@ export class Promotion extends Model<InferAttributes<Promotion>, InferCreationAt
   @AllowNull(true)
   @Column(DataType.JSONB)
   recurrence!: CreationOptional<PromotionRecurrence | null>;
+
+  /** Colour / pill overrides; null = template defaults. */
+  @AllowNull(true)
+  @Column(DataType.JSONB)
+  style!: CreationOptional<PromotionStyle | null>;
 
   @AllowNull(true)
   @Column(DataType.TEXT)

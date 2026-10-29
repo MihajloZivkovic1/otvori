@@ -79,11 +79,35 @@ export interface DrinkListEntry {
   menuItemId?: string;
 }
 
+/** Drink list looks: `poster` = the printed card (vertical title, icons), `simple` = title on top, no icons,
+ *  `chalk` = dark board with light type. */
+export const DRINK_LIST_VARIANTS = ['poster', 'simple', 'chalk'] as const;
+export type DrinkListVariant = (typeof DRINK_LIST_VARIANTS)[number];
+export const DRINK_LIST_ICONS = ['cocktails', 'none'] as const;
+export type DrinkListIcons = (typeof DRINK_LIST_ICONS)[number];
+
 export interface DrinkListContent {
   subtitle?: string;
   logoText?: string;
   entries: DrinkListEntry[];
   columns: 1 | 2;
+  /** Default `poster`. */
+  variant?: DrinkListVariant;
+  /** Default `cocktails` (ignored by `simple`). */
+  icons?: DrinkListIcons;
+}
+
+/** Where the collapsed banner pill sits. */
+export const PILL_POSITIONS = ['right', 'left'] as const;
+export type PillPosition = (typeof PILL_POSITIONS)[number];
+
+/** Optional look overrides on top of the accent: null/undefined fields fall back to the template defaults. */
+export interface PromotionStyle {
+  /** Text colour inside the promotion (and on the banner / pill). */
+  textColor?: string | null;
+  /** Background of the promotion body, the banner and the pill. */
+  backgroundColor?: string | null;
+  pillPosition?: PillPosition | null;
 }
 
 export interface FeaturedItemsContent {

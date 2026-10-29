@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PROMOTION_LIMITS, type DrinkListContent, type MenuItemDto } from '@qr-menu/shared';
+import { DRINK_LIST_VARIANTS, PROMOTION_LIMITS, type DrinkListContent, type MenuItemDto } from '@qr-menu/shared';
 import { text } from '../../../lib/format';
 import { Icon } from '../../icons';
 import { useRestaurantContext } from '../../shell/RestaurantLayout';
@@ -7,7 +7,9 @@ import { Button, IconButton } from '../../ui/Button';
 import { Field, Input, Textarea } from '../../ui/Field';
 import { Segmented } from '../../ui/Segmented';
 import { MenuItemPicker } from '../MenuItemPicker';
-import { descriptionToLines } from '../draft';
+import { DRINK_LIST_VARIANT_META, descriptionToLines } from '../draft';
+import { Switch } from '../../ui/Switch';
+import { cn } from '../../../lib/cn';
 
 interface Props {
   value: DrinkListContent;
@@ -36,8 +38,36 @@ export function DrinkListFields({ value, onChange, error }: Props) {
       ...items.map((item) => ({ name: text(item.name, restaurant.defaultLocale), lines: descriptionToLines(text(item.description, restaurant.defaultLocale)), menuItemId: item.id })),
     ]);
 
+  const variant = value.variant ?? 'poster';
   return (
     <div className="flex flex-col gap-5">
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold">Look</legend>
+        <div role="radiogroup" aria-label="Drink list look" className="grid gap-2 sm:grid-cols-3">
+          {DRINK_LIST_VARIANTS.map((candidate) => {
+            const selected = variant === candidate;
+            return (
+              <button
+                key={candidate}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => onChange({ ...value, variant: candidate })}
+                className={cn('flex cursor-pointer flex-col gap-0.5 rounded-[10px] border p-3 text-left', selected ? 'border-accent bg-accent-soft/40' : 'border-line hover:border-line-strong')}
+              >
+                <span className="text-sm font-medium">{DRINK_LIST_VARIANT_META[candidate].name}</span>
+                <span className="text-xs leading-[1.4] text-muted">{DRINK_LIST_VARIANT_META[candidate].description}</span>
+              </button>
+            );
+          })}
+        </div>
+        {variant !== 'simple' ? (
+          <label className="flex h-10 items-center justify-between gap-3 text-sm">
+            <span>Drink icons beside the title</span>
+            <Switch checked={(value.icons ?? 'cocktails') !== 'none'} onChange={(on) => onChange({ ...value, icons: on ? 'cocktails' : 'none' })} label="Drink icons" />
+          </label>
+        ) : null}
+      </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Logo text" htmlFor="promo-logo" hint="Printed in the logo spot, top left.">
           <Input id="promo-logo" value={value.logoText ?? ''} maxLength={PROMOTION_LIMITS.logoTextMax} onChange={(event) => onChange({ ...value, logoText: event.target.value })} />

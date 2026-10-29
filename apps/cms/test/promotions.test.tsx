@@ -27,6 +27,7 @@ const cocktail: PromotionDto = {
   startsAt: null,
   endsAt: null,
   recurrence: null,
+  style: null,
   imageUrl: null,
   isActiveNow: true,
   ...stamps,
@@ -149,6 +150,8 @@ describe('promotions (CMS)', () => {
     await u.type(priority, '5');
     await u.click(screen.getByRole('switch', { name: 'Repeat weekly' }));
     await u.click(screen.getByRole('button', { name: 'Sat' }));
+    await u.click(screen.getByRole('button', { name: 'Background #1F1A17' }));
+    await u.click(screen.getByRole('radio', { name: 'Bottom left' }));
     await u.click(screen.getByRole('button', { name: 'Create promotion' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/r/${ids.restaurant}/promotions`));
@@ -164,6 +167,7 @@ describe('promotions (CMS)', () => {
       startsAt: null,
       endsAt: null,
       recurrence: { weekdays: [1, 2, 3, 4, 5, 6], from: '16:00', to: '18:00' },
+      style: { backgroundColor: '#1F1A17', pillPosition: 'left' },
     });
   });
 
@@ -198,6 +202,7 @@ describe('promotions (CMS)', () => {
     const patch = requests(spy).find(({ url, method }) => method === 'PATCH' && url.pathname === `${base}/promotions/${cocktail.id}`)!;
     const content = (patch.body as { content: { entries: { name: string; menuItemId?: string }[] } }).content;
     expect(content.entries.map((entry) => entry.name)).toEqual(['Negroni Sbagliato', 'Hugo', 'Espresso']);
+    expect(content).toMatchObject({ variant: 'poster', icons: 'cocktails' });
     expect(content.entries[2]!.menuItemId).toBe(ids.espresso);
   });
 

@@ -351,9 +351,12 @@ routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/
   validated per template by the shared discriminated union `promotionBodySchema` (`{ template, content }`), `display` enum
   `modal | banner | card`, `accent_color` (null = the venue's `primaryColor`), `priority` (default 0, higher first), `is_active`,
   `starts_at` / `ends_at`, `recurrence` JSONB `{ weekdays (ISO 1 = Monday … 7), from 'HH:mm', to 'HH:mm' }` in the venue's time zone
-  (`to` at or before `from` = past midnight), `image_url`). Content shapes (`PromotionBody`): drink_list `{ subtitle?, logoText?,
-  entries: { name, lines[], menuItemId? }[], columns: 1|2 }` (entries picked from the menu copy name + description lines and keep the
-  id), featured_items `{ intro?, items: { menuItemId, badge? }[] }` (1–3), deal `{ headline, description?, priceCents, oldPriceCents?,
+  (`to` at or before `from` = past midnight), `style` JSONB `{ textColor?, backgroundColor?, pillPosition?: 'right'|'left' }`
+  (migration `20261102000000-promotion-style`; null = template defaults; applied as `--promo-ink` / `--promo-bg` on `.promo-root`,
+  as the banner / pill / card colours, and the pill corner), `image_url`). Content shapes (`PromotionBody`): drink_list `{ subtitle?,
+  logoText?, entries: { name, lines[], menuItemId? }[], columns: 1|2, variant?: 'poster'|'simple'|'chalk', icons?: 'cocktails'|'none' }`
+  (`poster` = the printed card, `simple` = title across the top without icons, `chalk` = dark board with light type; entries picked
+  from the menu copy name + description lines and keep the id), featured_items `{ intro?, items: { menuItemId, badge? }[] }` (1–3), deal `{ headline, description?, priceCents, oldPriceCents?,
   menuItemId? }` (prices in minor units like everywhere else), notice `{ headline, body }`. Limits in `PROMOTION_LIMITS`.
 - **Active now** (`isPromotionActiveNow()` in `active.ts`, pure `inRecurrenceWindow()` in shared): `is_active` AND start/end bounds AND,
   with a recurrence, the wall clock in the venue zone (`utils/time.ts` `zonedParts`) is inside a window — a window that crosses midnight
@@ -391,8 +394,9 @@ routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/
   `PromotionEditorPage` (`promotions/new`, `promotions/:promotionId`) = three steps: template (four cards rendering the real
   templates with sample content), content (per-template fields, `MenuItemPicker` grouped by category for drink list / featured /
   deal, photo upload for saved non-drink-list promotions) next to a **live 390 px phone preview** (`PromotionPreview` wraps
-  `PromotionView` in the guest light palette), then display mode, accent (venue colour default + presets + hex), priority, active,
-  date range and the weekly recurrence (weekday chips + from/to). The draft (`draft.ts`) keeps every template's content so switching
+  `PromotionView` in the guest light palette), then display mode, accent (venue colour default + presets + hex), background and text colour (presets + hex,
+  "default" = the template's own), the collapsed-pill corner (banner only), priority, active, date range and the weekly recurrence
+  (weekday chips + from/to); the drink list step also picks the look (Poster / Simple / Chalkboard) and the icon switch. The draft (`draft.ts`) keeps every template's content so switching
   back loses nothing; saving validates with `createPromotionSchema` and sends the whole form (create or PATCH). Query keys
   `['promotions', rid]`. The CMS chrome stays plum; the tenant accent only appears inside the preview.
 - Seed: the demo venues get no promotions (owners build their own). The real Fabrika venue gets the "Cocktail Menu" drink list

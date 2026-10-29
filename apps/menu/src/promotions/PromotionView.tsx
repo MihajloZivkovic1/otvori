@@ -15,7 +15,13 @@ export interface PromotionViewProps extends Omit<TemplateProps, 'promotion'> {
 
 /** Renders a promotion with the template its body names; the accent travels as a CSS variable. */
 export function PromotionView({ promotion, accent, className, ...rest }: PromotionViewProps) {
-  const style = { '--promo-accent': accent, '--promo-on-accent': readableOn(accent) } as CSSProperties;
+  const overrides = promotion.style ?? null;
+  const style = {
+    '--promo-accent': accent,
+    '--promo-on-accent': readableOn(accent),
+    ...(overrides?.textColor ? { '--promo-ink': overrides.textColor, '--promo-muted': overrides.textColor, '--promo-muted-opacity': 0.72 } : {}),
+    ...(overrides?.backgroundColor ? { '--promo-surface': overrides.backgroundColor, '--promo-bg': overrides.backgroundColor, background: overrides.backgroundColor } : {}),
+  } as CSSProperties;
   const body = (() => {
     switch (promotion.template) {
       case 'drink_list':

@@ -9,6 +9,7 @@ import {
   type PromotionBody,
   type PromotionDisplay,
   type PromotionDto,
+  type PromotionStyle,
   type PromotionTemplate,
   type PublicPromotionItemDto,
   type RestaurantDto,
@@ -42,7 +43,15 @@ export interface PromotionDraft {
   startsAt: string;
   endsAt: string;
   recurrence: DraftRecurrence;
+  /** Colour / pill overrides (null fields = template defaults). */
+  style: Required<PromotionStyle>;
 }
+
+export const DRINK_LIST_VARIANT_META: Record<NonNullable<DrinkListContent['variant']>, { name: string; description: string }> = {
+  poster: { name: 'Poster', description: 'The printed card: vertical title on the left, three drink icons.' },
+  simple: { name: 'Simple', description: 'Title across the top, no icons — more room for the drinks.' },
+  chalk: { name: 'Chalkboard', description: 'Dark board with light type and a dashed frame.' },
+};
 
 export const TEMPLATE_META: Record<PromotionTemplate, { name: string; description: string }> = {
   drink_list: { name: 'Drink list', description: 'A printed-style card: vertical title, two columns of drinks with their ingredients.' },
@@ -74,6 +83,7 @@ export function emptyDraft(restaurant: Pick<RestaurantDto, 'name'>): PromotionDr
     startsAt: '',
     endsAt: '',
     recurrence: DEFAULT_RECURRENCE,
+    style: { textColor: null, backgroundColor: null, pillPosition: null },
   };
 }
 
@@ -120,6 +130,7 @@ export function draftFromDto(dto: PromotionDto, restaurant: Pick<RestaurantDto, 
     startsAt: toLocalInput(dto.startsAt),
     endsAt: toLocalInput(dto.endsAt),
     recurrence: dto.recurrence ? { enabled: true, ...dto.recurrence } : DEFAULT_RECURRENCE,
+    style: { textColor: dto.style?.textColor ?? null, backgroundColor: dto.style?.backgroundColor ?? null, pillPosition: dto.style?.pillPosition ?? null },
   };
 }
 
@@ -135,6 +146,8 @@ export function draftBody(draft: PromotionDraft): PromotionBody {
           subtitle: clean(draft.drinkList.subtitle),
           logoText: clean(draft.drinkList.logoText),
           columns: draft.drinkList.columns,
+          variant: draft.drinkList.variant ?? 'poster',
+          icons: draft.drinkList.icons ?? 'cocktails',
           entries: draft.drinkList.entries.map((entry) => ({
             name: entry.name.trim(),
             lines: entry.lines.map((line) => line.trim()).filter(Boolean),
@@ -178,10 +191,18 @@ export function draftToInput(draft: PromotionDraft): Record<string, unknown> {
     startsAt: toIsoOrNull(draft.startsAt),
     endsAt: toIsoOrNull(draft.endsAt),
     recurrence: draft.recurrence.enabled ? { weekdays: [...draft.recurrence.weekdays].sort(), from: draft.recurrence.from, to: draft.recurrence.to } : null,
+    style: draftStyle(draft),
   };
 }
 
-export type DraftErrors = Partial<Record<'title' | 'content' | 'display' | 'priority' | 'startsAt' | 'endsAt' | 'recurrence' | 'accentColor', string>>;
+/** null when nothing is overridden, so the stored row stays clean. */
+export function draftStyle(draft: PromotionDraft): PromotionStyle | null {
+  const { textColor, backgroundColor, pillPosition } = draft.style;
+  if (!textColor && !backgroundColor && !pillPosition) return null;
+  return { ...(textColor ? { textColor } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(pillPosition ? { pillPosition } : {}) };
+}
+
+export type DraftErrors = Partial<Record<'title' | 'content' | 'display' | 'priority' | 'startsAt' | 'endsAt' | 'recurrence' | 'accentColor' | 'style', string>>;
 
 /** Runs the shared schema; returns the typed input or the field errors to show. */
 export function validateDraft(draft: PromotionDraft): { ok: true; input: CreatePromotionInput } | { ok: false; errors: DraftErrors } {
@@ -220,6 +241,7 @@ export function previewOf(draft: PromotionDraft, items: MenuItemDto[], defaultLo
   return {
     ...body,
     title: draft.title.trim() || TEMPLATE_META[draft.template].name,
+    style: draftStyle(draft),
     imageUrl,
     items: items.filter((item) => ids.has(item.id)).map((item) => toPreviewItem(item, defaultLocale)),
   };

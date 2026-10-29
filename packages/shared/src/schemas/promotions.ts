@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PROMOTION_DISPLAYS, PROMOTION_LIMITS, PROMOTION_TEMPLATES } from '../promotions.js';
+import { DRINK_LIST_ICONS, DRINK_LIST_VARIANTS, PILL_POSITIONS, PROMOTION_DISPLAYS, PROMOTION_LIMITS, PROMOTION_TEMPLATES } from '../promotions.js';
 import { hexColorSchema, isoDateTimeSchema, priceCentsSchema, uuidSchema } from './common.js';
 
 export const promotionTemplateSchema = z.enum(PROMOTION_TEMPLATES);
@@ -35,7 +35,16 @@ export const drinkListContentSchema = z.object({
   logoText: optionalText(PROMOTION_LIMITS.logoTextMax),
   entries: z.array(drinkListEntrySchema).min(1, 'Add at least one entry').max(PROMOTION_LIMITS.entriesMax),
   columns: z.union([z.literal(1), z.literal(2)]),
+  variant: z.enum(DRINK_LIST_VARIANTS).optional(),
+  icons: z.enum(DRINK_LIST_ICONS).optional(),
 });
+
+export const promotionStyleSchema = z.object({
+  textColor: hexColorSchema.nullable().optional(),
+  backgroundColor: hexColorSchema.nullable().optional(),
+  pillPosition: z.enum(PILL_POSITIONS).nullable().optional(),
+});
+export type PromotionStyleInput = z.infer<typeof promotionStyleSchema>;
 
 export const featuredItemsContentSchema = z.object({
   intro: optionalText(PROMOTION_LIMITS.introMax),
@@ -76,6 +85,8 @@ const promotionFields = z.object({
   startsAt: isoDateTimeSchema.nullable(),
   endsAt: isoDateTimeSchema.nullable(),
   recurrence: promotionRecurrenceSchema.nullable(),
+  /** Colour / pill overrides; null = template defaults. */
+  style: promotionStyleSchema.nullable(),
   /** Set by the image upload route; a PATCH may only clear it. */
   imageUrl: z.null().optional(),
 });
@@ -88,6 +99,7 @@ const createFields = promotionFields.partial({
   startsAt: true,
   endsAt: true,
   recurrence: true,
+  style: true,
   imageUrl: true,
 });
 

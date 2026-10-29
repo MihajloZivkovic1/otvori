@@ -127,8 +127,12 @@ describe('promotions (admin)', () => {
       expect(read.body.id).toBe(promo.id);
     }
 
-    const patched = await api.patch(byId).set(bearer(owner.accessToken)).send({ title: 'Happy hour', priority: 3, recurrence: { weekdays: [1, 2, 3, 4, 5], from: '16:00', to: '18:00' } });
+    const patched = await api
+      .patch(byId)
+      .set(bearer(owner.accessToken))
+      .send({ title: 'Happy hour', priority: 3, recurrence: { weekdays: [1, 2, 3, 4, 5], from: '16:00', to: '18:00' }, style: { textColor: '#FFFFFF', backgroundColor: '#1F1A17', pillPosition: 'left' } });
     expect(patched.status).toBe(200);
+    expect(patched.body.style).toEqual({ textColor: '#FFFFFF', backgroundColor: '#1F1A17', pillPosition: 'left' });
     expect(patched.body.title).toBe('Happy hour');
     expect(patched.body.recurrence).toEqual({ weekdays: [1, 2, 3, 4, 5], from: '16:00', to: '18:00' });
     expect(patched.body.template).toBe('deal');
@@ -224,7 +228,8 @@ describe('promotions (public)', () => {
       template: 'drink_list',
       display: 'banner',
       priority: 10,
-      content: { columns: 2, entries: [{ name: 'Negroni', lines: ['Gin'], menuItemId: negroni.id }, { name: 'Gone', lines: [], menuItemId: gone.id }] },
+      style: { backgroundColor: '#FFF4E6' },
+      content: { columns: 2, variant: 'simple', icons: 'none', entries: [{ name: 'Negroni', lines: ['Gin'], menuItemId: negroni.id }, { name: 'Gone', lines: [], menuItemId: gone.id }] },
     });
     const lowModal = await create(owner, { title: 'Low modal', template: 'notice', display: 'modal', priority: 1, content: { headline: 'a', body: 'b' } });
     const highModal = await create(owner, { title: 'High modal', template: 'notice', display: 'modal', priority: 2, content: { headline: 'a', body: 'b' } });
@@ -240,6 +245,8 @@ describe('promotions (public)', () => {
     expect(promos.map((p) => p.title)).toEqual(['Cocktail Menu', 'High modal', 'Try it']);
     expect(promos.find((p) => p.id === lowModal.id)).toBeUndefined();
     expect(promos[0]!.id).toBe(banner.id);
+    expect(promos[0]!.style).toEqual({ backgroundColor: '#FFF4E6' });
+    expect(promos[0]!.content).toMatchObject({ variant: 'simple', icons: 'none' });
     expect(promos[1]!.id).toBe(highModal.id);
     expect(promos[0]!.items).toEqual([
       { id: negroni.id, name: 'Negroni', description: 'Gin, Campari', priceCents: 90000, imageUrl: null, thumbnailUrl: null, isAvailable: true },

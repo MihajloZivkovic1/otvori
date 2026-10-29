@@ -1,4 +1,5 @@
 import { PROMOTION_LIMITS, promotionDismissKey, type PublicPromotionDto } from '@qr-menu/shared';
+import { readableOn } from './theme';
 
 /**
  * Dismissals live in localStorage keyed by `${id}:${updatedAt}`: a closed modal stays closed for 24 h on that phone,
@@ -66,6 +67,14 @@ export function setBannerCollapsed(promotionId: string, collapsed: boolean): voi
 /** Resolved accent: the promotion's own colour or the venue's. */
 export function promotionAccent(promotion: Pick<PublicPromotionDto, 'accentColor'>, primaryColor: string): string {
   return promotion.accentColor ?? primaryColor;
+}
+
+/** Colours of the banner / pill / card chrome: accent as background unless the style overrides it, readable text on top. */
+export function promotionChrome(promotion: Pick<PublicPromotionDto, 'accentColor' | 'style'>, primaryColor: string): { accent: string; background: string; text: string; pillPosition: 'left' | 'right' } {
+  const accent = promotionAccent(promotion, primaryColor);
+  const background = promotion.style?.backgroundColor ?? accent;
+  const text = promotion.style?.textColor ?? readableOn(background);
+  return { accent, background, text, pillPosition: promotion.style?.pillPosition ?? 'right' };
 }
 
 /** One line under the title for the banner / card. */

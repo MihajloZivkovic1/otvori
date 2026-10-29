@@ -10,6 +10,7 @@ const cocktail: PublicPromotionDto = {
   template: 'drink_list',
   display: 'banner',
   accentColor: '#E8453C',
+  style: null,
   priority: 10,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -31,6 +32,7 @@ const notice: PublicPromotionDto = {
   template: 'notice',
   display: 'modal',
   accentColor: null,
+  style: null,
   priority: 1,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -44,6 +46,7 @@ const featured: PublicPromotionDto = {
   template: 'featured_items',
   display: 'card',
   accentColor: null,
+  style: null,
   priority: 0,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -190,6 +193,33 @@ describe('promotions on the guest menu', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Vidi u meniju →' }));
     expect(await screen.findByRole('dialog', { name: 'Kapućino' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Probaj ove nedelje' })).not.toBeInTheDocument();
+  });
+
+  it('applies the style overrides: chalk variant, custom colours and the pill on the left', async () => {
+    const styled: PublicPromotionDto = {
+      ...cocktail,
+      style: { textColor: '#FFFFFF', backgroundColor: '#1F1A17', pillPosition: 'left' },
+      content: { ...cocktail.content, variant: 'chalk', icons: 'none' },
+    };
+    mockFetch(serve([styled]));
+    renderMenu();
+    const user = userEvent.setup();
+    const banner = await screen.findByRole('region', { name: 'Promocija: Cocktail Menu' });
+    const bar = banner.firstElementChild as HTMLElement;
+    expect(bar.style.background).toBe('rgb(31, 26, 23)');
+    expect(bar.style.color).toBe('rgb(255, 255, 255)');
+    await user.click(within(banner).getByText('Pogledaj'));
+    const card = await screen.findByRole('article', { name: 'Cocktail Menu' });
+    expect(card).toHaveClass('is-chalk');
+    expect(card).toHaveClass('no-icons');
+    expect(card.querySelector('.promo-dl-icons')).toBeNull();
+    const root = card.closest('.promo-root') as HTMLElement;
+    expect(root.style.getPropertyValue('--promo-ink')).toBe('#FFFFFF');
+    expect(root.style.getPropertyValue('--promo-bg')).toBe('#1F1A17');
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: 'Sakrij promociju' }));
+    const pill = screen.getByRole('button', { name: 'Prikaži promociju: Cocktail Menu' });
+    expect(pill.parentElement).toHaveClass('justify-start');
   });
 
   it('uses the English chrome with ?lang=en and shows nothing when the request fails', async () => {
