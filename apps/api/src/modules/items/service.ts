@@ -34,6 +34,7 @@ export function toItemDto(item: MenuItem, now = new Date()): MenuItemDto {
     categoryId: item.categoryId,
     name: item.name,
     description: item.description,
+    variantLabel: item.variantLabel ?? null,
     priceCents: item.priceCents,
     imageUrl: item.imageUrl,
     thumbnailUrl: item.thumbnailUrl,
@@ -116,6 +117,7 @@ export async function createItem(restaurantId: string, input: CreateItemInput): 
         categoryId: input.categoryId,
         name: input.name,
         description: normalizeDescription(input.description) ?? null,
+        variantLabel: normalizeDescription(input.variantLabel) ?? null,
         priceCents: input.priceCents,
         allergens: input.allergens ?? [],
         tags: input.tags ?? [],
@@ -145,6 +147,7 @@ function auditShape(dto: MenuItemDto): Record<string, unknown> {
   return {
     name: dto.name,
     description: dto.description,
+    variantLabel: dto.variantLabel,
     priceCents: dto.priceCents,
     variants: dto.variants.map((v) => ({ name: v.name, priceCents: v.priceCents })),
     allergens: dto.allergens,
@@ -162,12 +165,13 @@ export async function updateItem(restaurantId: string, itemId: string, input: Up
     if (input.categoryId && input.categoryId !== item.categoryId) {
       await assertCategory(restaurantId, input.categoryId, transaction);
     }
-    const { variants, description, unavailableUntil, posProductCode, ...rest } = input;
+    const { variants, description, variantLabel, unavailableUntil, posProductCode, ...rest } = input;
     await item.update(
       {
         ...definedOnly(rest),
         ...(posProductCode !== undefined ? { posProductCode: posProductCode?.trim() || null } : {}),
         ...(description !== undefined ? { description: normalizeDescription(description) ?? null } : {}),
+        ...(variantLabel !== undefined ? { variantLabel: normalizeDescription(variantLabel) ?? null } : {}),
         ...(unavailableUntil !== undefined
           ? { unavailableUntil: unavailableUntil ? new Date(unavailableUntil) : null }
           : {}),

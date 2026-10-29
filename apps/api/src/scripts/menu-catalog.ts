@@ -23,6 +23,8 @@ export interface CatalogItem {
   allergens?: string[];
   tags?: string[];
   variants?: CatalogVariant[];
+  /** Heading of the variant group ("Vrsta kafe"); default "Size". */
+  variantLabel?: TranslatedText;
   /** Wikimedia Commons file title (without the "File:" prefix). */
   photo?: string;
 }
@@ -340,6 +342,7 @@ export async function insertMenu(
           categoryId: categoryRow.id,
           name: entry.name,
           description: entry.description ?? null,
+          variantLabel: entry.variantLabel ?? null,
           priceCents: entry.priceCents,
           allergens: entry.allergens ?? [],
           tags: entry.tags ?? [],

@@ -88,6 +88,7 @@ export const menuSr: PublicMenuDto = {
             { id: ids.espressoSingle, name: 'Single', priceCents: 18000 },
             { id: ids.espressoDouble, name: 'Double', priceCents: 22000 },
           ],
+          variantLabel: 'Vrsta kafe',
         },
         {
           id: ids.cappuccino,
@@ -100,6 +101,7 @@ export const menuSr: PublicMenuDto = {
           tags: ['new'],
           isAvailable: true,
           variants: [],
+          variantLabel: null,
         },
       ],
     },
@@ -118,6 +120,7 @@ export const menuSr: PublicMenuDto = {
           tags: ['vegan'],
           isAvailable: false,
           variants: [],
+          variantLabel: null,
         },
       ],
     },

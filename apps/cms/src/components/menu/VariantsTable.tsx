@@ -1,4 +1,5 @@
 import { Controller, useFieldArray, type UseFormReturn } from 'react-hook-form';
+import type { Locale } from '@qr-menu/shared';
 import { cn } from '../../lib/cn';
 import { Icon } from '../icons';
 import { Button } from '../ui/Button';
@@ -9,10 +10,18 @@ interface VariantsTableProps {
   form: UseFormReturn<ItemFormValues>;
   currency: string;
   layout: 'drawer' | 'sheet';
+  /** The default locale: the heading is typed in that language here (other languages on their own tab). */
+  lang: Locale;
 }
 
+/** Suggestions for the group heading; the empty one means the menu app's default "Size". */
+export const VARIANT_LABEL_PRESETS: Record<Locale, string[]> = {
+  sr: ['Vrsta', 'Ukus', 'Vrsta kafe', 'Porcija'],
+  en: ['Type', 'Flavour', 'Coffee blend', 'Portion'],
+};
+
 /** Size/portion variants with replace-all semantics; the item's base price is "from" the cheapest variant. */
-export function VariantsTable({ form, currency, layout }: VariantsTableProps) {
+export function VariantsTable({ form, currency, layout, lang }: VariantsTableProps) {
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'variants' });
   const errors = form.formState.errors.variants;
   const large = layout === 'sheet';
@@ -86,6 +95,50 @@ export function VariantsTable({ form, currency, layout }: VariantsTableProps) {
         ) : null}
       </div>
       {typeof errors?.message === 'string' ? <span className="text-xs text-danger-text">{errors.message}</span> : null}
+      {fields.length > 0 ? <VariantLabelField form={form} lang={lang} large={large} /> : null}
+    </div>
+  );
+}
+
+/**
+ * What the group of variants is called on the guest's screen: "Size" by default, or the venue's own word
+ * ("Vrsta kafe" for coffee blends, "Ukus" for flavours). Stored per language like a description.
+ */
+export function VariantLabelField({ form, lang, large }: { form: UseFormReturn<ItemFormValues>; lang: Locale; large: boolean }) {
+  const id = `item-variant-label-${lang}`;
+  const value = form.watch(`variantLabel.${lang}` as const) ?? '';
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[13px] font-medium">
+        Variants heading{lang === 'en' ? ' (English)' : ''}
+      </label>
+      <input
+        id={id}
+        type="text"
+        maxLength={500}
+        placeholder={lang === 'en' ? 'Size' : 'Veličina'}
+        className={cn(
+          'rounded-md border border-line bg-surface text-ink placeholder:text-faint focus:border-line-strong',
+          large ? 'h-11 px-3 text-[15px]' : 'h-9 px-2.5 text-[13px]',
+        )}
+        {...form.register(`variantLabel.${lang}` as const)}
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {VARIANT_LABEL_PRESETS[lang].map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => form.setValue(`variantLabel.${lang}` as const, value === preset ? '' : preset, { shouldDirty: true })}
+            className={cn(
+              'h-7 cursor-pointer rounded-full border px-2.5 text-xs',
+              value === preset ? 'border-ink bg-ink text-surface' : 'border-line text-ink-2 hover:bg-line-2',
+            )}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+      <span className="text-xs text-muted">Shown above the variant list. Empty = “{lang === 'en' ? 'Size' : 'Veličina'}”.</span>
     </div>
   );
 }

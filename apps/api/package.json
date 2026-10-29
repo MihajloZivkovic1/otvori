@@ -14,6 +14,7 @@
     "seed": "tsx src/db/seeders/seed.ts",
     "seed:drinks": "tsx src/scripts/seed-drinks.ts",
     "seed:venues": "tsx src/scripts/seed-venues.ts",
+    "seed:fabrika": "tsx src/scripts/seed-fabrika.ts",
     "gen:octopos": "node scripts/gen-octopos-client.mjs",
     "gen:octopos:check": "node scripts/gen-octopos-client.mjs --check",
     "test": "vitest run",

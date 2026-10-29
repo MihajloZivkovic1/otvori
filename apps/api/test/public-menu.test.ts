@@ -13,6 +13,7 @@ async function seedMenu(owner: RegisteredUser) {
     priceCents: 18000,
     allergens: [],
     tags: ['new'],
+    variantLabel: { sr: 'Vrsta kafe', en: 'Coffee blend' },
     variants: [
       { name: 'Dupli', priceCents: 22000, sortOrder: 1 },
       { name: 'Jedan', priceCents: 18000, sortOrder: 0 },
@@ -68,6 +69,8 @@ describe('public menu', () => {
     expect(espresso.tags).toEqual(['new']);
     expect(espresso.isAvailable).toBe(true);
     expect(espresso.variants.map((v: { name: string }) => v.name)).toEqual(['Jedan', 'Dupli']);
+    expect(espresso.variantLabel).toBe('Vrsta kafe');
+    expect(coffee.items[1].variantLabel).toBeNull();
     expect(coffee.items[2].isAvailable).toBe(false);
   });
 
@@ -84,6 +87,7 @@ describe('public menu', () => {
     const names = en.body.categories[0].items.map((i: { name: string }) => i.name);
     expect(names).toEqual(['Espresso', 'Domaća kafa', 'Gone']);
     expect(en.body.categories[0].items[0].description).toBe('Strong coffee');
+    expect(en.body.categories[0].items[0].variantLabel).toBe('Coffee blend');
 
     const unsupported = await api.get(`/api/public/${slug}/menu?locale=de`);
     expect(unsupported.status).toBe(400);

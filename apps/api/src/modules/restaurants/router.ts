@@ -11,3 +11,7 @@ restaurantsRouter.patch('/', requireOwner, controller.updateRestaurant);
 restaurantsRouter.delete('/', requireOwner, controller.deleteRestaurant);
 restaurantsRouter.post('/logo', requireOwner, imageUpload, controller.uploadLogo);
 restaurantsRouter.post('/publish', requireOwner, controller.publishRestaurant);
+// The universal menu QR (no table) for venues that do not hand out per-table codes.
+restaurantsRouter.get('/qr.png', requireOwner, controller.menuQrPng);
+restaurantsRouter.get('/qr.svg', requireOwner, controller.menuQrSvg);
+restaurantsRouter.get('/qr-card.pdf', requireOwner, controller.menuQrCard);

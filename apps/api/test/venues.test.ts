@@ -91,3 +91,37 @@ describe('table QR codes', () => {
     expect(list.body[0].menuUrl).toBe('http://kafeterija.localhost:5174/t/7');
   });
 });
+
+describe('universal menu QR', () => {
+  it('serves the venue QR without a table as PNG, SVG and a one-card PDF (owner only)', async () => {
+    const owner = await registerUser({ restaurantName: 'Kafeterija' });
+    const base = `/api/admin/restaurants/${owner.restaurantId}`;
+
+    const svg = await api.get(`${base}/qr.svg`).set(bearer(owner.accessToken)).buffer(true).parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks).toString()));
+    });
+    expect(svg.status).toBe(200);
+    expect(svg.headers['content-type']).toContain('image/svg+xml');
+    expect(svg.body as string).toContain('<svg');
+
+    const png = await api.get(`${base}/qr.png`).set(bearer(owner.accessToken)).buffer().parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(png.status).toBe(200);
+    expect(png.headers['content-type']).toContain('image/png');
+    expect((png.body as Buffer).subarray(1, 4).toString()).toBe('PNG');
+
+    const pdf = await api.get(`${base}/qr-card.pdf`).set(bearer(owner.accessToken)).buffer().parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-disposition']).toBe('inline; filename="qr-kafeterija-meni.pdf"');
+    expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+});

@@ -72,6 +72,7 @@ export async function getPublicMenu(slug: string, requestedLocale?: string): Pro
       tags: item.tags,
       isAvailable: isEffectivelyAvailable(item.isAvailable, item.unavailableUntil, now) && orderableOnPos(restaurant, item),
       variants: (item.variants ?? []).map((v) => ({ id: v.id, name: v.name, priceCents: v.priceCents })),
+      variantLabel: item.variantLabel ? resolveText(item.variantLabel, locale, fallback) || null : null,
     });
     itemsByCategory.set(item.categoryId, list);
   }

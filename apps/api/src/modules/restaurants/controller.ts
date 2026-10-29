@@ -3,6 +3,7 @@ import { restaurantIdOf } from '../../middleware/membership.js';
 import { uploadedFile } from '../../middleware/upload.js';
 import { noStore } from '../../utils/http.js';
 import { createRestaurantSchema, updateRestaurantSchema } from './schemas.js';
+import * as tablesService from '../tables/service.js';
 import * as service from './service.js';
 
 /** POST /api/admin/restaurants — not tenant-scoped: the caller becomes the owner of the new venue. */
@@ -34,4 +35,24 @@ export async function publishRestaurant(req: Request, res: Response): Promise<vo
 export async function deleteRestaurant(req: Request, res: Response): Promise<void> {
   await service.deleteRestaurant(restaurantIdOf(req));
   res.status(204).end();
+}
+
+/** Universal menu QR (no table) — PNG / SVG / one-card PDF, owner only. */
+export async function menuQrPng(req: Request, res: Response): Promise<void> {
+  const png = await tablesService.menuQrPng(restaurantIdOf(req));
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.type('image/png').send(png);
+}
+
+export async function menuQrSvg(req: Request, res: Response): Promise<void> {
+  const svg = await tablesService.menuQrSvg(restaurantIdOf(req));
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.type('image/svg+xml').send(svg);
+}
+
+export async function menuQrCard(req: Request, res: Response): Promise<void> {
+  const { pdf, filename } = await tablesService.menuQrCardPdf(restaurantIdOf(req));
+  noStore(res);
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.type('application/pdf').send(pdf);
 }

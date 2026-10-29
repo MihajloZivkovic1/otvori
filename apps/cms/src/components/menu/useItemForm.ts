@@ -29,6 +29,7 @@ function toFormValues(item: MenuItemDto | null, categoryId: string): Partial<Ite
       isAvailable: true,
       unavailableUntil: null,
       variants: [],
+      variantLabel: { sr: '', en: '' },
       posProductCode: null,
     };
   }
@@ -42,6 +43,7 @@ function toFormValues(item: MenuItemDto | null, categoryId: string): Partial<Ite
     isAvailable: item.isEffectivelyAvailable,
     unavailableUntil: null,
     variants: item.variants.map((v) => ({ name: v.name, priceCents: v.priceCents })),
+    variantLabel: { sr: item.variantLabel?.sr ?? '', en: item.variantLabel?.en ?? '' },
     posProductCode: item.posProductCode,
   };
 }
@@ -86,6 +88,7 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
     setSaving(true);
     try {
       const description = compact(values.description);
+      const variantLabel = compact(values.variantLabel);
       const payload: UpdateItemInput = {
         categoryId: values.categoryId,
         name: compact(values.name),
@@ -94,6 +97,7 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
         allergens: values.allergens ?? [],
         tags: values.tags ?? [],
         variants: (values.variants ?? []).map((v, index) => ({ name: v.name, priceCents: v.priceCents, sortOrder: index })),
+        variantLabel: Object.keys(variantLabel).length ? variantLabel : null,
         posProductCode: (values.posProductCode ?? '').trim() || null,
       };
       if (!item || availabilityTouched) {

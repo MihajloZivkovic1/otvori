@@ -197,6 +197,8 @@ export const menuItemDtoSchema = z.object({
   isEffectivelyAvailable: z.boolean(),
   sortOrder: z.number().int(),
   variants: z.array(itemVariantDtoSchema),
+  /** Translated heading of the variant group; null = "Size". */
+  variantLabel: translatedTextOrEmptySchema.nullable(),
   createdAt: isoString,
   updatedAt: isoString,
 });
@@ -285,6 +287,8 @@ export const publicMenuItemDtoSchema = z.object({
   tags: z.array(z.string()),
   isAvailable: z.boolean(),
   variants: z.array(z.object({ id: uuidSchema, name: z.string(), priceCents: z.number().int() })),
+  /** Resolved heading of the variant group; null = the app's default "Size". */
+  variantLabel: z.string().nullable(),
 });
 export type PublicMenuItemDto = z.infer<typeof publicMenuItemDtoSchema>;
 
