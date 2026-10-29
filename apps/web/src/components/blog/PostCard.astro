@@ -1,0 +1,26 @@
+---
+import { formatDate, isoDate, postPath, type PostMeta } from '../../blog';
+import type { Dictionary } from '../../i18n';
+interface Props {
+  post: PostMeta;
+  minutes: number;
+  t: Dictionary;
+}
+const { post, minutes, t } = Astro.props;
+---
+
+<li class="hinge-card flex flex-col gap-3 p-6 lg:gap-3.5 lg:rounded-2xl lg:p-8">
+  <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted lg:text-[13px]">
+    <span class="font-semibold tracking-[.06em] text-plum uppercase">{t.blog.categories[post.category]}</span>
+    <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time>
+    <span>
+      {minutes} {t.blog.minutes}
+    </span>
+  </p>
+  <h2 class="font-serif text-[22px] leading-[1.2] font-bold tracking-[-.01em] lg:text-[26px]">
+    <a href={postPath(post.slug)} class="text-ink no-underline hover:text-plum">
+      {post.title}
+    </a>
+  </h2>
+  <p class="text-[15px] leading-[1.55] text-ink-2 lg:text-base">{post.description}</p>
+</li>

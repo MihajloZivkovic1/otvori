@@ -6,15 +6,18 @@ import Wordmark from './Wordmark.astro';
 interface Props {
   locale: Locale;
   t: Dictionary;
+  /** False on pages other than the landing (blog): section links point back to the landing page. */
+  onLanding?: boolean;
 }
-const { locale, t } = Astro.props;
+const { locale, t, onLanding = true } = Astro.props;
 const other = otherLocale(locale);
 const home = localePath(locale);
+const section = (id: string) => (onLanding ? `#${id}` : `${home}#${id}`);
 const nav = [
-  { href: '#kako', label: t.nav.how },
-  { href: '#dobijas', label: t.nav.features },
-  { href: '#cene', label: t.nav.pricing },
-  { href: '#pitanja', label: t.nav.faq },
+  { href: section('kako'), label: t.nav.how },
+  { href: section('dobijas'), label: t.nav.features },
+  { href: section('cene'), label: t.nav.pricing },
+  { href: section('pitanja'), label: t.nav.faq },
 ];
 ---
 

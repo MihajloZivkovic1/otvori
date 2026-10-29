@@ -16,6 +16,7 @@
     "og": "tsx scripts/og.mjs"
   },
   "dependencies": {
+    "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.4.1",
     "qrcode-generator": "^2.0.4"

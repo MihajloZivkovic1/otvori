@@ -184,6 +184,7 @@ export const sr: Dictionary = {
       { label: 'Cene', href: '#cene' },
       { label: 'Pitanja', href: '#pitanja' },
       { label: 'Prijava', href: links.signIn },
+      { label: 'Blog', href: '/blog/' },
       { label: 'Uslovi', href: links.terms },
       { label: 'Privatnost', href: links.privacy },
     ],
@@ -192,6 +193,24 @@ export const sr: Dictionary = {
   card: {
     logo: 'TVOJ LOGO',
     note: 'Štampa na 300 g mat papiru, 90 × 90 mm, jednostrano. Link ispod koda ostaje za telefone bez čitača.',
+  },
+  blog: {
+    title: 'Blog — saveti za kafiće, kafane i restorane',
+    description:
+      'Kratki, praktični tekstovi o QR meniju, naručivanju sa stola i vođenju smene. Bez marketinga, sa brojevima.',
+    eyebrow: 'Blog',
+    h: 'Saveti za kafiće, kafane i restorane',
+    all: 'Svi tekstovi',
+    categories: { smena: 'Smena', poslovanje: 'Poslovanje', uporedbe: 'Uporedbe' },
+    published: 'Objavljeno',
+    updated: 'Ažurirano',
+    minutes: 'min čitanja',
+    faq: 'Česta pitanja',
+    back: 'Svi tekstovi',
+    ctaH: 'Probaj otvori na svojim stolovima.',
+    ctaP: '30 dana besplatno, bez kartice. Meni uneseš za pola sata.',
+    empty: 'Prvi tekstovi stižu uskoro.',
+    rss: 'RSS',
   },
   langSwitch: { label: 'Jezik', sr: 'Srpski', en: 'English' },
 };
