@@ -40,7 +40,8 @@ fi
 TAG="$(cat .deployed-tag 2>/dev/null || envval IMAGE_TAG)"; TAG="${TAG:-latest}"
 
 echo "rename: 1/6 backup"
-./backup.sh
+# backup.sh talks to the stack through the compose file, whose project is already "otvori"; point it at the old one.
+COMPOSE_PROJECT_NAME="$OLD" ./backup.sh
 
 echo "rename: 2/6 stopping the $OLD stack (volumes are kept)"
 old down --remove-orphans
