@@ -29,6 +29,26 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(DataType.BOOLEAN)
   isSuperadmin!: CreationOptional<boolean>;
 
+  /** The superadmin's contact number for this person (Phase 13); never shown to other members. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  phone!: CreationOptional<string | null>;
+
+  /** A superadmin typed the password: the CMS asks for a new one on the first sign-in. */
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  mustChangePassword!: CreationOptional<boolean>;
+
+  /** Deactivated accounts cannot sign in and every session is revoked. */
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  deactivatedAt!: CreationOptional<Date | null>;
+
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  lastLoginAt!: CreationOptional<Date | null>;
+
   createdAt!: CreationOptional<Date>;
   updatedAt!: CreationOptional<Date>;
 

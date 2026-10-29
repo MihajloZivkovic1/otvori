@@ -50,8 +50,15 @@ export function toUserDto(user: User): UserDto {
     name: user.name,
     isSuperadmin: user.isSuperadmin,
     hasPassword: Boolean(user.passwordHash),
+    mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+/** Where a sign-in came from (kept on the refresh token for the account's sessions list). */
+export interface SessionMeta {
+  ip: string | null;
+  userAgent: string | null;
 }
 
 export function toRestaurantSummaryDto(restaurant: Restaurant): RestaurantSummaryDto {
@@ -83,7 +90,8 @@ export async function listMemberships(userId: string): Promise<MembershipDto[]> 
  * Issue an access token + a fresh refresh token (persisted as a hash). `sessionId` identifies the sign-in across
  * rotations (a refresh passes the old one on); it rides in the access token as `sid` and binds elevation tokens.
  */
-export async function createSession(user: User, sessionId: string = randomUUID()): Promise<Session> {
+export async function createSession(user: User, sessionId: string = randomUUID(), meta: SessionMeta = { ip: null, userAgent: null }): Promise<Session> {
+  if (user.deactivatedAt) throw unauthorized('This account has been deactivated', 'ACCOUNT_DEACTIVATED');
   const { token, expiresIn } = signAccessToken(user.id, sessionId);
   const refreshToken = generateOpaqueToken(48);
   const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_TTL_DAYS * DAY_MS);
@@ -93,6 +101,8 @@ export async function createSession(user: User, sessionId: string = randomUUID()
     type: 'refresh',
     expiresAt: refreshExpiresAt,
     sessionId,
+    ip: meta.ip,
+    userAgent: meta.userAgent?.slice(0, 300) ?? null,
   });
   return {
     accessToken: token,
@@ -105,8 +115,9 @@ export async function createSession(user: User, sessionId: string = randomUUID()
 }
 
 /** A new sign-in: the session, the audit rows ("auth.login" per venue) and, after a password, the elevations. */
-async function openSession(user: User, method: LoginMethod, ip: string | null, restaurantIds?: string[]): Promise<Session> {
-  const session = await createSession(user);
+async function openSession(user: User, method: LoginMethod, ip: string | null, restaurantIds?: string[], userAgent: string | null = null): Promise<Session> {
+  const session = await createSession(user, undefined, { ip, userAgent });
+  await user.update({ lastLoginAt: new Date() });
   const venues = restaurantIds ?? session.memberships.map((m) => m.restaurant.id);
   const roleOf = (restaurantId: string) => session.memberships.find((m) => m.restaurant.id === restaurantId)?.role ?? null;
   await Promise.all(
@@ -152,14 +163,14 @@ function dummyHash(): Promise<string> {
   return dummyHashPromise;
 }
 
-export async function login(input: LoginInput, ip: string | null = null): Promise<Session> {
+export async function login(input: LoginInput, ip: string | null = null, userAgent: string | null = null): Promise<Session> {
   const user = await User.findOne({ where: { email: input.email } });
   // Always run a bcrypt comparison so unknown emails take the same time as wrong passwords.
   const valid = user?.passwordHash
     ? await verifyPassword(input.password, user.passwordHash)
     : (await bcrypt.compare(input.password, await dummyHash()), false);
   if (!user || !valid) throw unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
-  return openSession(user, 'password', ip);
+  return openSession(user, 'password', ip, undefined, userAgent);
 }
 
 async function pruneRefreshTokens(userId: string): Promise<void> {
@@ -191,7 +202,7 @@ export async function refresh(rawToken: string | undefined): Promise<Session> {
   await record.update({ usedAt: new Date() });
   await pruneRefreshTokens(user.id);
   // Keep the sign-in's identity across the rotation so elevation tokens (owner PIN) stay valid.
-  return createSession(user, record.sessionId ?? undefined);
+  return createSession(user, record.sessionId ?? undefined, { ip: record.ip, userAgent: record.userAgent });
 }
 
 export async function logout(rawToken: string | undefined): Promise<void> {
@@ -202,7 +213,7 @@ export async function logout(rawToken: string | undefined): Promise<void> {
   );
 }
 
-async function issueOneTimeToken(userId: string, type: 'magic_link' | 'password_reset', ttlMs: number): Promise<string> {
+export async function issueOneTimeToken(userId: string, type: 'magic_link' | 'password_reset', ttlMs: number): Promise<string> {
   const raw = generateOpaqueToken(32);
   await AuthToken.create({ userId, tokenHash: hashToken(raw), type, expiresAt: new Date(Date.now() + ttlMs) });
   return raw;

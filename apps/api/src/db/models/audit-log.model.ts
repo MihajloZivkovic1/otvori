@@ -1,5 +1,5 @@
-import type { CreationOptional, InferAttributes, InferCreationAttributes } from 'sequelize';
-import { AllowNull, Column, DataType, Default, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import type { CreationOptional, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
+import { AllowNull, BelongsTo, Column, DataType, Default, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
 import { Restaurant } from './restaurant.model.js';
 import { User } from './user.model.js';
 
@@ -11,10 +11,11 @@ export class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAttr
   @Column(DataType.UUID)
   id!: CreationOptional<string>;
 
+  /** Null for platform-level rows (a superadmin resetting a password, deactivating an account). */
   @ForeignKey(() => Restaurant)
-  @AllowNull(false)
+  @AllowNull(true)
   @Column(DataType.UUID)
-  restaurantId!: string;
+  restaurantId!: CreationOptional<string | null>;
 
   @ForeignKey(() => User)
   @AllowNull(true)
@@ -67,4 +68,7 @@ export class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAttr
   ip!: CreationOptional<string | null>;
 
   createdAt!: CreationOptional<Date>;
+
+  @BelongsTo(() => Restaurant)
+  restaurant?: NonAttribute<Restaurant>;
 }

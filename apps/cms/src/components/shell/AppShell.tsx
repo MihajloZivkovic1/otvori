@@ -40,7 +40,7 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
 
   if (isMobile) {
     return (
-      <div className="flex h-dvh flex-col bg-canvas">
+      <div className="flex h-full flex-col bg-canvas">
         <LockStatus variant="strip" />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
         <InstallHint />
@@ -50,7 +50,7 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-canvas">
+    <div className="flex h-full overflow-hidden bg-canvas">
       <Sidebar restaurant={restaurant} role={role} compact={compact} />
       <div className="relative flex min-w-0 flex-1 flex-col">
         <Topbar restaurant={restaurant} role={role} title={title} />

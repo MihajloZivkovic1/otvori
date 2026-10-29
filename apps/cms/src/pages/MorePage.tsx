@@ -55,7 +55,7 @@ export function MorePage() {
             <span className="flex-1">Switch venue</span>
             <Icon name="chevronRight" size={16} strokeWidth={1.8} className="text-muted" />
           </button>
-          {me.user.isSuperadmin ? row('tables', 'All restaurants', '/superadmin') : null}
+          {me.user.isSuperadmin ? row('shield', 'Superadmin', '/admin/restaurants') : null}
           <a href={restaurant.publicUrl} target="_blank" rel="noreferrer" className={ROW}>
             <Icon name="externalBox" size={20} className="text-muted" />
             <span className="flex-1">View live menu</span>

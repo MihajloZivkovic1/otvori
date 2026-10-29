@@ -52,7 +52,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
 export async function login(req: Request, res: Response): Promise<void> {
   const input = loginSchema.parse(req.body);
-  sendSession(res, await authService.login(input, req.ip ?? null));
+  sendSession(res, await authService.login(input, req.ip ?? null, req.get('user-agent') ?? null));
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {

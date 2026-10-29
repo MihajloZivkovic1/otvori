@@ -3,7 +3,7 @@ import { HomeRedirect } from './components/shell/HomeRedirect';
 import { FullPageLoading, RequireAuth } from './components/shell/RequireAuth';
 import { RestaurantIndex, RestaurantLayout } from './components/shell/RestaurantLayout';
 import { RouteError } from './components/shell/RouteError';
-import { SuperadminLayout } from './components/shell/SuperadminLayout';
+import { AdminLayout } from './components/admin/AdminShell';
 import { HomePage } from './pages/HomePage';
 
 /** Route tree (data router, lazy page chunks). Tests mount it with createMemoryRouter. */
@@ -26,11 +26,20 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <HomeRedirect /> },
           { path: 'no-venue', lazy: () => import('./pages/NoVenuePage').then((m) => ({ Component: m.NoVenuePage })) },
+          // Superadmin area (Phase 13): its own shell, nothing of the last venue in it.
+          { path: 'superadmin/*', element: <Navigate to="/admin/restaurants" replace /> },
           {
-            path: 'superadmin',
-            element: <SuperadminLayout />,
+            path: 'admin',
+            element: <AdminLayout />,
             children: [
-              { index: true, lazy: () => import('./pages/SuperadminPage').then((m) => ({ Component: m.SuperadminPage })) },
+              { index: true, element: <Navigate to="/admin/restaurants" replace /> },
+              { path: 'restaurants', lazy: () => import('./pages/admin/RestaurantsPage').then((m) => ({ Component: m.RestaurantsPage })) },
+              { path: 'restaurants/new', lazy: () => import('./pages/admin/OnboardingPage').then((m) => ({ Component: m.OnboardingPage })) },
+              { path: 'restaurants/:id/setup/:step', lazy: () => import('./pages/admin/OnboardingPage').then((m) => ({ Component: m.OnboardingPage })) },
+              { path: 'restaurants/:id/:tab?', lazy: () => import('./pages/admin/RestaurantPage').then((m) => ({ Component: m.RestaurantPage })) },
+              { path: 'users', lazy: () => import('./pages/admin/UsersPage').then((m) => ({ Component: m.UsersPage })) },
+              { path: 'activity', lazy: () => import('./pages/admin/ActivityPage').then((m) => ({ Component: m.ActivityPage })) },
+              { path: 'system', lazy: () => import('./pages/admin/SystemPage').then((m) => ({ Component: m.SystemPage })) },
             ],
           },
           {

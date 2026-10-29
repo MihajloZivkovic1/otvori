@@ -1,5 +1,6 @@
 import type { AuthResponseDto } from '@qr-menu/shared';
 import { elevationStore, requestElevation, restaurantIdFromPath } from './elevation';
+import { impersonationStore, renewImpersonation } from './impersonation';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -115,10 +116,14 @@ async function parseError(response: Response): Promise<ApiError> {
 async function send(path: string, init: RequestInit, auth: boolean, allowRetry: boolean, allowUnlock = true): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = tokenStore.get();
-  if (auth && token) headers.set('Authorization', `Bearer ${token}`);
-  // Owner PIN (Phase 11): owner requests carry the device's elevation token for that venue.
   const rid = auth ? restaurantIdFromPath(path) : null;
-  const elevation = rid ? elevationStore.get(rid) : null;
+  // "Open as owner" (Phase 13): requests to the impersonated venue carry the venue-scoped token instead; it acts
+  // as the owner without a PIN, so no elevation header goes with it.
+  const impersonation = rid ? impersonationStore.get(rid) : null;
+  if (impersonation) headers.set('Authorization', `Bearer ${impersonation.token}`);
+  else if (auth && token) headers.set('Authorization', `Bearer ${token}`);
+  // Owner PIN (Phase 11): owner requests carry the device's elevation token for that venue.
+  const elevation = rid && !impersonation ? elevationStore.get(rid) : null;
   if (elevation) headers.set('X-Elevation', elevation.token);
   else headers.delete('X-Elevation');
 
@@ -135,6 +140,13 @@ async function send(path: string, init: RequestInit, auth: boolean, allowRetry: 
     // about the session: hand it to the caller instead of refreshing or signing out.
     const code = await peekErrorCode(response);
     if (code === 'PIN_INVALID' || code === 'INVALID_CREDENTIALS') return response;
+    // An expired impersonation token says nothing about the superadmin's own session: ask for a fresh one and
+    // replay, otherwise hand the 401 to the caller (the venue layout shows "Back to admin").
+    if (impersonation && rid) {
+      impersonationStore.clear();
+      if (allowRetry && (await renewImpersonation(rid))) return send(path, init, auth, false, allowUnlock);
+      return response;
+    }
     if (allowRetry) {
       const session = await refreshSession();
       if (session) return send(path, init, auth, false, allowUnlock);

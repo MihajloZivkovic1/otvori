@@ -46,11 +46,11 @@ export function VenueSheet({ open, onClose, currentId }: { open: boolean; onClos
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate('/superadmin');
+                  navigate('/admin/restaurants');
                 }}
                 className="flex h-14 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-ink"
               >
-                All restaurants <Badge className="ml-auto text-ink-2">SUPERADMIN</Badge>
+                Superadmin area <Badge className="ml-auto text-ink-2">SUPERADMIN</Badge>
               </button>
             </li>
           ) : null}

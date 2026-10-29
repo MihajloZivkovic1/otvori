@@ -175,6 +175,25 @@ export class Restaurant extends Model<InferAttributes<Restaurant>, InferCreation
   @Column(DataType.DATEONLY)
   digestSentOn!: CreationOptional<string | null>;
 
+  /** Manual invoicing (Phase 13): free text and the date until which the venue has paid. Superadmin only. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  billingNote!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.DATEONLY)
+  paidUntil!: CreationOptional<string | null>;
+
+  /** Internal notes (contact person, agreements). Never leaves /api/superadmin. */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  adminNotes!: CreationOptional<string | null>;
+
+  /** Onboarding wizard: the step (1–4) to resume at; null once finished (or for self-registered venues). */
+  @AllowNull(true)
+  @Column(DataType.INTEGER)
+  onboardingStep!: CreationOptional<number | null>;
+
   createdAt!: CreationOptional<Date>;
   updatedAt!: CreationOptional<Date>;
 

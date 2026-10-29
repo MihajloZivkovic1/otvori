@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { tokenStore } from '../src/lib/api';
 import { elevationStore } from '../src/lib/elevation';
+import { impersonationStore } from '../src/lib/impersonation';
 import { setViewport } from './helpers';
 
 beforeEach(() => {
@@ -10,6 +11,7 @@ beforeEach(() => {
   sessionStorage.clear();
   tokenStore.set(null);
   elevationStore.clearAll();
+  impersonationStore.clear();
   setViewport('desktop');
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.scrollTo = vi.fn();

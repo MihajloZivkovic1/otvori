@@ -13,7 +13,8 @@ import { logger } from '../../utils/logger.js';
 import { currentActor, type Actor } from './context.js';
 
 export interface AuditEntry {
-  restaurantId: string;
+  /** Null for platform-level rows (superadmin actions on accounts); those only show in /admin/activity. */
+  restaurantId: string | null;
   action: AuditAction;
   entity?: { type: string; id?: string | null; label?: string | null };
   before?: Record<string, unknown> | null;
@@ -98,15 +99,18 @@ export function toAuditEntryDto(row: AuditLog): AuditEntryDto {
 
 const PRICE_ACTIONS: AuditAction[] = ['item.create', 'item.update', 'pos.sync'];
 
+/** The `kind` / `action` filter as a where fragment (shared with the superadmin activity screen). */
+export function kindWhere(query: Pick<ListAuditQuery, 'kind' | 'action'>): WhereOptions<AuditLog> {
+  if (query.action) return { action: query.action };
+  if (query.kind === 'prices') {
+    return { action: PRICE_ACTIONS, [Op.and]: [literal(`"AuditLog"."after" ?| array['priceCents','variants','priceChanges']`)] };
+  }
+  if (query.kind !== 'all') return { action: [...AUDIT_KIND_ACTIONS[query.kind]] };
+  return {};
+}
+
 export async function listAuditLog(restaurantId: string, query: ListAuditQuery): Promise<AuditPageDto> {
-  const where: WhereOptions<AuditLog> = { restaurantId };
-  if (query.action) Object.assign(where, { action: query.action });
-  else if (query.kind === 'prices') {
-    Object.assign(where, {
-      action: PRICE_ACTIONS,
-      [Op.and]: [literal(`"AuditLog"."after" ?| array['priceCents','variants','priceChanges']`)],
-    });
-  } else if (query.kind !== 'all') Object.assign(where, { action: [...AUDIT_KIND_ACTIONS[query.kind]] });
+  const where: WhereOptions<AuditLog> = { restaurantId, ...kindWhere(query) };
   if (query.userId) Object.assign(where, { userId: query.userId });
   if (query.from || query.to) {
     Object.assign(where, {

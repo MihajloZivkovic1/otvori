@@ -45,16 +45,15 @@ describe('global feature flags (FEATURE_PAYMENTS=false)', () => {
       if (url.pathname === `/api/superadmin/restaurants/${row.id}` && method === 'PATCH') return { body: { ...row, ...(body as Partial<SuperadminRestaurantDto>) } };
       return undefined;
     });
-    renderApp('/superadmin');
+    renderApp(`/admin/restaurants/${row.id}/plan`);
     const typist = userEvent.setup();
-    await typist.click(await screen.findByRole('button', { name: `Manage ${row.name}` }));
-    const dialog = await screen.findByRole('dialog');
-    const paymentsSwitch = within(dialog).getByRole('switch', { name: 'Online payment' });
+    const panel = await screen.findByRole('tabpanel', { name: 'Plan & modules' });
+    const paymentsSwitch = within(panel).getByRole('switch', { name: 'Online payment' });
     await waitFor(() => expect(paymentsSwitch).toBeDisabled());
-    expect(within(dialog).getByText('Not available yet')).toBeInTheDocument();
-    expect(within(dialog).getByRole('switch', { name: 'POS integration' })).toBeEnabled();
-    await typist.click(within(dialog).getByRole('switch', { name: 'POS integration' }));
-    await typist.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(panel).getByText(/Not available yet/)).toBeInTheDocument();
+    expect(within(panel).getByRole('switch', { name: 'POS integration' })).toBeEnabled();
+    await typist.click(within(panel).getByRole('switch', { name: 'POS integration' }));
+    await typist.click(within(panel).getByRole('button', { name: 'Save changes' }));
     await waitFor(() => {
       const patch = requests(spy).find((r) => r.method === 'PATCH' && r.url.pathname === `/api/superadmin/restaurants/${row.id}`);
       expect(patch?.body).toMatchObject({ modules: { payments: false, pos: true } });

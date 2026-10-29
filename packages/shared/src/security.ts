@@ -111,20 +111,56 @@ export const AUDIT_ACTIONS = [
   'team.remove',
   'team.role',
   'team.digest',
+  // Phase 13: superadmin area (platform-level rows have no venue unless the action is about one)
+  'auth.impersonate',
+  'auth.password_change',
+  'auth.sessions_revoke',
+  'admin.restaurant_create',
+  'admin.restaurant_update',
+  'admin.restaurant_delete',
+  'admin.member_add',
+  'admin.member_role',
+  'admin.member_remove',
+  'admin.user_update',
+  'admin.user_reset_password',
+  'admin.user_magic_link',
+  'admin.user_deactivate',
+  'admin.user_activate',
+  'admin.welcome_email',
+  'admin.pos_job_retry',
+  'menu.import',
+  'menu.copy',
+  'table.bulk_create',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** Filters offered by the history screen; each is a set of actions. */
-export const AUDIT_KINDS = ['all', 'prices', 'menu', 'availability', 'orders', 'auth', 'team', 'settings'] as const;
+export const AUDIT_KINDS = ['all', 'prices', 'menu', 'availability', 'orders', 'auth', 'team', 'settings', 'admin'] as const;
 export type AuditKind = (typeof AUDIT_KINDS)[number];
 
 export const AUDIT_KIND_ACTIONS: Record<Exclude<AuditKind, 'all' | 'prices'>, readonly AuditAction[]> = {
-  menu: ['category.create', 'category.update', 'category.delete', 'category.reorder', 'item.create', 'item.update', 'item.delete', 'item.reorder', 'item.image', 'pos.sync'],
+  menu: ['category.create', 'category.update', 'category.delete', 'category.reorder', 'item.create', 'item.update', 'item.delete', 'item.reorder', 'item.image', 'pos.sync', 'menu.import', 'menu.copy'],
   availability: ['item.availability'],
   orders: ['order.accept', 'order.reject', 'order.deliver', 'order.cash', 'order.fiscal_retry', 'order.fiscal_manual', 'request.done', 'table.block', 'table.unblock'],
-  auth: ['auth.login', 'auth.pin_set', 'auth.pin_change', 'auth.pin_remove', 'auth.pin_unlock', 'auth.pin_failed', 'auth.pin_lockout'],
+  auth: ['auth.login', 'auth.pin_set', 'auth.pin_change', 'auth.pin_remove', 'auth.pin_unlock', 'auth.pin_failed', 'auth.pin_lockout', 'auth.impersonate', 'auth.password_change', 'auth.sessions_revoke'],
   team: ['team.invite', 'team.invite_revoke', 'team.join_code', 'team.join', 'team.remove', 'team.role', 'team.digest'],
-  settings: ['restaurant.update', 'restaurant.logo', 'restaurant.publish', 'restaurant.delete', 'table.create', 'table.update', 'table.delete', 'table.reorder', 'payment_config.update', 'pos_config.update'],
+  settings: ['restaurant.update', 'restaurant.logo', 'restaurant.publish', 'restaurant.delete', 'table.create', 'table.update', 'table.delete', 'table.reorder', 'table.bulk_create', 'payment_config.update', 'pos_config.update'],
+  admin: [
+    'auth.impersonate',
+    'admin.restaurant_create',
+    'admin.restaurant_update',
+    'admin.restaurant_delete',
+    'admin.member_add',
+    'admin.member_role',
+    'admin.member_remove',
+    'admin.user_update',
+    'admin.user_reset_password',
+    'admin.user_magic_link',
+    'admin.user_deactivate',
+    'admin.user_activate',
+    'admin.welcome_email',
+    'admin.pos_job_retry',
+  ],
 };
 
 /** True when an item change touched a price (base price or any variant price). */

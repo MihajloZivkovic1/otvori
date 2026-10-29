@@ -27,13 +27,9 @@ import type {
   PosSyncPreviewDto,
   PosSyncResultDto,
   ApplyPosSyncInput,
-  PaginatedDto,
   RestaurantDto,
   ServiceRequestDto,
   SseTokenDto,
-  SuperadminListRestaurantsQuery,
-  SuperadminRestaurantDto,
-  SuperadminUpdateRestaurantInput,
   TableDto,
   UpdateCategoryInput,
   UpdateItemInput,
@@ -60,7 +56,6 @@ export const keys = {
   security: (rid: string) => ['security', rid] as const,
   team: (rid: string) => ['team', rid] as const,
   audit: (rid: string, query: Partial<ListAuditQuery>) => ['audit', rid, query] as const,
-  superadminRestaurants: (query: Partial<SuperadminListRestaurantsQuery>) => ['superadmin', 'restaurants', query] as const,
 };
 
 export const base = (rid: string) => `/api/admin/restaurants/${rid}`;
@@ -566,34 +561,6 @@ export function useAnalytics(rid: string, range: AnalyticsRange) {
     queryKey: keys.analytics(rid, range),
     queryFn: () => api<AnalyticsDto>(`${base(rid)}/analytics?range=${range}`),
     staleTime: 60_000,
-  });
-}
-
-/* ------------------------------------------------------------------ superadmin */
-
-export function useSuperadminRestaurants(query: Partial<SuperadminListRestaurantsQuery>) {
-  const params = new URLSearchParams();
-  if (query.search) params.set('search', query.search);
-  if (query.status) params.set('status', query.status);
-  if (query.plan) params.set('plan', query.plan);
-  params.set('page', String(query.page ?? 1));
-  params.set('pageSize', String(query.pageSize ?? 50));
-  return useQuery({
-    queryKey: keys.superadminRestaurants(query),
-    queryFn: () => api<PaginatedDto<SuperadminRestaurantDto>>(`/api/superadmin/restaurants?${params.toString()}`),
-    placeholderData: (previous) => previous,
-  });
-}
-
-export function useSuperadminUpdateRestaurant() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: SuperadminUpdateRestaurantInput }) =>
-      api<SuperadminRestaurantDto>(`/api/superadmin/restaurants/${id}`, { method: 'PATCH', body: input }),
-    onSuccess: (restaurant) => {
-      void client.invalidateQueries({ queryKey: ['superadmin', 'restaurants'] });
-      void client.invalidateQueries({ queryKey: keys.restaurant(restaurant.id) });
-    },
   });
 }
 

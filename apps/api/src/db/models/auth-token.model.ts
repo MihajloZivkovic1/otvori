@@ -40,6 +40,15 @@ export class AuthToken extends Model<InferAttributes<AuthToken>, InferCreationAt
   @Column(DataType.UUID)
   sessionId!: CreationOptional<string | null>;
 
+  /** Where the sign-in came from (sessions list in the account menu, Phase 13). */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  ip!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  userAgent!: CreationOptional<string | null>;
+
   createdAt!: CreationOptional<Date>;
 
   @BelongsTo(() => User)

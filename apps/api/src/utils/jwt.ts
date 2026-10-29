@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { ORDERING_LIMITS, elevationSeconds, type ElevationWindow } from '@qr-menu/shared';
+import { IMPERSONATION_LIMITS, ORDERING_LIMITS, elevationSeconds, type ElevationWindow } from '@qr-menu/shared';
 import { env } from '../config/env.js';
 import { unauthorized } from './errors.js';
 
@@ -16,7 +16,14 @@ export function signAccessToken(userId: string, sessionId: string | null): { tok
   return { token, expiresIn: env.JWT_ACCESS_TTL_SECONDS };
 }
 
-export function verifyAccessToken(token: string): { userId: string; sessionId: string | null } {
+export interface AccessClaims {
+  userId: string;
+  sessionId: string | null;
+  /** Set on an "Open as owner" token (Phase 13): the one venue it may touch. */
+  impersonatedRestaurantId: string | null;
+}
+
+export function verifyAccessToken(token: string): AccessClaims {
   let payload: jwt.JwtPayload | string;
   try {
     payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER, algorithms: ['HS256'] });
@@ -29,7 +36,27 @@ export function verifyAccessToken(token: string): { userId: string; sessionId: s
   if (typeof payload === 'string' || payload.type !== 'access' || typeof payload.sub !== 'string') {
     throw unauthorized('Invalid access token');
   }
-  return { userId: payload.sub, sessionId: typeof payload.sid === 'string' ? payload.sid : null };
+  return {
+    userId: payload.sub,
+    sessionId: typeof payload.sid === 'string' ? payload.sid : null,
+    impersonatedRestaurantId: typeof payload.imp === 'string' ? payload.imp : null,
+  };
+}
+
+/**
+ * "Open as owner" (Phase 13): an access token for the superadmin, limited to one venue (`imp`) and to
+ * IMPERSONATION_LIMITS.ttlMinutes. It has no refresh token — the CMS asks for a new one when it expires — and
+ * `requireAuth` reads `isSuperadmin` as false for it, so /api/superadmin is out of reach while it is in use.
+ */
+export function signImpersonationToken(superadminId: string, restaurantId: string): { token: string; expiresAt: Date } {
+  const expiresIn = IMPERSONATION_LIMITS.ttlMinutes * 60;
+  const token = jwt.sign({ type: 'access', imp: restaurantId, sid: `imp-${Date.now().toString(36)}` }, env.JWT_ACCESS_SECRET, {
+    algorithm: 'HS256',
+    subject: superadminId,
+    issuer: ISSUER,
+    expiresIn,
+  });
+  return { token, expiresAt: new Date(Date.now() + expiresIn * 1000) };
 }
 
 /**

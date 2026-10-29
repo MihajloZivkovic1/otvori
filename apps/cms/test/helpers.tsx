@@ -5,6 +5,9 @@ import { vi } from 'vitest';
 import type {
   AnalyticsDto,
   AuthResponseDto,
+  ImpersonationDto,
+  SuperadminRestaurantDetailDto,
+  SystemStatusDto,
   CategoryDto,
   MeDto,
   MembershipDto,
@@ -81,6 +84,7 @@ export const user: UserDto = {
   name: 'Ana Petrović',
   isSuperadmin: false,
   hasPassword: true,
+  mustChangePassword: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -485,9 +489,62 @@ export const superadminRows: SuperadminRestaurantDto[] = [
     itemCount: 3,
     modules: { ordering: true, payments: false, pos: false },
     owner: { id: user.id, name: user.name, email: user.email },
+    lastScanAt: '2026-10-20T09:00:00.000Z',
+    paidUntil: null,
+    onboardingStep: null,
     ...stamps,
   },
 ];
+
+/** The same venue on the superadmin detail page (Phase 13), with its owner as the only member. */
+export const superadminDetail: SuperadminRestaurantDetailDto = {
+  ...superadminRows[0]!,
+  address: restaurant.address,
+  timezone: restaurant.timezone,
+  currency: restaurant.currency,
+  defaultLocale: restaurant.defaultLocale,
+  supportedLocales: restaurant.supportedLocales,
+  tagline: restaurant.tagline,
+  menuNote: restaurant.menuNote,
+  orderingMode: 'order',
+  orderingPaused: false,
+  pinSet: false,
+  publicUrl: restaurant.publicUrl,
+  cmsUrl: `http://localhost:5173/r/${restaurant.id}`,
+  billingNote: null,
+  adminNotes: null,
+  categoryCount: 3,
+  memberCount: 1,
+  scansLast7Days: 63,
+  ordersLast7Days: 12,
+  members: [
+    { membershipId: ids.membership, userId: user.id, name: user.name, email: user.email, phone: null, role: 'owner', hasPassword: true, hasRealEmail: true, mustChangePassword: false, lastLoginAt: '2026-10-20T08:00:00.000Z', deactivatedAt: null },
+  ],
+  invites: [],
+};
+
+/** What POST /impersonate answers: a token the venue's routes then carry. */
+export const impersonation: ImpersonationDto = {
+  token: 'imp-token',
+  expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+  restaurant: { id: restaurant.id, name: restaurant.name, slug: restaurant.slug },
+  owner: { id: user.id, name: user.name, email: user.email },
+};
+
+export const systemStatus: SystemStatusDto = {
+  version: 'test',
+  nodeEnv: 'test',
+  startedAt: '2026-10-20T06:00:00.000Z',
+  uptimeSeconds: 3600,
+  db: 'ok',
+  features: { payments: true, pos: true },
+  mail: { provider: 'log', from: 'otvori <zdravo@otvori.menu>' },
+  storage: { driver: 'local', bucket: null },
+  mocks: { payments: true, pos: true },
+  counts: { restaurants: 1, active: 1, trial: 0, suspended: 0, published: 1, onboarding: 0, users: 2, tables: 1, items: 3, scansToday: 12, scansLast7Days: 63, ordersToday: 2, ordersLast7Days: 12 },
+  queues: { pos: { queued: 0, running: 0, failed: 0, doneLast24h: 4 }, payments: { pending: 0, paidLast24h: 1 } },
+  failedJobs: [],
+};
 
 /* ------------------------------------------------------------------ fetch mock */
 
@@ -679,7 +736,14 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
   if (path === `${base}/team/join-code` && method === 'POST') return { status: 201, body: { code: '482913', expiresAt: '2026-10-23T09:12:00.000Z' } };
   if (path === `${base}/team/join-code` && method === 'DELETE') return { body: team };
   if (path === `${base}/audit-log` && method === 'GET') return { body: { items: [], total: 0, page: 1, pageSize: 50, users: [] } };
-  if (path === '/api/superadmin/restaurants') return { body: { items: superadminRows, total: superadminRows.length, page: 1, pageSize: 50 } };
+  // Superadmin area (Phase 13).
+  if (path === '/api/superadmin/restaurants' && method === 'GET') return { body: { items: superadminRows, total: superadminRows.length, page: 1, pageSize: 50 } };
+  if (path === `/api/superadmin/restaurants/${ids.restaurant}` && method === 'GET') return { body: superadminDetail };
+  if (path === `/api/superadmin/restaurants/${ids.restaurant}` && method === 'PATCH') return { body: { ...superadminDetail, ...(body as Partial<SuperadminRestaurantDetailDto>), updatedAt: '2026-10-22T12:00:00.000Z' } };
+  if (path === `/api/superadmin/restaurants/${ids.restaurant}/impersonate` && method === 'POST') return { status: 201, body: impersonation };
+  if (path === '/api/superadmin/users' && method === 'GET') return { body: { items: [], total: 0, page: 1, pageSize: 50 } };
+  if (path === '/api/superadmin/activity' && method === 'GET') return { body: { items: [], total: 0, page: 1, pageSize: 50, restaurants: [{ id: ids.restaurant, name: restaurant.name }], users: [] } };
+  if (path === '/api/superadmin/system' && method === 'GET') return { body: systemStatus };
   if (path.endsWith('/qr.png')) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { headers: { 'Content-Type': 'image/png' } });
   if (path.endsWith('/qr-card.pdf')) return new Response('%PDF-1.4', { headers: { 'Content-Type': 'application/pdf' } });
   if (path.endsWith('/qr.svg')) return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', { headers: { 'Content-Type': 'image/svg+xml' } });

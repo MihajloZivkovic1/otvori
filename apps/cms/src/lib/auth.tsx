@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AuthResponseDto, MeDto } from '@qr-menu/shared';
 import { api, refreshSession, setUnauthorizedHandler, tokenStore } from './api';
 import { elevationStore } from './elevation';
+import { impersonationStore } from './impersonation';
 import { sessionFlags } from './storage';
 
 export type AuthStatus = 'restoring' | 'anonymous' | 'authenticated';
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       sessionFlags.clear();
       elevationStore.clearAll();
+      impersonationStore.clear();
       setMe(null);
       setStatus('anonymous');
       queryClient.clear();
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.set(null);
     sessionFlags.clear();
     elevationStore.clearAll();
+    impersonationStore.clear();
     setMe(null);
     setSignedOutExplicitly(true);
     setStatus('anonymous');

@@ -47,6 +47,8 @@ export const userDtoSchema = z.object({
   name: z.string(),
   isSuperadmin: z.boolean(),
   hasPassword: z.boolean(),
+  /** Set by a superadmin who typed the password: the CMS asks for a new one before anything else (Phase 13). */
+  mustChangePassword: z.boolean(),
   createdAt: isoString,
 });
 export type UserDto = z.infer<typeof userDtoSchema>;
@@ -501,10 +503,257 @@ export const superadminRestaurantDtoSchema = z.object({
   itemCount: z.number().int(),
   modules: restaurantModulesSchema,
   owner: z.object({ id: uuidSchema, name: z.string(), email: z.string() }).nullable(),
+  /** Most recent guest scan of any of its QR codes; null = never scanned. */
+  lastScanAt: isoString.nullable(),
+  /** Manual invoicing (Phase 13): until when the venue has paid. */
+  paidUntil: z.string().nullable(),
+  /** 1–4 while the onboarding wizard is unfinished; null once done (or for venues created by registration). */
+  onboardingStep: z.number().int().nullable(),
   createdAt: isoString,
   updatedAt: isoString,
 });
 export type SuperadminRestaurantDto = z.infer<typeof superadminRestaurantDtoSchema>;
+
+/* ------------------------------------------------------------------ superadmin area (Phase 13) */
+
+/** One member as the superadmin sees it (account details included, unlike the venue's own Team card). */
+export const superadminMemberDtoSchema = z.object({
+  membershipId: uuidSchema,
+  userId: uuidSchema,
+  name: z.string(),
+  email: z.string(),
+  phone: z.string().nullable(),
+  role: membershipRoleSchema,
+  hasPassword: z.boolean(),
+  hasRealEmail: z.boolean(),
+  mustChangePassword: z.boolean(),
+  lastLoginAt: isoString.nullable(),
+  deactivatedAt: isoString.nullable(),
+});
+export type SuperadminMemberDto = z.infer<typeof superadminMemberDtoSchema>;
+
+/** GET /api/superadmin/restaurants/:id */
+export const superadminRestaurantDetailDtoSchema = superadminRestaurantDtoSchema.extend({
+  address: z.string().nullable(),
+  timezone: z.string(),
+  currency: z.string(),
+  defaultLocale: z.string(),
+  supportedLocales: z.array(z.string()),
+  tagline: z.string().nullable(),
+  menuNote: z.string().nullable(),
+  orderingMode: orderingModeSchema,
+  orderingPaused: z.boolean(),
+  pinSet: z.boolean(),
+  publicUrl: z.string(),
+  /** CMS deep link for the owner (APP_URL/r/<id>). */
+  cmsUrl: z.string(),
+  billingNote: z.string().nullable(),
+  adminNotes: z.string().nullable(),
+  categoryCount: z.number().int(),
+  memberCount: z.number().int(),
+  scansLast7Days: z.number().int(),
+  ordersLast7Days: z.number().int(),
+  members: z.array(superadminMemberDtoSchema),
+  invites: z.array(z.lazy(() => teamInviteDtoSchema)),
+});
+export type SuperadminRestaurantDetailDto = z.infer<typeof superadminRestaurantDetailDtoSchema>;
+
+/** POST …/members */
+export const superadminAddMemberResultDtoSchema = z.object({
+  member: superadminMemberDtoSchema,
+  /** True when the account was created now (false = an existing account was attached). */
+  created: z.boolean(),
+  members: z.array(superadminMemberDtoSchema),
+});
+export type SuperadminAddMemberResultDto = z.infer<typeof superadminAddMemberResultDtoSchema>;
+
+/** POST /api/superadmin/restaurants/:id/impersonate — "Open as owner". */
+export const impersonationDtoSchema = z.object({
+  token: z.string(),
+  expiresAt: isoString,
+  restaurant: z.object({ id: uuidSchema, name: z.string(), slug: z.string() }),
+  owner: z.object({ id: uuidSchema, name: z.string(), email: z.string() }).nullable(),
+});
+export type ImpersonationDto = z.infer<typeof impersonationDtoSchema>;
+
+export const superadminUserDtoSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  email: z.string(),
+  phone: z.string().nullable(),
+  isSuperadmin: z.boolean(),
+  hasPassword: z.boolean(),
+  hasRealEmail: z.boolean(),
+  mustChangePassword: z.boolean(),
+  deactivatedAt: isoString.nullable(),
+  lastLoginAt: isoString.nullable(),
+  createdAt: isoString,
+  memberships: z.array(
+    z.object({
+      membershipId: uuidSchema,
+      role: membershipRoleSchema,
+      restaurant: z.object({ id: uuidSchema, name: z.string(), slug: z.string(), status: restaurantStatusSchema }),
+    }),
+  ),
+});
+export type SuperadminUserDto = z.infer<typeof superadminUserDtoSchema>;
+
+/** Reset-password / magic-link sent by a superadmin: the link is also returned so it can be handed over directly. */
+export const superadminUserLinkDtoSchema = z.object({
+  ok: z.literal(true),
+  /** Whether a mail was sent (accounts with a synthetic join-code address get none). */
+  mailed: z.boolean(),
+  url: z.string(),
+  expiresAt: isoString,
+});
+export type SuperadminUserLinkDto = z.infer<typeof superadminUserLinkDtoSchema>;
+
+export const superadminActivityEntryDtoSchema = z.lazy(() =>
+  auditEntryDtoSchema.extend({ restaurant: z.object({ id: uuidSchema, name: z.string() }).nullable() }),
+);
+export type SuperadminActivityEntryDto = AuditEntryDto & { restaurant: { id: string; name: string } | null };
+
+export interface SuperadminActivityPageDto {
+  items: SuperadminActivityEntryDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  restaurants: { id: string; name: string }[];
+  users: { id: string; name: string }[];
+}
+
+/** GET /api/superadmin/system */
+export const systemStatusDtoSchema = z.object({
+  version: z.string(),
+  nodeEnv: z.string(),
+  startedAt: isoString,
+  uptimeSeconds: z.number().int(),
+  db: z.enum(['ok', 'error']),
+  features: featureFlagsSchema,
+  mail: z.object({ provider: z.string(), from: z.string() }),
+  storage: z.object({ driver: z.enum(['s3', 'local']), bucket: z.string().nullable() }),
+  mocks: z.object({ payments: z.boolean(), pos: z.boolean() }),
+  counts: z.object({
+    restaurants: z.number().int(),
+    active: z.number().int(),
+    trial: z.number().int(),
+    suspended: z.number().int(),
+    published: z.number().int(),
+    onboarding: z.number().int(),
+    users: z.number().int(),
+    tables: z.number().int(),
+    items: z.number().int(),
+    scansToday: z.number().int(),
+    scansLast7Days: z.number().int(),
+    ordersToday: z.number().int(),
+    ordersLast7Days: z.number().int(),
+  }),
+  queues: z.object({
+    pos: z.object({ queued: z.number().int(), running: z.number().int(), failed: z.number().int(), doneLast24h: z.number().int() }),
+    payments: z.object({ pending: z.number().int(), paidLast24h: z.number().int() }),
+  }),
+  failedJobs: z.array(
+    z.object({
+      id: uuidSchema,
+      restaurant: z.object({ id: uuidSchema, name: z.string() }),
+      orderId: uuidSchema,
+      orderNumber: z.number().int().nullable(),
+      type: z.string(),
+      attempts: z.number().int(),
+      lastError: z.string().nullable(),
+      updatedAt: isoString,
+    }),
+  ),
+});
+export type SystemStatusDto = z.infer<typeof systemStatusDtoSchema>;
+
+export const slugCheckDtoSchema = z.object({
+  slug: z.string(),
+  available: z.boolean(),
+  /** Why it is not available ("taken", "reserved", "invalid"), or null. */
+  reason: z.string().nullable(),
+  /** A free slug close to the one asked for. */
+  suggestion: z.string(),
+});
+export type SlugCheckDto = z.infer<typeof slugCheckDtoSchema>;
+
+export const bulkTablesResultDtoSchema = z.object({
+  created: z.number().int(),
+  tables: z.array(tableDtoSchema),
+});
+export type BulkTablesResultDto = z.infer<typeof bulkTablesResultDtoSchema>;
+
+/** One parsed spreadsheet line; `errors` empty = importable. */
+export const menuImportPreviewRowDtoSchema = z.object({
+  line: z.number().int(),
+  category: z.string(),
+  name: translatedTextOrEmptySchema,
+  description: translatedTextOrEmptySchema.nullable(),
+  priceCents: z.number().int().nullable(),
+  allergens: z.array(z.string()),
+  tags: z.array(z.string()),
+  errors: z.array(z.string()),
+});
+export type MenuImportPreviewRowDto = z.infer<typeof menuImportPreviewRowDtoSchema>;
+
+export const menuImportPreviewDtoSchema = z.object({
+  rows: z.array(menuImportPreviewRowDtoSchema),
+  valid: z.number().int(),
+  invalid: z.number().int(),
+  /** Distinct category names in file order. */
+  categories: z.array(z.string()),
+  /** Which of those already exist in the venue (by name, any language). */
+  existingCategories: z.array(z.string()),
+  /** Header names the file had that the template does not know (ignored). */
+  unknownColumns: z.array(z.string()),
+});
+export type MenuImportPreviewDto = z.infer<typeof menuImportPreviewDtoSchema>;
+
+export const menuImportResultDtoSchema = z.object({
+  categoriesCreated: z.number().int(),
+  categoriesReused: z.number().int(),
+  itemsCreated: z.number().int(),
+  rowsSkipped: z.number().int(),
+});
+export type MenuImportResultDto = z.infer<typeof menuImportResultDtoSchema>;
+
+export const copyMenuResultDtoSchema = z.object({
+  categories: z.number().int(),
+  items: z.number().int(),
+  variants: z.number().int(),
+});
+export type CopyMenuResultDto = z.infer<typeof copyMenuResultDtoSchema>;
+
+export const welcomeEmailResultDtoSchema = z.object({
+  ok: z.literal(true),
+  to: z.string(),
+  /** True when the mail carried the password; false = it carried a set-password link. */
+  includedPassword: z.boolean(),
+  /** The mail body as sent, so the admin can read it back / paste it into a chat. */
+  text: z.string(),
+});
+export type WelcomeEmailResultDto = z.infer<typeof welcomeEmailResultDtoSchema>;
+
+/** GET /api/superadmin/search?q= — the ⌘K palette in the admin area. */
+export const superadminSearchDtoSchema = z.object({
+  restaurants: z.array(z.object({ id: uuidSchema, name: z.string(), slug: z.string(), city: z.string().nullable(), status: restaurantStatusSchema })),
+  users: z.array(z.object({ id: uuidSchema, name: z.string(), email: z.string() })),
+  items: z.array(z.object({ id: uuidSchema, name: z.string(), restaurant: z.object({ id: uuidSchema, name: z.string() }) })),
+  tables: z.array(z.object({ id: uuidSchema, label: z.string(), number: z.number().int(), restaurant: z.object({ id: uuidSchema, name: z.string() }) })),
+});
+export type SuperadminSearchDto = z.infer<typeof superadminSearchDtoSchema>;
+
+/** GET /api/auth/sessions — the signed-in person's devices (one row per sign-in). */
+export const sessionDtoSchema = z.object({
+  id: z.string(),
+  createdAt: isoString,
+  lastUsedAt: isoString,
+  expiresAt: isoString,
+  ip: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  current: z.boolean(),
+});
+export type SessionDto = z.infer<typeof sessionDtoSchema>;
 
 export const paginatedDtoSchema = <T extends z.ZodType>(item: T) =>
   z.object({

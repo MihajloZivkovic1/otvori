@@ -7,6 +7,11 @@ export interface AuthUser {
   isSuperadmin: boolean;
   /** Stable id of this sign-in (auth_tokens.session_id); null for tokens minted before Phase 11. */
   sessionId: string | null;
+  /**
+   * Set while a superadmin acts through an "Open as owner" token (Phase 13): the token only works for this one
+   * venue, `isSuperadmin` reads false for its duration, and audit rows name the superadmin as the actor.
+   */
+  impersonation?: { restaurantId: string };
 }
 
 export interface MembershipContext {

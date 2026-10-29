@@ -22,13 +22,13 @@ const TITLES: Record<string, string> = {
   settings: 'Settings',
   home: 'Home',
   more: 'More',
-  superadmin: 'All restaurants',
+  admin: 'Superadmin',
 };
 
-/** Third path segment of /r/:restaurantId/<screen>, or "superadmin". */
+/** Third path segment of /r/:restaurantId/<screen>, or "admin" inside the superadmin area. */
 export function useScreen(): string | null {
   const { pathname } = useLocation();
-  if (pathname.startsWith('/superadmin')) return 'superadmin';
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   const match = /^\/r\/[^/]+\/([^/]+)/.exec(pathname);
   return match?.[1] ?? null;
 }
@@ -38,5 +38,5 @@ export function screenTitle(screen: string | null): string {
 }
 
 export function restaurantPath(restaurantId: string, screen: string | null): string {
-  return `/r/${restaurantId}${screen && screen in TITLES && screen !== 'superadmin' ? `/${screen}` : ''}`;
+  return `/r/${restaurantId}${screen && screen in TITLES && screen !== 'admin' ? `/${screen}` : ''}`;
 }

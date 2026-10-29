@@ -94,12 +94,11 @@ describe('modules', () => {
         ? { body: { ...row, ...(body as Partial<SuperadminRestaurantDto>) } }
         : undefined,
     );
-    renderApp('/superadmin');
+    renderApp(`/admin/restaurants/${row.id}/plan`);
     const typist = userEvent.setup();
-    await typist.click(await screen.findByRole('button', { name: `Manage ${row.name}` }));
-    const dialog = await screen.findByRole('dialog');
-    await typist.click(within(dialog).getByRole('switch', { name: 'Online payment' }));
-    await typist.click(within(dialog).getByRole('button', { name: 'Save' }));
+    const panel = await screen.findByRole('tabpanel', { name: 'Plan & modules' });
+    await typist.click(within(panel).getByRole('switch', { name: 'Online payment' }));
+    await typist.click(within(panel).getByRole('button', { name: 'Save changes' }));
     await waitFor(() => {
       const patch = requests(spy).find((r) => r.method === 'PATCH' && r.url.pathname === `/api/superadmin/restaurants/${row.id}`);
       expect(patch?.body).toMatchObject({ modules: { ordering: true, payments: true, pos: false } });

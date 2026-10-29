@@ -30,6 +30,18 @@ export function requireMembership(options: { role?: 'owner' } = {}) {
     if (!parsed.success) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
     const restaurantId = parsed.data;
 
+    // "Open as owner" (Phase 13): the token is scoped to one venue and acts as its owner without a PIN.
+    if (user.impersonation) {
+      if (user.impersonation.restaurantId !== restaurantId) {
+        throw new AppError(403, 'IMPERSONATION_SCOPE', 'This session is limited to one venue', { restaurantId: user.impersonation.restaurantId });
+      }
+      const exists = await Restaurant.count({ where: { id: restaurantId } });
+      if (!exists) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
+      req.membership = { restaurantId, role: 'owner', viaSuperadmin: true, elevated: true };
+      runWithActor(actorOf(req), next);
+      return;
+    }
+
     if (user.isSuperadmin) {
       const exists = await Restaurant.count({ where: { id: restaurantId } });
       if (!exists) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');

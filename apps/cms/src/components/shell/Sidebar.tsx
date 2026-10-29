@@ -11,6 +11,7 @@ import { useOrdering } from '../orders/OrderingProvider';
 import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Chip';
 import { Tooltip } from '../ui/Tooltip';
+import { AdminVenueList } from '../admin/AdminVenueList';
 import { AddVenueModal, canAddVenue } from './AddVenueModal';
 
 interface SidebarProps {
@@ -143,7 +144,7 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
     };
   }, [open]);
 
-  const onSuperadmin = screen === 'superadmin';
+  const onSuperadmin = screen === 'admin';
   const current = restaurant
     ? { name: restaurant.name, color: restaurant.primaryColor, logoUrl: restaurant.logoUrl }
     : { name: 'All restaurants', color: RESTAURANT_DEFAULTS.primaryColor, logoUrl: null };
@@ -178,9 +179,40 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
         <div
           role="menu"
           aria-label="Your venues"
-          className="pop-enter absolute left-0 top-11 z-20 flex w-[264px] flex-col gap-0.5 rounded-[10px] border border-line bg-surface p-1.5 shadow-[0_8px_30px_rgba(0,0,0,.12)]"
+          className={cn('pop-enter absolute left-0 top-11 z-20 flex flex-col gap-0.5 rounded-[10px] border border-line bg-surface p-1.5 shadow-[0_8px_30px_rgba(0,0,0,.12)]', me.user.isSuperadmin ? 'w-[300px]' : 'w-[264px]')}
         >
-          <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Your venues</div>
+          {me.user.isSuperadmin ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/admin/restaurants');
+                }}
+                className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-ink hover:bg-line-2"
+              >
+                <Icon name="shield" size={14} className="text-accent" />
+                Superadmin area
+                <Badge className="ml-auto text-ink-2">SUPERADMIN</Badge>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/admin/restaurants/new');
+                }}
+                className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-accent hover:bg-line-2"
+              >
+                + New venue
+              </button>
+              <div className="my-1 h-px bg-line" aria-hidden="true" />
+              <AdminVenueList currentId={restaurant?.id ?? null} excludeIds={me.memberships.map((m) => m.restaurant.id)} onPick={pick} />
+              {me.memberships.length > 0 ? <div className="my-1 h-px bg-line" aria-hidden="true" /> : null}
+            </>
+          ) : null}
+          {me.memberships.length > 0 || !me.user.isSuperadmin ? <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Your venues</div> : null}
           {me.memberships.map((membership) => {
             const venue = membership.restaurant;
             const active = !onSuperadmin && venue.id === restaurant?.id;
@@ -205,26 +237,9 @@ function VenueSwitcher({ restaurant, wide }: { restaurant: RestaurantDto | null;
               </button>
             );
           })}
-          {me.memberships.length === 0 ? <div className="px-2.5 py-2 text-xs text-muted">No venues yet</div> : null}
-          <div className="my-1 h-px bg-line" aria-hidden="true" />
-          {me.user.isSuperadmin ? (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                navigate('/superadmin');
-              }}
-              className={cn(
-                'flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-ink hover:bg-line-2',
-                onSuperadmin && 'bg-line-2',
-              )}
-            >
-              All restaurants
-              <Badge className="ml-auto text-ink-2">SUPERADMIN</Badge>
-            </button>
-          ) : null}
-          {allowed ? (
+          {me.memberships.length === 0 && !me.user.isSuperadmin ? <div className="px-2.5 py-2 text-xs text-muted">No venues yet</div> : null}
+          {me.user.isSuperadmin ? null : <div className="my-1 h-px bg-line" aria-hidden="true" />}
+          {me.user.isSuperadmin ? null : allowed ? (
             <button
               type="button"
               role="menuitem"

@@ -152,5 +152,10 @@ export const ERROR_CODES = [
   'INVITE_INVALID',
   'JOIN_CODE_INVALID',
   'LAST_OWNER',
+  // superadmin, impersonation and onboarding (Phase 13)
+  'IMPERSONATION_SCOPE',
+  'ACCOUNT_DEACTIVATED',
+  'PASSWORD_CHANGE_REQUIRED',
+  'IMPORT_INVALID',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
