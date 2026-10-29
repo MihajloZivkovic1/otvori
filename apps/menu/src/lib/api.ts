@@ -4,6 +4,7 @@ import {
   type PublicMenuDto,
   type PublicOrderDto,
   type PublicPaymentDto,
+  type PublicPromotionDto,
   type PublicServiceRequestDto,
   type ServiceRequestType,
 } from '@qr-menu/shared';
@@ -83,6 +84,15 @@ export async function fetchMenu(slug: string | null, locale: string | undefined,
     if (!check.success) console.warn('[tabla] /menu payload does not match PublicMenuDto', check.error.issues);
   }
   return data;
+}
+
+/** Active promotions (Phase 14); fetched next to the menu, never on its critical path. */
+export async function fetchPromotions(slug: string | null, locale: string | undefined, signal?: AbortSignal): Promise<PublicPromotionDto[]> {
+  const url = publicUrl(slug, 'promotions');
+  if (locale) url.searchParams.set('locale', locale);
+  const data = await request<unknown>(url, { signal, headers: { Accept: 'application/json' } });
+  // Promotions are a nicety: anything but a list renders as "none" rather than breaking the menu.
+  return Array.isArray(data) ? (data as PublicPromotionDto[]) : [];
 }
 
 /** Fire-and-forget analytics; never throws, never awaited by the UI. */

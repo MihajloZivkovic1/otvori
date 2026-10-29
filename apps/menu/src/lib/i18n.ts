@@ -110,6 +110,24 @@ export interface Dictionary {
   errors: OrderingErrors;
   // online payment (Phase 9c)
   pay: PaymentCopy;
+  // promotions (Phase 14): template chrome; the promotion content itself is single-language
+  promo: PromotionCopy;
+}
+
+export interface PromotionCopy {
+  /** Banner / card call to action. */
+  view: string;
+  close: string;
+  promotion: string;
+  deal: string;
+  notice: string;
+  featured: string;
+  unavailable: string;
+  seeInMenu: string;
+  oldPrice: string;
+  /** Accessible names of the banner controls. */
+  collapse: string;
+  expand: string;
 }
 
 export interface PaymentCopy {
@@ -278,6 +296,19 @@ export const dict: Record<UiLocale, Dictionary> = {
       emailSent: 'Sent. Check your inbox.',
       emailInvalid: 'Enter a valid e-mail address.',
     },
+    promo: {
+      view: 'View',
+      close: 'Close',
+      promotion: 'Promotion',
+      deal: 'Offer',
+      notice: 'Notice',
+      featured: 'Recommended',
+      unavailable: 'Not available right now',
+      seeInMenu: 'See in menu',
+      oldPrice: 'Previously',
+      collapse: 'Hide promotion',
+      expand: 'Show promotion',
+    },
     errors: {
       blocked: 'Ordering from this table is temporarily disabled. Please call the waiter.',
       paused: 'Ordering is paused right now.',
@@ -422,6 +453,19 @@ export const dict: Record<UiLocale, Dictionary> = {
       emailSent: 'Poslato. Proveri sanduče.',
       emailInvalid: 'Upiši ispravnu adresu.',
     },
+    promo: {
+      view: 'Pogledaj',
+      close: 'Zatvori',
+      promotion: 'Promocija',
+      deal: 'Ponuda',
+      notice: 'Obaveštenje',
+      featured: 'Preporučujemo',
+      unavailable: 'Trenutno nedostupno',
+      seeInMenu: 'Vidi u meniju',
+      oldPrice: 'Ranije',
+      collapse: 'Sakrij promociju',
+      expand: 'Prikaži promociju',
+    },
     errors: {
       blocked: 'Naručivanje sa ovog stola je privremeno onemogućeno. Pozovite konobara.',
       paused: 'Naručivanje je trenutno pauzirano.',
@@ -436,6 +480,11 @@ export const dict: Record<UiLocale, Dictionary> = {
     },
   },
 };
+
+/** The promotion chrome strings for a locale (also used by the CMS live preview through `@qr-menu/menu/promotions`). */
+export function promotionCopy(locale: string): PromotionCopy {
+  return dict[toUiLocale(locale)].promo;
+}
 
 export function tagLabel(t: Dictionary, tag: string): string {
   return t.tags[tag] ?? tag;

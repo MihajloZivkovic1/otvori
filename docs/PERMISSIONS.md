@@ -80,6 +80,14 @@ uses impersonation. Deactivated accounts (`users.deactivated_at`) get `401 ACCOU
 | `GET /tables/qr-sheet.pdf`, `GET /tables/:id/qr.png`, `GET /tables/:id/qr.svg` (QR print/download) | **owner** |
 | `POST /tables/:id/block`, `DELETE /tables/:id/block` (30-minute block; ordering module) | service |
 
+### Promotions (Phase 14; verified by `apps/api/test/promotions.test.ts`)
+
+| Route | Class |
+| --- | --- |
+| `GET /promotions`, `GET /promotions/:promoId` | service |
+| `POST /promotions`, `PATCH /promotions/:promoId`, `PATCH /promotions/:promoId/toggle`, `DELETE /promotions/:promoId`, `POST /promotions/:promoId/image` | **owner** |
+| `GET/PATCH/DELETE /api/admin/promotions/:promoId`, `PATCH …/toggle`, `POST …/image` (by id, no `:restaurantId`) | same classes: `requireMembership({ restaurantId })` resolves the venue from the promotion row first, so a member of another venue gets `403 FORBIDDEN` |
+
 ### Ordering (module `ordering`)
 
 | Route | Class |

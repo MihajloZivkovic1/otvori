@@ -12,14 +12,18 @@ import { requireSession } from '../../middleware/session.js';
 import * as ordering from '../ordering/controller.js';
 import * as payments from '../payments/controller.js';
 import * as pos from '../pos/controller.js';
+import * as promotions from '../promotions/controller.js';
 import * as controller from './controller.js';
 
 export const publicRouter = Router();
 
 publicRouter.use(hostSlug);
+// Promotions (Phase 14): the active ones, cached like the menu. /r/:slug mirrors the menu app's path form.
+publicRouter.get('/r/:slug/promotions', promotions.getPublicPromotions);
 // Host-based (kafeterija.otvori.menu/api/public/menu) and explicit (/api/public/kafeterija/menu) forms.
 for (const prefix of ['', '/:slug']) {
   publicRouter.get(`${prefix}/menu`, controller.getMenu);
+  publicRouter.get(`${prefix}/promotions`, promotions.getPublicPromotions);
   publicRouter.post(`${prefix}/events`, publicEventsLimiter, controller.postEvent);
   // Table ordering: every route needs the guest session (X-Session-Id); writes are rate-limited per session and IP.
   publicRouter.post(`${prefix}/orders`, requireSession, sessionOrdersLimiter, publicOrdersLimiter, ordering.createOrder);

@@ -52,6 +52,10 @@ export const routes: RouteObject[] = [
               { path: 'menu', lazy: () => import('./pages/MenuPage').then((m) => ({ Component: m.MenuPage })) },
               { path: 'menu/unavailable', lazy: () => import('./pages/UnavailablePage').then((m) => ({ Component: m.UnavailablePage })) },
               { path: 'tables', lazy: () => import('./pages/TablesPage').then((m) => ({ Component: m.TablesPage })) },
+              // Promotions (Phase 14): list, the three-step editor for a new one and for an existing one.
+              { path: 'promotions', lazy: () => import('./pages/PromotionsPage').then((m) => ({ Component: m.PromotionsPage })) },
+              { path: 'promotions/new', lazy: () => import('./pages/PromotionEditorPage').then((m) => ({ Component: m.PromotionEditorPage })) },
+              { path: 'promotions/:promotionId', lazy: () => import('./pages/PromotionEditorPage').then((m) => ({ Component: m.PromotionEditorPage })) },
               { path: 'orders', lazy: () => import('./pages/OrdersPage').then((m) => ({ Component: m.OrdersPage })) },
               { path: 'branding', lazy: () => import('./pages/BrandingPage').then((m) => ({ Component: m.BrandingPage })) },
               { path: 'analytics', lazy: () => import('./pages/AnalyticsPage').then((m) => ({ Component: m.AnalyticsPage })) },

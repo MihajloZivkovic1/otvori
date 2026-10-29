@@ -18,6 +18,7 @@ import type {
   CategoryDto,
   CreateCategoryInput,
   CreateItemInput,
+  CreatePromotionInput,
   CreateRestaurantInput,
   CreateTableInput,
   MenuItemDto,
@@ -26,6 +27,7 @@ import type {
   PosConfigDto,
   PosSyncPreviewDto,
   PosSyncResultDto,
+  PromotionDto,
   ApplyPosSyncInput,
   RestaurantDto,
   ServiceRequestDto,
@@ -35,6 +37,7 @@ import type {
   UpdateItemInput,
   UpdateOrderStatusInput,
   UpdatePaymentConfigInput,
+  UpdatePromotionInput,
   UpdatePosConfigInput,
   UpdateRestaurantInput,
   UpdateTableInput,
@@ -46,6 +49,7 @@ export const keys = {
   categories: (rid: string) => ['categories', rid] as const,
   items: (rid: string) => ['items', rid] as const,
   tables: (rid: string) => ['tables', rid] as const,
+  promotions: (rid: string) => ['promotions', rid] as const,
   analytics: (rid: string, range: AnalyticsRange) => ['analytics', rid, range] as const,
   orders: (rid: string) => ['orders', rid] as const,
   paymentConfig: (rid: string) => ['paymentConfig', rid] as const,
@@ -672,5 +676,76 @@ export function useAuditLog(rid: string, query: Partial<ListAuditQuery>, enabled
     queryFn: () => api<AuditPageDto>(`${base(rid)}/audit-log?${params.toString()}`),
     placeholderData: (previous) => previous,
     enabled,
+  });
+}
+
+/* ------------------------------------------------------------------ promotions (Phase 14) */
+
+export function usePromotions(rid: string) {
+  return useQuery({ queryKey: keys.promotions(rid), queryFn: () => api<PromotionDto[]>(`${base(rid)}/promotions`) });
+}
+
+function setPromotion(client: QueryClient, rid: string, promotion: PromotionDto) {
+  client.setQueryData<PromotionDto[]>(keys.promotions(rid), (prev) => {
+    if (!prev) return [promotion];
+    const index = prev.findIndex((p) => p.id === promotion.id);
+    return index === -1 ? [promotion, ...prev] : prev.map((p) => (p.id === promotion.id ? promotion : p));
+  });
+  void client.invalidateQueries({ queryKey: keys.promotions(rid) });
+}
+
+export function useCreatePromotion(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreatePromotionInput) => api<PromotionDto>(`${base(rid)}/promotions`, { method: 'POST', body: input }),
+    onSuccess: (promotion) => setPromotion(client, rid, promotion),
+  });
+}
+
+export function useUpdatePromotion(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdatePromotionInput }) =>
+      api<PromotionDto>(`${base(rid)}/promotions/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: (promotion) => setPromotion(client, rid, promotion),
+  });
+}
+
+/** The active switch; applied optimistically with rollback. */
+export function useTogglePromotion(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api<PromotionDto>(`${base(rid)}/promotions/${id}/toggle`, { method: 'PATCH', body: { isActive } }),
+    onMutate: async ({ id, isActive }) => {
+      await client.cancelQueries({ queryKey: keys.promotions(rid) });
+      const previous = client.getQueryData<PromotionDto[]>(keys.promotions(rid));
+      client.setQueryData<PromotionDto[]>(keys.promotions(rid), (prev) => prev?.map((p) => (p.id === id ? { ...p, isActive, isActiveNow: isActive && p.isActiveNow } : p)));
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) client.setQueryData(keys.promotions(rid), context.previous);
+    },
+    onSuccess: (promotion) => setPromotion(client, rid, promotion),
+    onSettled: () => void client.invalidateQueries({ queryKey: keys.promotions(rid) }),
+  });
+}
+
+export function useDeletePromotion(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`${base(rid)}/promotions/${id}`, { method: 'DELETE' }),
+    onSuccess: (_result, id) => {
+      client.setQueryData<PromotionDto[]>(keys.promotions(rid), (prev) => prev?.filter((p) => p.id !== id));
+      void client.invalidateQueries({ queryKey: keys.promotions(rid) });
+    },
+  });
+}
+
+export function useUploadPromotionImage(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: Blob }) => apiUpload<PromotionDto>(`${base(rid)}/promotions/${id}/image`, file, 'promotion.jpg'),
+    onSuccess: (promotion) => setPromotion(client, rid, promotion),
   });
 }

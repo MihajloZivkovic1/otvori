@@ -12,12 +12,15 @@ import { ordersRouter, requestsRouter } from './ordering/router.js';
 import * as paymentsController from './payments/controller.js';
 import { paymentConfigRouter } from './payments/router.js';
 import * as posController from './pos/controller.js';
+import { promotionByIdRouter, promotionsRouter } from './promotions/router.js';
+import { restaurantIdOfPromotion } from './promotions/service.js';
 import { posConfigRouter, posRouter } from './pos/router.js';
 import { requireSseToken, streamEvents } from './ordering/sse.js';
 import * as restaurantsController from './restaurants/controller.js';
 import { restaurantsRouter } from './restaurants/router.js';
 import { securityRouter } from './security/router.js';
 import { tablesRouter } from './tables/router.js';
+import { uuidParam } from '../utils/http.js';
 import { teamRouter } from './team/router.js';
 
 /**
@@ -30,6 +33,14 @@ export const adminRouter = Router();
 // The one admin route without a :restaurantId: it creates the venue the caller will own.
 adminRouter.post('/restaurants', requireAuth, restaurantsController.createRestaurant);
 
+// Promotions by id (Phase 14): the venue comes from the promotion row, then the usual membership / owner checks apply.
+adminRouter.use(
+  '/promotions/:promoId',
+  requireAuth,
+  requireMembership({ restaurantId: (req) => restaurantIdOfPromotion(uuidParam(req.params.promoId, 'promoId')) }),
+  promotionByIdRouter,
+);
+
 // Server-Sent Events for the waiter screen. EventSource cannot send a bearer header, so this route authenticates
 // with the short-lived token from POST /sse-token (which does go through requireAuth + requireMembership).
 adminRouter.get('/restaurants/:restaurantId/events', requireSseToken, requireModule('ordering'), streamEvents);
@@ -38,6 +49,8 @@ const scoped = Router({ mergeParams: true });
 scoped.use('/categories', categoriesRouter);
 scoped.use('/items', itemsRouter);
 scoped.use('/tables', tablesRouter);
+// Promotions (Phase 14): list/read for both roles, every change owner-level.
+scoped.use('/promotions', promotionsRouter);
 // Spreadsheet import (Phase 13b): template, preview with per-row errors, import.
 scoped.use('/menu/import', menuImportRouter);
 scoped.use('/analytics', analyticsRouter);

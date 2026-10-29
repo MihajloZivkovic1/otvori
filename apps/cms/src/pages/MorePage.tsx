@@ -55,6 +55,7 @@ export function MorePage() {
         </div>
 
         <nav className="overflow-hidden rounded-[14px] border border-line bg-surface" aria-label="More">
+          {row('megaphone', t('Promotions'), `/r/${restaurant.id}/promotions`)}
           {row('branding', 'Branding', `/r/${restaurant.id}/branding`)}
           {ordering.enabled ? row('analytics', 'Analytics', `/r/${restaurant.id}/analytics`) : null}
           {row('settings', 'Settings', `/r/${restaurant.id}/settings`)}

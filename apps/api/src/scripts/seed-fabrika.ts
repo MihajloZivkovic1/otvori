@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { readFile } from 'node:fs/promises';
 import { Op, type Transaction } from 'sequelize';
 import { env } from '../config/env.js';
-import { Membership, MenuItem, Restaurant, RestaurantTable, User } from '../db/models/index.js';
+import { Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
 import { sequelize } from '../db/sequelize.js';
 import { touchRestaurant } from '../modules/shared/touch-restaurant.js';
 import { processLogo } from '../utils/images.js';
@@ -11,6 +11,7 @@ import { hashPassword } from '../utils/password.js';
 import { buildMenuUrl } from '../utils/public-url.js';
 import { deleteStoredUrl, storage } from '../utils/storage.js';
 import { FABRIKA_MENU } from './fabrika-menu.js';
+import { FABRIKA_PROMOTIONS, type SeedPromotion } from './fabrika-promotions.js';
 import { insertMenu } from './menu-catalog.js';
 
 /**
@@ -19,6 +20,7 @@ import { insertMenu } from './menu-catalog.js';
  *
  *   OWNER_PASSWORD=… npm run seed:fabrika -- --logo path/to/logo.png          (dev: tsx)
  *   docker compose … exec -e OWNER_PASSWORD=… api node dist/scripts/seed-fabrika.js --logo /tmp/logo.png   (production)
+ *   … seed-fabrika.js --promo-only   (keeps the live venue and its menu untouched; only upserts the promotions by title)
  *
  * The owner account is created when missing; an existing one keeps its other venues and only gets the password reset.
  * The previous venue's owner (`fabrika@otvori.menu`, from the pilot seed) is removed when no other venue is left to it.
@@ -43,6 +45,34 @@ function logoPathArg(): string | null {
 }
 
 /** Deletes the venue (rows cascade) and returns its stored photo and logo URLs for `deleteStoredUrl()` after commit. */
+/** Upsert the venue's seeded promotions by title (so re-running never duplicates the cocktail card). */
+async function upsertPromotions(restaurantId: string, promotions: SeedPromotion[], transaction?: Transaction): Promise<void> {
+  for (const [index, promo] of promotions.entries()) {
+    const values = {
+      title: promo.title,
+      template: promo.template,
+      content: promo.content,
+      display: promo.display,
+      accentColor: promo.accentColor ?? null,
+      priority: promo.priority ?? index,
+    };
+    const existing = await Promotion.findOne({ where: { restaurantId, title: promo.title }, transaction });
+    if (existing) await existing.update(values, { transaction });
+    else await Promotion.create({ restaurantId, ...values }, { transaction });
+  }
+}
+
+async function promotionsOnly(): Promise<void> {
+  const restaurant = await Restaurant.findOne({ where: { slug: VENUE.slug } });
+  if (!restaurant) {
+    process.stderr.write(`No venue with slug "${VENUE.slug}" — run the full seeder first.\n`);
+    process.exit(2);
+  }
+  await upsertPromotions(restaurant.id, FABRIKA_PROMOTIONS);
+  process.stdout.write(`${VENUE.name}: ${FABRIKA_PROMOTIONS.length} promotion(s) upserted (${FABRIKA_PROMOTIONS.map((p) => p.title).join(', ')})\n`);
+  await sequelize.close();
+}
+
 async function removeVenue(restaurant: Restaurant, transaction: Transaction): Promise<string[]> {
   const items = await MenuItem.findAll({ where: { restaurantId: restaurant.id }, attributes: ['imageUrl', 'thumbnailUrl'], transaction });
   const urls = [restaurant.logoUrl, ...items.flatMap((item) => [item.imageUrl, item.thumbnailUrl])];
@@ -59,6 +89,10 @@ async function removeVenue(restaurant: Restaurant, transaction: Transaction): Pr
 }
 
 async function main(): Promise<void> {
+  if (process.argv.includes('--promo-only')) {
+    await promotionsOnly();
+    return;
+  }
   if (PASSWORD.length < 8) {
     process.stderr.write("Set OWNER_PASSWORD (at least 8 characters) to the owner's password.\n");
     process.exit(2);
@@ -108,6 +142,7 @@ async function main(): Promise<void> {
       { transaction },
     );
     itemCount = (await insertMenu(restaurant.id, FABRIKA_MENU, 0, transaction)).length;
+    await upsertPromotions(restaurant.id, FABRIKA_PROMOTIONS, transaction);
     await touchRestaurant(restaurant.id, transaction);
     return restaurant;
   });
@@ -121,7 +156,7 @@ async function main(): Promise<void> {
   }
 
   process.stdout.write(
-    `${VENUE.name}: ${FABRIKA_MENU.length} categories, ${itemCount} items, ${VENUE.tables} tables` +
+    `${VENUE.name}: ${FABRIKA_MENU.length} categories, ${itemCount} items, ${VENUE.tables} tables, ${FABRIKA_PROMOTIONS.length} promotion(s)` +
       `${logoPng ? ', logo uploaded' : ', no logo (--logo not given)'}${replaced ? ` (${replaced} old venue(s) replaced)` : ''}\n` +
       `Menu: ${buildMenuUrl(VENUE.slug)}\nSign in at ${env.APP_URL}: ${OWNER.email}\n`,
   );

@@ -1,0 +1,381 @@
+/*
+ * Promotion templates (Phase 14). Plain CSS on purpose: the same components render inside the guest menu and inside
+ * the CMS live preview, and neither app's Tailwind scan sees the other's sources. Colours come from the host's
+ * tokens (--surface, --ink, --muted, --line …) with fallbacks to the guest light palette; the accent is the
+ * promotion's own colour (or the venue colour) on --promo-accent.
+ */
+/* Defaults live on the wrapper (PromotionView sets the real accent inline on the same element). */
+.promo-root {
+  --promo-accent: #7a3e48;
+  --promo-on-accent: #ffffff;
+}
+.promo {
+  --promo-surface: var(--surface, #fffdf9);
+  --promo-ink: var(--ink, #1f1a17);
+  --promo-muted: var(--muted, #6e645c);
+  --promo-line: var(--line, rgba(31, 26, 23, 0.1));
+  --promo-chip: var(--chip, #eee6db);
+  --promo-placeholder: var(--placeholder, #e8dccb);
+  --promo-sans: var(--font-sans, "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  --promo-serif: var(--font-serif, "Libre Baskerville", Georgia, "Times New Roman", serif);
+  color: var(--promo-ink);
+  font-family: var(--promo-sans);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+.promo * {
+  box-sizing: border-box;
+}
+.promo p {
+  margin: 0;
+}
+
+/* ---- shared bits */
+.promo-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--promo-accent);
+}
+.promo-headline {
+  margin: 0;
+  font-family: var(--promo-serif);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.promo-body {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.promo-muted {
+  color: var(--promo-muted);
+}
+.promo-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 18px;
+  background: var(--promo-placeholder);
+}
+.promo-price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.promo-old-price {
+  color: var(--promo-muted);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+.promo-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--promo-accent);
+  color: var(--promo-on-accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.promo-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--promo-accent);
+  cursor: pointer;
+}
+.promo-unavailable {
+  opacity: 0.45;
+}
+
+/* ---- notice */
+.promo-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+/* ---- deal */
+.promo-deal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.promo-deal-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.promo-deal-price {
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--promo-accent);
+  font-variant-numeric: tabular-nums;
+}
+.promo-deal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--promo-line);
+  border-radius: 14px;
+}
+.promo-deal-item img,
+.promo-featured-item img,
+.promo-thumb {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--promo-placeholder);
+}
+
+/* ---- featured items */
+.promo-featured {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.promo-featured-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.promo-featured-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--promo-line);
+  border-radius: 16px;
+  background: var(--promo-surface);
+}
+.promo-featured-item img {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+}
+.promo-featured-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.promo-featured-name {
+  font-family: var(--promo-serif);
+  font-size: 16px;
+  line-height: 1.25;
+}
+.promo-featured-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--promo-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.promo-featured-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+/* ---- drink list: the printed cocktail card (design/cocktail-menu.pdf) */
+.promo-drinks {
+  --dl-paper: #f6eee6;
+  --dl-ink: #2b2522;
+  --dl-muted: #6a5f5a;
+  position: relative;
+  width: 100%;
+  max-width: 390px;
+  min-height: 480px;
+  margin: 0 auto;
+  padding: 14px 10px 14px 10px;
+  display: grid;
+  grid-template-columns: 56px 40px minmax(0, 1fr);
+  column-gap: 6px;
+  background: var(--dl-paper);
+  color: var(--dl-ink);
+  border: 2px solid var(--promo-accent);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.promo-drinks::before {
+  /* faint paper grain */
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 10% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, rgba(0, 0, 0, 0.035), transparent 60%);
+}
+.promo-dl-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 0;
+}
+.promo-dl-logo {
+  width: 100%;
+  padding: 6px 0;
+  border-top: 1.5px solid var(--promo-accent);
+  border-bottom: 1.5px solid var(--promo-accent);
+  text-align: center;
+  font-family: var(--promo-serif);
+  font-weight: 700;
+  font-size: 9.5px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--promo-accent);
+  overflow-wrap: break-word;
+}
+.promo-dl-logo.is-mark {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.promo-dl-title {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 0;
+  margin-top: 8px;
+}
+.promo-dl-title span {
+  display: block;
+  max-height: 100%;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--promo-sans);
+  font-weight: 800;
+  font-stretch: condensed;
+  font-size: 34px;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--promo-accent);
+  overflow-wrap: anywhere;
+}
+.promo-dl-icons {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 30px 0 20px;
+  color: var(--promo-accent);
+}
+.promo-dl-icons svg {
+  width: 38px;
+  height: 48px;
+}
+.promo-dl-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 9px 10px 10px;
+  border: 1.5px solid var(--promo-accent);
+  border-radius: 12px;
+}
+.promo-dl-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 0;
+  flex: 1;
+}
+.promo-dl-columns.is-two {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.promo-dl-col {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.promo-dl-col.is-right {
+  text-align: right;
+}
+.promo-dl-name {
+  display: block;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--promo-accent);
+  margin-bottom: 2px;
+  text-wrap: balance;
+}
+.promo-dl-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.promo-dl-line {
+  font-size: 10px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--dl-muted);
+}
+.promo-dl-entry.is-unavailable .promo-dl-name,
+.promo-dl-entry.is-unavailable .promo-dl-line {
+  opacity: 0.45;
+}
+.promo-dl-foot {
+  margin-top: auto;
+  padding-top: 6px;
+  text-align: right;
+  font-family: var(--promo-serif);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--dl-ink);
+}
+.promo-dl-foot small {
+  display: block;
+  font-family: var(--promo-sans);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--dl-muted);
+}
+
+@media (max-width: 359px) {
+  .promo-drinks {
+    grid-template-columns: 48px 34px minmax(0, 1fr);
+  }
+  .promo-dl-title span {
+    font-size: 30px;
+  }
+  .promo-dl-icons svg {
+    width: 32px;
+    height: 40px;
+  }
+}

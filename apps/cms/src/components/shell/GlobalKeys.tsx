@@ -52,7 +52,7 @@ export function GlobalKeys({ context }: { context: PaletteContext }) {
         pendingG = 0;
         const venue = context.venue;
         const map: Record<string, string | undefined> = venue
-          ? { m: `/r/${venue.id}/menu`, t: `/r/${venue.id}/tables`, o: `/r/${venue.id}/orders`, b: `/r/${venue.id}/branding`, a: `/r/${venue.id}/analytics`, s: `/r/${venue.id}/settings` }
+          ? { m: `/r/${venue.id}/menu`, t: `/r/${venue.id}/tables`, p: `/r/${venue.id}/promotions`, o: `/r/${venue.id}/orders`, b: `/r/${venue.id}/branding`, a: `/r/${venue.id}/analytics`, s: `/r/${venue.id}/settings` }
           : { r: '/admin/restaurants', u: '/admin/users', a: '/admin/activity', y: '/admin/system', n: '/admin/restaurants/new' };
         const target = map[event.key.toLowerCase()];
         if (target) {

@@ -28,6 +28,7 @@ import { restaurantModulesSchema } from './modules.js';
 import { FISCAL_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS, PAYMENT_STATUSES } from './payments.js';
 import { posConfigDtoSchema } from './pos.js';
 import { auditActionSchema } from './schemas/audit.js';
+import { promotionBodySchema, promotionDisplaySchema, promotionRecurrenceSchema } from './schemas/promotions.js';
 import { elevationWindowSchema } from './schemas/security.js';
 
 const isoString = z.string();
@@ -872,3 +873,53 @@ export const auditPageDtoSchema = z.object({
   users: z.array(z.object({ id: uuidSchema, name: z.string() })),
 });
 export type AuditPageDto = z.infer<typeof auditPageDtoSchema>;
+
+/* ------------------------------------------------------------------ promotions (Phase 14) */
+
+const promotionDtoFields = z.object({
+  id: uuidSchema,
+  restaurantId: uuidSchema,
+  title: z.string(),
+  display: promotionDisplaySchema,
+  /** null = the venue's primaryColor. */
+  accentColor: z.string().nullable(),
+  priority: z.number().int(),
+  isActive: z.boolean(),
+  startsAt: isoString.nullable(),
+  endsAt: isoString.nullable(),
+  recurrence: promotionRecurrenceSchema.nullable(),
+  imageUrl: z.string().nullable(),
+  /** Computed server-side in the venue's time zone: active flag, date range and recurrence window. */
+  isActiveNow: z.boolean(),
+  createdAt: isoString,
+  updatedAt: isoString,
+});
+export const promotionDtoSchema = z.intersection(promotionBodySchema, promotionDtoFields);
+export type PromotionDto = z.infer<typeof promotionDtoSchema>;
+
+/** A menu item a promotion refers to, resolved in the requested locale (so the guest app fetches nothing more). */
+export const publicPromotionItemDtoSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  description: z.string().nullable(),
+  priceCents: z.number().int(),
+  imageUrl: z.string().nullable(),
+  thumbnailUrl: z.string().nullable(),
+  isAvailable: z.boolean(),
+});
+export type PublicPromotionItemDto = z.infer<typeof publicPromotionItemDtoSchema>;
+
+export const publicPromotionDtoSchema = z.intersection(
+  promotionBodySchema,
+  z.object({
+    id: uuidSchema,
+    title: z.string(),
+    display: promotionDisplaySchema,
+    accentColor: z.string().nullable(),
+    priority: z.number().int(),
+    imageUrl: z.string().nullable(),
+    updatedAt: isoString,
+    items: z.array(publicPromotionItemDtoSchema),
+  }),
+);
+export type PublicPromotionDto = z.infer<typeof publicPromotionDtoSchema>;

@@ -34,23 +34,24 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 | `docs/` | `PRE-DEPLOY-AUDIT.md` (Phase 9a audit), `octopos.md` (what the Octopos API does + open questions), `DEMO.md` (end-to-end demo script), `PERMISSIONS.md` (owner/service route matrix, Phase 11) | Phase 9–11 |
 
 `apps/api/src`: `config/` (env), `db/` (sequelize instance, `models/`, `migrations/`, `seeders/`),
-`modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`), `middleware/`, `utils/`, `scripts/`
+`modules/<name>/` (`router.ts`, `controller.ts`, `service.ts`, `schemas.ts`; `promotions/` adds `active.ts`), `middleware/`, `utils/`, `scripts/`
 (`create-superadmin.ts`), `app.ts`, `index.ts` (connects, runs migrations when `MIGRATE_ON_START`, listens, graceful SIGTERM).
 Tests live in `apps/api/test`.
 
 `apps/cms/src`: `main.tsx` (QueryClient → I18nProvider → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx`
 (route tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/forgot/magic/reset/change-password, `admin/` for the
-superadmin area, `ErrorPages.tsx`), `components/ui/` (primitives incl. `DataTable`, `Tabs`), `components/shell/` (sidebar, top bar, tab
+superadmin area, `PromotionsPage.tsx` + `PromotionEditorPage.tsx`, `ErrorPages.tsx`), `components/ui/` (primitives incl. `DataTable`, `Tabs`), `components/shell/` (sidebar, top bar, tab
 bar, layouts, guards, command palette, global keys), `components/admin/` (admin shell, venue pages, onboarding wizard),
-`components/account/` (account menu, profile), `components/audit/` (shared audit list), `components/{menu,tables,branding,settings,orders}/`,
+`components/account/` (account menu, profile), `components/audit/` (shared audit list), `components/{menu,tables,branding,settings,orders,promotions}/`,
 `lib/` (api, auth, queries, admin, account, impersonation, i18n, theme, undo, storage, format, screens, slug, crop, download, color, notify),
 `hooks/`, `styles.css`. Tests in `apps/cms/test`.
 
 `apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
 (routes `/r/:slug/t/:table`, `/r/:slug/*`, `/t/:table` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
-`components/` (Header, CategoryBar, CategorySection, ItemRow, ItemSheet, OfflineScreen, MenuSkeleton, Footer, Chips, LogoTile, icons),
-`hooks/` (useMenu, useActiveCategory, useLockBodyScroll, useFocusTrap), `lib/` (api, tenant, session, locale, i18n, format, theme,
-events), `styles.css` (tokens + Tailwind). Tests live in `apps/menu/test` (vitest + Testing Library, jsdom; `helpers.tsx` has the
+`components/` (Header, CategoryBar, CategorySection, ItemRow, ItemSheet, OfflineScreen, MenuSkeleton, Footer, Chips, LogoTile, icons,
+PromotionsHost, PromotionModal), `promotions/` (the four promotion templates + `PromotionView`, plain CSS, exported to the CMS as
+`@qr-menu/menu/promotions`), `hooks/` (useMenu, usePromotions, useActiveCategory, useLockBodyScroll, useFocusTrap), `lib/` (api, tenant, session,
+locale, i18n, format, theme, events, promotions), `styles.css` (tokens + Tailwind). Tests live in `apps/menu/test` (vitest + Testing Library, jsdom; `helpers.tsx` has the
 menu fixtures, a fetch mock and `renderMenu()`).
 
 ## Commands
@@ -335,6 +336,69 @@ decisions and the open TODO list: `docs/ADMIN-UX-REVIEW.md`.
   (`lib/i18n.tsx`, `localStorage['tabla.cms.locale']`) and theme (`lib/theme.ts`, `localStorage['tabla.cms.theme']`,
   `data-theme` on `<html>`), 403/404/500 pages, readable API errors (`errorMessage()` code map), silent refresh a minute
   before expiry, `localStorage['tabla.cms.lastPath.<userId>']` for "/" and re-login.
+
+## Promotions (Phase 14)
+
+Venue announcements on the guest menu: a cocktail card, a happy hour, tonight's special. Code: `apps/api/src/modules/promotions/`
+(`active.ts` active-now, `service.ts`, `controller.ts`, `router.ts`), model `db/models/promotion.model.ts`, migration
+`20261101000000-promotions`; shared `packages/shared/src/promotions.ts` + `schemas/promotions.ts`; menu app `src/promotions/`
+(templates) + `components/PromotionsHost.tsx` / `PromotionModal.tsx` + `lib/promotions.ts`; CMS `pages/Promotions{,Editor}Page.tsx`
++ `components/promotions/` (`draft.ts`, `PromotionPreview`, `TemplatePicker`, `MenuItemPicker`, `fields/*`). Design reference for the
+drink list: `design/cocktail-menu.pdf`. Tests: `apps/api/test/promotions.test.ts` (active-now unit tests incl. the cross-midnight case,
+routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/promotions.test.tsx`.
+
+- **Entity** `promotions` (restaurant CASCADE, `title`, `template` enum `drink_list | featured_items | deal | notice`, `content` JSONB
+  validated per template by the shared discriminated union `promotionBodySchema` (`{ template, content }`), `display` enum
+  `modal | banner | card`, `accent_color` (null = the venue's `primaryColor`), `priority` (default 0, higher first), `is_active`,
+  `starts_at` / `ends_at`, `recurrence` JSONB `{ weekdays (ISO 1 = Monday … 7), from 'HH:mm', to 'HH:mm' }` in the venue's time zone
+  (`to` at or before `from` = past midnight), `image_url`). Content shapes (`PromotionBody`): drink_list `{ subtitle?, logoText?,
+  entries: { name, lines[], menuItemId? }[], columns: 1|2 }` (entries picked from the menu copy name + description lines and keep the
+  id), featured_items `{ intro?, items: { menuItemId, badge? }[] }` (1–3), deal `{ headline, description?, priceCents, oldPriceCents?,
+  menuItemId? }` (prices in minor units like everywhere else), notice `{ headline, body }`. Limits in `PROMOTION_LIMITS`.
+- **Active now** (`isPromotionActiveNow()` in `active.ts`, pure `inRecurrenceWindow()` in shared): `is_active` AND start/end bounds AND,
+  with a recurrence, the wall clock in the venue zone (`utils/time.ts` `zonedParts`) is inside a window — a window that crosses midnight
+  also matches the small hours of the *next* day through the previous weekday. DTOs carry `isActiveNow`; the CMS derives the status
+  chip with `promotionStatus()` (`active | scheduled | expired | off`).
+- **Admin API**: scoped `GET/POST /admin/restaurants/:id/promotions`, `GET/PATCH/DELETE …/promotions/:promoId`, `PATCH …/toggle
+  { isActive }`, `POST …/image` (multer + the item-photo pipeline, 800×800 WebP under `restaurants/<id>/promotions/`); reads are
+  service-level, every change `requireOwner`. The same handlers are mounted by id at `/admin/promotions/:promoId` (+ `/toggle`,
+  `/image`): `requireMembership({ restaurantId })` resolves the venue from the row before the membership check (403 for other
+  venues' members). `PATCH` sends `template` + `content` together (a template switch replaces the content in one request; content
+  alone is a 400); referenced items must belong to the venue (404). Audit `promotion.create|update|delete|toggle|image` (kind `menu`).
+  The CMS always calls the scoped form so `X-Elevation` / impersonation headers attach as usual.
+- **Public API** `GET /api/public/r/:slug/promotions` (also `/:slug/promotions` and the host-based `/promotions`, `?locale=`): active-now
+  promotions, priority DESC then newest, **at most one `modal`** (the first in that order), each with `items` = the referenced menu
+  items resolved in the locale (`name, description, priceCents, imageUrl, thumbnailUrl, isAvailable` — hidden category / unavailable /
+  not orderable on POS read as unavailable). `Cache-Control: public, max-age=30` like the menu. Only for published venues.
+- **Menu app**: `usePromotions` loads them next to the menu (`['promotions', tenantKey, locale]`, never blocking; a failed or
+  non-array response = none). `PromotionsHost`: the `modal` opens once per page load `PROMOTION_LIMITS.modalDelayMs` (600 ms) after
+  the menu painted unless another overlay is open or it was dismissed; closing (X, scrim tap, Escape, swipe down ≥ 72 px) records
+  `localStorage['tabla.promo.dismissed']` keyed `${id}:${updatedAt}` for 24 h (an owner edit resets it). `banner` = fixed bar above
+  the cart bar (`raised`) with title, one-line summary and "Pogledaj"; X collapses it to a pill in the bottom corner
+  (`sessionStorage['tabla.promo.collapsed.<id>']`) that reopens it. `card` = `PromotionCard` above the first category (hidden while
+  searching). Banner / card open the full view with `?promo=<id>` (pushed with `state.sheet` like `?item=`; "See in menu" swaps it for
+  `?item=`). `PromotionModal` is a centred dialog (`aria-modal`, focus trap, body lock); the templates ship as their own chunk,
+  prefetched once promotions exist. Accent = `accentColor ?? primaryColor` via `--promo-accent` on `.promo-root`; chrome strings in
+  `t.promo` (sr/en), promotion content is single-language.
+- **Templates** live in `apps/menu/src/promotions/` and use plain CSS (`promotions.css`, `promo-*` classes, host tokens with
+  guest-palette fallbacks) so the CMS renders the very same components: `apps/menu/package.json` exports
+  `"./promotions"` → `src/promotions/index.ts` and the CMS depends on `@qr-menu/menu` (Vite/TS resolve the TSX source; nothing
+  in that folder may import `lib/api`, the router or `import.meta.env`). `DrinkList` reproduces `design/cocktail-menu.pdf` at
+  390 px (vertical title, three line-art drinks, rounded panel, two columns left/right-aligned, the venue's logo text; on desktop
+  a tall portrait card centred in the modal).
+- **CMS**: sidebar "Promotions" (SR "Promocije", `g p`, under More on phones). `PromotionsPage` lists title, template, display,
+  status chip (Active / Scheduled / Expired / Off), the active switch (optimistic `PATCH …/toggle`), edit, delete with confirm.
+  `PromotionEditorPage` (`promotions/new`, `promotions/:promotionId`) = three steps: template (four cards rendering the real
+  templates with sample content), content (per-template fields, `MenuItemPicker` grouped by category for drink list / featured /
+  deal, photo upload for saved non-drink-list promotions) next to a **live 390 px phone preview** (`PromotionPreview` wraps
+  `PromotionView` in the guest light palette), then display mode, accent (venue colour default + presets + hex), priority, active,
+  date range and the weekly recurrence (weekday chips + from/to). The draft (`draft.ts`) keeps every template's content so switching
+  back loses nothing; saving validates with `createPromotionSchema` and sends the whole form (create or PATCH). Query keys
+  `['promotions', rid]`. The CMS chrome stays plum; the tenant accent only appears inside the preview.
+- Seed: the demo venues get no promotions (owners build their own). The real Fabrika venue gets the "Cocktail Menu" drink list
+  (`scripts/fabrika-promotions.ts`: accent `#E8453C`, banner, two columns, the twelve cocktails from the reference, logo text
+  "Fabrika Kafeterija") from `seed:fabrika`, which upserts it by title; `seed:fabrika -- --promo-only` adds/refreshes only the
+  promotions on the live venue without replacing its menu.
 
 ## Online payment (Phase 9c)
 

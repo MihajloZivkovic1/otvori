@@ -15,7 +15,7 @@ const TABS: Tab[] = [
   { label: 'Menu', icon: 'menu', to: '', active: (s) => s === undefined || s === 'home' || s === 'menu' },
   { label: 'Tables', icon: 'tables', to: 'tables', active: (s) => s === 'tables' },
   { label: 'Analytics', icon: 'analytics', to: 'analytics', active: (s) => s === 'analytics' },
-  { label: 'More', icon: 'moreTab', to: 'more', active: (s) => s === 'more' || s === 'branding' || s === 'settings' },
+  { label: 'More', icon: 'moreTab', to: 'more', active: (s) => s === 'more' || s === 'branding' || s === 'settings' || s === 'promotions' },
 ];
 
 /** With ordering on, "Orders" takes the third slot and Analytics moves under More (design B9). */
@@ -23,7 +23,7 @@ const ORDERING_TABS: Tab[] = [
   TABS[0]!,
   TABS[1]!,
   { label: 'Orders', icon: 'orders', to: 'orders', active: (s) => s === 'orders' },
-  { label: 'More', icon: 'moreTab', to: 'more', active: (s) => s === 'more' || s === 'branding' || s === 'settings' || s === 'analytics' },
+  { label: 'More', icon: 'moreTab', to: 'more', active: (s) => s === 'more' || s === 'branding' || s === 'settings' || s === 'analytics' || s === 'promotions' },
 ];
 
 /** Bottom tab bar (design frames M2–M11). Home lives under the Menu tab. */

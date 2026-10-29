@@ -11,11 +11,13 @@ import type { AddSelection } from '../components/ItemSheet';
 import { MenuSkeleton } from '../components/MenuSkeleton';
 import { OfflineScreen } from '../components/OfflineScreen';
 import { OrderingBar } from '../components/OrderingBar';
+import { PromotionCard, PromotionsHost } from '../components/PromotionsHost';
 import { TablePrompt } from '../components/TablePrompt';
 import { Toast } from '../components/Toast';
 import { useActiveCategory } from '../hooks/useActiveCategory';
 import { useCart } from '../hooks/useCart';
 import { useMenu } from '../hooks/useMenu';
+import { usePromotions } from '../hooks/usePromotions';
 import { useServiceCalls } from '../hooks/useServiceCalls';
 import { useSessionOrders } from '../hooks/useSessionOrders';
 import { useDocumentLang, useTenant, useTenantTheme } from '../hooks/useTenant';
@@ -108,12 +110,18 @@ export function MenuPage() {
   const itemParam = searchParams.get('item');
   const openItem = useMemo(() => (itemParam ? findItem(categories, itemParam) : null), [categories, itemParam]);
   const cartOpen = canOrder && searchParams.get('cart') === '1';
+  // Promotions (Phase 14) load next to the menu; `?promo=<id>` is the full view opened from the banner / card.
+  const promotions = usePromotions(slug, tenantKey, requested, Boolean(loadedSlug));
+  const promoParam = searchParams.get('promo');
+  const inlineCard = useMemo(() => promotions.find((promotion) => promotion.display === 'card') ?? null, [promotions]);
 
   const pushParam = useCallback(
     (key: string, value: string) => {
       setSearchParams(
         (previous) => {
           const next = new URLSearchParams(previous);
+          // One overlay at a time: "See in menu" inside a promotion swaps ?promo= for ?item=.
+          if (key !== 'promo') next.delete('promo');
           next.set(key, value);
           return next;
         },
@@ -131,6 +139,7 @@ export function MenuPage() {
     [pushParam, slug],
   );
   const openCart = useCallback(() => pushParam('cart', '1'), [pushParam]);
+  const openPromotion = useCallback((promotionId: string) => pushParam('promo', promotionId), [pushParam]);
 
   // Sheets are history entries (Back closes them); direct links to ?item= / ?cart= are closed with `replace`.
   const openedFromMenu = Boolean((location.state as { sheet?: boolean } | null)?.sheet);
@@ -144,6 +153,7 @@ export function MenuPage() {
         const next = new URLSearchParams(previous);
         next.delete('item');
         next.delete('cart');
+        next.delete('promo');
         return next;
       },
       { replace: true },
@@ -251,9 +261,10 @@ export function MenuPage() {
   const { restaurant: current } = menu.data;
   const latestOrder = sessionOrders[0];
   const showCartBar = canOrder && cartItems > 0 && !cartOpen;
+  const hasBanner = promotions.some((promotion) => promotion.display === 'banner');
 
   return (
-    <div className={`mx-auto min-h-dvh max-w-[640px] ${showCartBar ? 'pb-28' : 'pb-10'}`}>
+    <div className={`mx-auto min-h-dvh max-w-[640px] ${showCartBar ? (hasBanner ? 'pb-44' : 'pb-28') : hasBanner ? 'pb-28' : 'pb-10'}`}>
       <title>{`${current.name} · otvori`}</title>
       <Header
         restaurant={current}
@@ -281,6 +292,7 @@ export function MenuPage() {
         <CategoryBar categories={visibleCategories} activeId={active} onSelect={scrollTo} t={t} />
       )}
       <main>
+        {inlineCard && !query ? <PromotionCard promotion={inlineCard} primaryColor={current.primaryColor} t={t} onOpen={() => openPromotion(inlineCard.id)} /> : null}
         {visibleCategories.length === 0 ? (
           <p className="px-5 py-12 text-center text-[15px] text-muted text-pretty">{query ? t.noResults : t.emptyMenu}</p>
         ) : (
@@ -302,7 +314,20 @@ export function MenuPage() {
       {showCartBar && (
         <CartBar count={cartItems} totalCents={cartTotal(pricedLines)} currency={current.currency} locale={locale} t={t} onOpen={openCart} />
       )}
-      <Toast toast={toast} raised={showCartBar} />
+      <PromotionsHost
+        promotions={promotions}
+        primaryColor={current.primaryColor}
+        currency={current.currency}
+        locale={locale}
+        t={t}
+        openId={promoParam}
+        onOpen={openPromotion}
+        onClose={closeOverlay}
+        busy={Boolean(openItem || cartOpen || tablePrompt)}
+        raised={showCartBar}
+        onOpenItem={openSheet}
+      />
+      <Toast toast={toast} raised={showCartBar || hasBanner} />
       {openItem && (
         <Suspense fallback={null}>
           <ItemSheet

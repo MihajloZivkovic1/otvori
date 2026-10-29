@@ -87,6 +87,11 @@ export const AUDIT_ACTIONS = [
   'table.reorder',
   'table.block',
   'table.unblock',
+  'promotion.create',
+  'promotion.update',
+  'promotion.delete',
+  'promotion.toggle',
+  'promotion.image',
   'payment_config.update',
   'pos_config.update',
   'pos.sync',
@@ -139,7 +144,7 @@ export const AUDIT_KINDS = ['all', 'prices', 'menu', 'availability', 'orders', '
 export type AuditKind = (typeof AUDIT_KINDS)[number];
 
 export const AUDIT_KIND_ACTIONS: Record<Exclude<AuditKind, 'all' | 'prices'>, readonly AuditAction[]> = {
-  menu: ['category.create', 'category.update', 'category.delete', 'category.reorder', 'item.create', 'item.update', 'item.delete', 'item.reorder', 'item.image', 'pos.sync', 'menu.import', 'menu.copy'],
+  menu: ['category.create', 'category.update', 'category.delete', 'category.reorder', 'item.create', 'item.update', 'item.delete', 'item.reorder', 'item.image', 'pos.sync', 'menu.import', 'menu.copy', 'promotion.create', 'promotion.update', 'promotion.delete', 'promotion.toggle', 'promotion.image'],
   availability: ['item.availability'],
   orders: ['order.accept', 'order.reject', 'order.deliver', 'order.cash', 'order.fiscal_retry', 'order.fiscal_manual', 'request.done', 'table.block', 'table.unblock'],
   auth: ['auth.login', 'auth.pin_set', 'auth.pin_change', 'auth.pin_remove', 'auth.pin_unlock', 'auth.pin_failed', 'auth.pin_lockout', 'auth.impersonate', 'auth.password_change', 'auth.sessions_revoke'],

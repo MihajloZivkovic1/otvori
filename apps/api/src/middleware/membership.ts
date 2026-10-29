@@ -19,14 +19,18 @@ export const pinRequired = () =>
  * Tenant guard for /api/admin/restaurants/:restaurantId/... routes.
  * The restaurant id ALWAYS comes from the route param and is checked against the
  * authenticated user's memberships; services must never read it from the body.
- * Superadmins may act on any restaurant (as an implicit owner).
+ * Superadmins may act on any restaurant (as an implicit owner). `options.restaurantId` lets a route keyed by a
+ * child id (e.g. /admin/promotions/:promoId) look the venue up from the row instead of the param.
  * Also opens the audit context (who / role / ip) for everything downstream (modules/audit/context.ts).
  */
-export function requireMembership(options: { role?: 'owner' } = {}) {
+export function requireMembership(
+  options: { role?: 'owner'; restaurantId?: (req: Request) => string | Promise<string> } = {},
+) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     const user = req.user;
     if (!user) throw forbidden();
-    const parsed = uuidSchema.safeParse(req.params.restaurantId);
+    // Routes keyed by a child id (/admin/promotions/:promoId) resolve the venue from the row; the default is the param.
+    const parsed = uuidSchema.safeParse(options.restaurantId ? await options.restaurantId(req) : req.params.restaurantId);
     if (!parsed.success) throw notFound('Restaurant not found', 'RESTAURANT_NOT_FOUND');
     const restaurantId = parsed.data;
 

@@ -24,4 +24,6 @@ export * from './security.js';
 export * from './schemas/security.js';
 export * from './schemas/team.js';
 export * from './schemas/audit.js';
+export * from './promotions.js';
+export * from './schemas/promotions.js';
 export * from './dto.js';

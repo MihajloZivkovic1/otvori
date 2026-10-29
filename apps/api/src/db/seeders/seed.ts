@@ -11,6 +11,8 @@ import {
   type PaymentStatus,
   type PosCloseMode,
   type PosProviderKey,
+  type PromotionBody,
+  type PromotionDisplay,
   type RestaurantModules,
   type Plan,
   type RestaurantStatus,
@@ -31,6 +33,7 @@ import {
   MenuItem,
   Order,
   OrderItem,
+  Promotion,
   Restaurant,
   RestaurantTable,
   ScanEvent,
@@ -119,7 +122,11 @@ interface SeedRestaurant {
   paymentConfig?: { provider: PaymentProviderKey; merchantId: string; secret: string; tipPresets: number[]; receiptEmailEnabled: boolean };
   /** POS integration (Phase 9d): mock register for the demo venue; table ids are mapped after the tables exist. */
   posConfig?: { provider: PosProviderKey; baseUrl: string | null; apiKey: string; sendOrdersToPos: boolean; closeOnPayment: boolean; closeMode: PosCloseMode };
+  /** Promotions (Phase 14): shown on the guest menu as a modal / banner / card. */
+  promotions?: SeedPromotion[];
 }
+type SeedPromotion = PromotionBody & { title: string; display: PromotionDisplay; accentColor?: string; priority?: number };
+
 
 const SUPERADMIN = { email: 'admin@otvori.menu', password: 'admin1234', name: 'otvori admin' };
 
@@ -721,6 +728,20 @@ async function seedRestaurant(def: SeedRestaurant, transaction: Transaction): Pr
     );
   }
   if (def.orderDays) await seedOrders(restaurant, tables, orderableItems, def.orderDays, transaction);
+  for (const [index, promo] of (def.promotions ?? []).entries()) {
+    await Promotion.create(
+      {
+        restaurantId: restaurant.id,
+        title: promo.title,
+        template: promo.template,
+        content: promo.content,
+        display: promo.display,
+        accentColor: promo.accentColor ?? null,
+        priority: promo.priority ?? index,
+      },
+      { transaction },
+    );
+  }
   logger.info(
     { slug: def.slug, categories: def.categories.length, tables: tables.length, scans: scans.length, itemViews: views.length },
     `Seeded ${def.name}`,

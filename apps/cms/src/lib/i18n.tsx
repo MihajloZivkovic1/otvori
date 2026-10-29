@@ -10,6 +10,12 @@ import { cmsLocale as stored } from './storage';
 const SR: Record<string, string> = {
   Menu: 'Meni',
   'Tables & QR': 'Stolovi i QR',
+  Promotions: 'Promocije',
+  'New promotion': 'Nova promocija',
+  Active: 'Aktivna',
+  Scheduled: 'Zakazana',
+  Expired: 'Istekla',
+  Off: 'Isključena',
   Tables: 'Stolovi',
   Orders: 'Narudžbine',
   Branding: 'Izgled',
