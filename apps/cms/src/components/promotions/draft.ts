@@ -83,7 +83,7 @@ export function emptyDraft(restaurant: Pick<RestaurantDto, 'name'>): PromotionDr
     startsAt: '',
     endsAt: '',
     recurrence: DEFAULT_RECURRENCE,
-    style: { textColor: null, backgroundColor: null, pillPosition: null },
+    style: { textColor: null, backgroundColor: null, pillPosition: null, pillColor: null, pillStyle: null, pillTextColor: null },
   };
 }
 
@@ -130,7 +130,14 @@ export function draftFromDto(dto: PromotionDto, restaurant: Pick<RestaurantDto, 
     startsAt: toLocalInput(dto.startsAt),
     endsAt: toLocalInput(dto.endsAt),
     recurrence: dto.recurrence ? { enabled: true, ...dto.recurrence } : DEFAULT_RECURRENCE,
-    style: { textColor: dto.style?.textColor ?? null, backgroundColor: dto.style?.backgroundColor ?? null, pillPosition: dto.style?.pillPosition ?? null },
+    style: {
+      textColor: dto.style?.textColor ?? null,
+      backgroundColor: dto.style?.backgroundColor ?? null,
+      pillPosition: dto.style?.pillPosition ?? null,
+      pillColor: dto.style?.pillColor ?? null,
+      pillStyle: dto.style?.pillStyle ?? null,
+      pillTextColor: dto.style?.pillTextColor ?? null,
+    },
   };
 }
 
@@ -197,9 +204,8 @@ export function draftToInput(draft: PromotionDraft): Record<string, unknown> {
 
 /** null when nothing is overridden, so the stored row stays clean. */
 export function draftStyle(draft: PromotionDraft): PromotionStyle | null {
-  const { textColor, backgroundColor, pillPosition } = draft.style;
-  if (!textColor && !backgroundColor && !pillPosition) return null;
-  return { ...(textColor ? { textColor } : {}), ...(backgroundColor ? { backgroundColor } : {}), ...(pillPosition ? { pillPosition } : {}) };
+  const entries = Object.entries(draft.style).filter(([, value]) => value);
+  return entries.length ? (Object.fromEntries(entries) as PromotionStyle) : null;
 }
 
 export type DraftErrors = Partial<Record<'title' | 'content' | 'display' | 'priority' | 'startsAt' | 'endsAt' | 'recurrence' | 'accentColor' | 'style', string>>;

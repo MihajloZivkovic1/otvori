@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DRINK_LIST_ICONS, DRINK_LIST_VARIANTS, PILL_POSITIONS, PROMOTION_DISPLAYS, PROMOTION_LIMITS, PROMOTION_TEMPLATES } from '../promotions.js';
+import { DRINK_LIST_ICONS, DRINK_LIST_VARIANTS, PILL_POSITIONS, PILL_STYLES, PROMOTION_DISPLAYS, PROMOTION_LIMITS, PROMOTION_TEMPLATES } from '../promotions.js';
 import { hexColorSchema, isoDateTimeSchema, priceCentsSchema, uuidSchema } from './common.js';
 
 export const promotionTemplateSchema = z.enum(PROMOTION_TEMPLATES);
@@ -43,6 +43,9 @@ export const promotionStyleSchema = z.object({
   textColor: hexColorSchema.nullable().optional(),
   backgroundColor: hexColorSchema.nullable().optional(),
   pillPosition: z.enum(PILL_POSITIONS).nullable().optional(),
+  pillColor: hexColorSchema.nullable().optional(),
+  pillStyle: z.enum(PILL_STYLES).nullable().optional(),
+  pillTextColor: hexColorSchema.nullable().optional(),
 });
 export type PromotionStyleInput = z.infer<typeof promotionStyleSchema>;
 

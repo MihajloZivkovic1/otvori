@@ -70,11 +70,20 @@ export function promotionAccent(promotion: Pick<PublicPromotionDto, 'accentColor
 }
 
 /** Colours of the banner / pill / card chrome: accent as background unless the style overrides it, readable text on top. */
-export function promotionChrome(promotion: Pick<PublicPromotionDto, 'accentColor' | 'style'>, primaryColor: string): { accent: string; background: string; text: string; pillPosition: 'left' | 'right' } {
+export function promotionChrome(
+  promotion: Pick<PublicPromotionDto, 'accentColor' | 'style'>,
+  primaryColor: string,
+): { accent: string; background: string; text: string; pillPosition: 'left' | 'right'; pill: { background: string; text: string; outline: boolean } } {
   const accent = promotionAccent(promotion, primaryColor);
   const background = promotion.style?.backgroundColor ?? accent;
   const text = promotion.style?.textColor ?? readableOn(background);
-  return { accent, background, text, pillPosition: promotion.style?.pillPosition ?? 'right' };
+  const pillColor = promotion.style?.pillColor ?? background;
+  const outline = promotion.style?.pillStyle === 'outline';
+  // Outline pill: the pill colour becomes the border + text on the menu surface; pillTextColor overrides the text either way.
+  const pill = outline
+    ? { background: 'var(--surface)', text: promotion.style?.pillTextColor ?? pillColor, outline: true }
+    : { background: pillColor, text: promotion.style?.pillTextColor ?? (promotion.style?.pillColor ? readableOn(pillColor) : text), outline: false };
+  return { accent, background, text, pillPosition: promotion.style?.pillPosition ?? 'right', pill };
 }
 
 /** One line under the title for the banner / card. */

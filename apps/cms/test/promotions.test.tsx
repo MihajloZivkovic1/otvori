@@ -152,6 +152,15 @@ describe('promotions (CMS)', () => {
     await u.click(screen.getByRole('button', { name: 'Sat' }));
     await u.click(screen.getByRole('button', { name: 'Background #1F1A17' }));
     await u.click(screen.getByRole('radio', { name: 'Bottom left' }));
+    await u.click(screen.getByRole('radio', { name: 'Outline' }));
+    // Hex fields accept partial typing and only commit a complete colour.
+    const textHex = screen.getByLabelText('Custom text colour');
+    await u.type(textHex, '#ffcc0');
+    expect(textHex).toHaveValue('#ffcc0');
+    await u.type(textHex, '0');
+    expect(textHex).toHaveValue('#FFCC00');
+    await u.type(screen.getByLabelText('Custom pill colour'), '#123456');
+    await u.click(screen.getByRole('button', { name: 'Pill text #FFFFFF' }));
     await u.click(screen.getByRole('button', { name: 'Create promotion' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/r/${ids.restaurant}/promotions`));
@@ -167,7 +176,7 @@ describe('promotions (CMS)', () => {
       startsAt: null,
       endsAt: null,
       recurrence: { weekdays: [1, 2, 3, 4, 5, 6], from: '16:00', to: '18:00' },
-      style: { backgroundColor: '#1F1A17', pillPosition: 'left' },
+      style: { textColor: '#FFCC00', backgroundColor: '#1F1A17', pillPosition: 'left', pillColor: '#123456', pillStyle: 'outline', pillTextColor: '#FFFFFF' },
     });
   });
 

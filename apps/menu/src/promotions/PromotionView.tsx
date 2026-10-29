@@ -19,8 +19,9 @@ export function PromotionView({ promotion, accent, className, ...rest }: Promoti
   const style = {
     '--promo-accent': accent,
     '--promo-on-accent': readableOn(accent),
-    ...(overrides?.textColor ? { '--promo-ink': overrides.textColor, '--promo-muted': overrides.textColor, '--promo-muted-opacity': 0.72 } : {}),
-    ...(overrides?.backgroundColor ? { '--promo-surface': overrides.backgroundColor, '--promo-bg': overrides.backgroundColor, background: overrides.backgroundColor } : {}),
+    // `.promo` reads these through var() fallbacks, so an inline value here wins over the host tokens.
+    ...(overrides?.textColor ? { '--promo-text': overrides.textColor, '--promo-muted-opacity': 0.72 } : {}),
+    ...(overrides?.backgroundColor ? { '--promo-bg': overrides.backgroundColor, background: overrides.backgroundColor } : {}),
   } as CSSProperties;
   const body = (() => {
     switch (promotion.template) {

@@ -1,4 +1,5 @@
-import { PROMOTION_DISPLAYS, PROMOTION_LIMITS, WEEKDAYS, hexColorSchema, type PillPosition, type PromotionDisplay } from '@qr-menu/shared';
+import { useState } from 'react';
+import { PROMOTION_DISPLAYS, PROMOTION_LIMITS, WEEKDAYS, hexColorSchema, type PillPosition, type PillStyle, type PromotionDisplay } from '@qr-menu/shared';
 import { cn } from '../../../lib/cn';
 import { useRestaurantContext } from '../../shell/RestaurantLayout';
 import { Chip } from '../../ui/Chip';
@@ -21,16 +22,37 @@ const BACKGROUNDS = ['#F6EEE6', '#FFFFFF', '#FFF4E6', '#E8F1EC', '#1F1A17', '#2B
 /** Text presets: ink, white, warm grey, plum. */
 const TEXTS = ['#1F1A17', '#FFFFFF', '#6A5F5A', '#7A3E48'];
 
-function hexOrKeep(next: string, current: string | null): string | null {
-  if (next === '') return null;
-  return hexColorSchema.safeParse(next).success ? next.toUpperCase() : current;
+/** Free-typed hex field: keeps partial input locally and only reports a complete #RRGGBB (or '' = clear). */
+function HexInput({ value, presets, onChange, label }: { value: string | null; presets: readonly string[]; onChange: (hex: string | null) => void; label: string }) {
+  const external = value && !presets.includes(value.toUpperCase()) ? value : '';
+  const [text, setText] = useState(external);
+  // Reset the local text when the committed value changes from outside (a swatch click) — the React "adjust state
+  // during render" pattern, so no effect is needed.
+  const [seen, setSeen] = useState(external);
+  if (seen !== external) {
+    setSeen(external);
+    setText(external);
+  }
+  return (
+    <Input
+      aria-label={label}
+      placeholder="#RRGGBB"
+      className="w-28"
+      value={text}
+      onChange={(event) => {
+        const next = event.target.value.trim();
+        setText(next);
+        if (next === '') onChange(null);
+        else if (hexColorSchema.safeParse(next).success) onChange(next.toUpperCase());
+      }}
+    />
+  );
 }
 
 /** Step 3: how, when and how prominently the promotion shows. */
 export function DisplayFields({ value, onChange, errors }: Props) {
   const { restaurant } = useRestaurantContext();
   const venueColor = restaurant.primaryColor;
-  const customAccent = value.accentColor && !PRESETS.includes(value.accentColor.toUpperCase()) ? value.accentColor : '';
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,16 +79,7 @@ export function DisplayFields({ value, onChange, errors }: Props) {
           {PRESETS.map((color) => (
             <Swatch key={color} color={color} label={color} selected={value.accentColor?.toUpperCase() === color} onClick={() => onChange({ accentColor: color })} />
           ))}
-          <Input
-            aria-label="Custom accent colour"
-            placeholder="#RRGGBB"
-            className="w-28"
-            value={customAccent}
-            onChange={(event) => {
-              const next = event.target.value.trim();
-              onChange({ accentColor: hexColorSchema.safeParse(next).success ? next.toUpperCase() : next === '' ? null : value.accentColor });
-            }}
-          />
+          <HexInput label="Custom accent colour" value={value.accentColor} presets={PRESETS} onChange={(accentColor) => onChange({ accentColor })} />
         </div>
       </Field>
 
@@ -76,13 +89,7 @@ export function DisplayFields({ value, onChange, errors }: Props) {
           {BACKGROUNDS.map((color) => (
             <Swatch key={color} color={color} label={`Background ${color}`} selected={value.style.backgroundColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, backgroundColor: color } })} />
           ))}
-          <Input
-            aria-label="Custom background colour"
-            placeholder="#RRGGBB"
-            className="w-28"
-            value={value.style.backgroundColor && !BACKGROUNDS.includes(value.style.backgroundColor.toUpperCase()) ? value.style.backgroundColor : ''}
-            onChange={(event) => onChange({ style: { ...value.style, backgroundColor: hexOrKeep(event.target.value.trim(), value.style.backgroundColor) } })}
-          />
+          <HexInput label="Custom background colour" value={value.style.backgroundColor} presets={BACKGROUNDS} onChange={(backgroundColor) => onChange({ style: { ...value.style, backgroundColor } })} />
         </div>
       </Field>
 
@@ -92,27 +99,49 @@ export function DisplayFields({ value, onChange, errors }: Props) {
           {TEXTS.map((color) => (
             <Swatch key={color} color={color} label={`Text ${color}`} selected={value.style.textColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, textColor: color } })} />
           ))}
-          <Input
-            aria-label="Custom text colour"
-            placeholder="#RRGGBB"
-            className="w-28"
-            value={value.style.textColor && !TEXTS.includes(value.style.textColor.toUpperCase()) ? value.style.textColor : ''}
-            onChange={(event) => onChange({ style: { ...value.style, textColor: hexOrKeep(event.target.value.trim(), value.style.textColor) } })}
-          />
+          <HexInput label="Custom text colour" value={value.style.textColor} presets={TEXTS} onChange={(textColor) => onChange({ style: { ...value.style, textColor } })} />
         </div>
       </Field>
 
       {value.display === 'banner' ? (
-        <Field label="Collapsed pill" hint="Where the small pill sits after a guest closes the banner.">
-          <Segmented<PillPosition>
-            label="Pill position"
-            value={value.style.pillPosition ?? 'right'}
-            onChange={(pillPosition) => onChange({ style: { ...value.style, pillPosition } })}
-            options={[
-              { value: 'right', label: 'Bottom right' },
-              { value: 'left', label: 'Bottom left' },
-            ]}
-          />
+        <Field label="Collapsed pill" hint="The small pill a guest sees after closing the banner; one tap opens the promotion.">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-3">
+              <Segmented<PillPosition>
+                label="Pill position"
+                value={value.style.pillPosition ?? 'right'}
+                onChange={(pillPosition) => onChange({ style: { ...value.style, pillPosition } })}
+                options={[
+                  { value: 'right', label: 'Bottom right' },
+                  { value: 'left', label: 'Bottom left' },
+                ]}
+              />
+              <Segmented<PillStyle>
+                label="Pill style"
+                value={value.style.pillStyle ?? 'solid'}
+                onChange={(pillStyle) => onChange({ style: { ...value.style, pillStyle } })}
+                options={[
+                  { value: 'solid', label: 'Solid' },
+                  { value: 'outline', label: 'Outline' },
+                ]}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Swatch color="transparent" label="Pill colour same as banner" selected={value.style.pillColor === null} onClick={() => onChange({ style: { ...value.style, pillColor: null } })} outline />
+              {[...PRESETS, '#FFFFFF'].map((color) => (
+                <Swatch key={color} color={color} label={`Pill ${color}`} selected={value.style.pillColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, pillColor: color } })} />
+              ))}
+              <HexInput label="Custom pill colour" value={value.style.pillColor} presets={[...PRESETS, '#FFFFFF']} onChange={(pillColor) => onChange({ style: { ...value.style, pillColor } })} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-xs text-muted">Pill text</span>
+              <Swatch color="transparent" label="Automatic pill text colour" selected={value.style.pillTextColor === null} onClick={() => onChange({ style: { ...value.style, pillTextColor: null } })} outline />
+              {TEXTS.map((color) => (
+                <Swatch key={color} color={color} label={`Pill text ${color}`} selected={value.style.pillTextColor?.toUpperCase() === color} onClick={() => onChange({ style: { ...value.style, pillTextColor: color } })} />
+              ))}
+              <HexInput label="Custom pill text colour" value={value.style.pillTextColor} presets={TEXTS} onChange={(pillTextColor) => onChange({ style: { ...value.style, pillTextColor } })} />
+            </div>
+          </div>
         </Field>
       ) : null}
 

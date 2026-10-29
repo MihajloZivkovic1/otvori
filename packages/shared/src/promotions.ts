@@ -100,6 +100,9 @@ export interface DrinkListContent {
 /** Where the collapsed banner pill sits. */
 export const PILL_POSITIONS = ['right', 'left'] as const;
 export type PillPosition = (typeof PILL_POSITIONS)[number];
+/** solid = filled pill, outline = surface pill with a coloured border and text. */
+export const PILL_STYLES = ['solid', 'outline'] as const;
+export type PillStyle = (typeof PILL_STYLES)[number];
 
 /** Optional look overrides on top of the accent: null/undefined fields fall back to the template defaults. */
 export interface PromotionStyle {
@@ -108,6 +111,11 @@ export interface PromotionStyle {
   /** Background of the promotion body, the banner and the pill. */
   backgroundColor?: string | null;
   pillPosition?: PillPosition | null;
+  /** Pill colour; default = the banner background. */
+  pillColor?: string | null;
+  pillStyle?: PillStyle | null;
+  /** Text (and outline) colour of the pill; default = readable on the pill colour. */
+  pillTextColor?: string | null;
 }
 
 export interface FeaturedItemsContent {

@@ -10,9 +10,10 @@
   --promo-on-accent: #ffffff;
 }
 .promo {
-  --promo-surface: var(--surface, #fffdf9);
-  --promo-ink: var(--ink, #1f1a17);
-  --promo-muted: var(--muted, #6e645c);
+  /* --promo-text / --promo-bg are the owner's overrides, set inline on .promo-root by PromotionView. */
+  --promo-surface: var(--promo-bg, var(--surface, #fffdf9));
+  --promo-ink: var(--promo-text, var(--ink, #1f1a17));
+  --promo-muted: var(--promo-text, var(--muted, #6e645c));
   --promo-muted-opacity: 1;
   --promo-line: var(--line, rgba(31, 26, 23, 0.1));
   --promo-chip: var(--chip, #eee6db);
@@ -205,8 +206,8 @@
 /* ---- drink list: the printed cocktail card (design/cocktail-menu.pdf) */
 .promo-drinks {
   --dl-paper: var(--promo-bg, #f6eee6);
-  --dl-ink: var(--promo-ink, #2b2522);
-  --dl-muted: var(--promo-muted, #6a5f5a);
+  --dl-ink: var(--promo-text, #2b2522);
+  --dl-muted: var(--promo-text, #6a5f5a);
   position: relative;
   width: 100%;
   max-width: 390px;
@@ -394,8 +395,8 @@
 /* chalk: dark board, light type, dashed inner frame */
 .promo-drinks.is-chalk {
   --dl-paper: var(--promo-bg, #1f1b19);
-  --dl-ink: var(--promo-ink, #f3ede6);
-  --dl-muted: var(--promo-muted, #c9beb3);
+  --dl-ink: var(--promo-text, #f3ede6);
+  --dl-muted: var(--promo-text, #c9beb3);
   border-color: color-mix(in oklab, var(--promo-accent) 70%, white);
 }
 .promo-drinks.is-chalk::before {

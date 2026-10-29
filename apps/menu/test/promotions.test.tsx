@@ -203,7 +203,7 @@ describe('promotions on the guest menu', () => {
   it('applies the style overrides: chalk variant, custom colours and the pill on the left', async () => {
     const styled: PublicPromotionDto = {
       ...cocktail,
-      style: { textColor: '#FFFFFF', backgroundColor: '#1F1A17', pillPosition: 'left' },
+      style: { textColor: '#FFFFFF', backgroundColor: '#1F1A17', pillPosition: 'left', pillColor: '#E8453C', pillStyle: 'outline', pillTextColor: '#123456' },
       content: { ...cocktail.content, variant: 'chalk', icons: 'none' },
     };
     mockFetch(serve([styled]));
@@ -219,12 +219,15 @@ describe('promotions on the guest menu', () => {
     expect(card).toHaveClass('no-icons');
     expect(card.querySelector('.promo-dl-icons')).toBeNull();
     const root = card.closest('.promo-root') as HTMLElement;
-    expect(root.style.getPropertyValue('--promo-ink')).toBe('#FFFFFF');
+    expect(root.style.getPropertyValue('--promo-text')).toBe('#FFFFFF');
     expect(root.style.getPropertyValue('--promo-bg')).toBe('#1F1A17');
     await user.keyboard('{Escape}');
     await user.click(await screen.findByRole('button', { name: 'Sakrij promociju' }));
     const pill = screen.getByRole('button', { name: 'Prikaži promociju: Cocktail Menu' });
     expect(pill.parentElement).toHaveClass('justify-start');
+    expect(pill).toHaveAttribute('data-pill-style', 'outline');
+    expect(pill.style.color).toBe('rgb(18, 52, 86)');
+    expect(pill.style.boxShadow).toContain('#E8453C');
   });
 
   it('uses the English chrome with ?lang=en and shows nothing when the request fails', async () => {

@@ -115,8 +115,9 @@ export function PromotionBanner({ promotion, primaryColor, t, raised, onOpen }: 
           type="button"
           onClick={onOpen}
           aria-label={`${t.promo.expand}: ${promotion.title}`}
-          style={style}
-          className="pointer-events-auto flex h-10 max-w-[180px] items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold shadow-[0_8px_24px_rgba(31,26,23,.24)]"
+          style={{ background: chrome.pill.background, color: chrome.pill.text, ...(chrome.pill.outline ? { boxShadow: `inset 0 0 0 2px ${promotion.style?.pillColor ?? chrome.background}, 0 8px 24px rgba(31,26,23,.18)` } : {}) } as CSSProperties}
+          data-pill-style={chrome.pill.outline ? 'outline' : 'solid'}
+          className={`pointer-events-auto flex h-10 max-w-[180px] items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold ${chrome.pill.outline ? '' : 'shadow-[0_8px_24px_rgba(31,26,23,.24)]'}`}
         >
           <SparkIcon />
           <span className="truncate">{promotion.title}</span>
