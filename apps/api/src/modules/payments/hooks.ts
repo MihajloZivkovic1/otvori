@@ -27,3 +27,24 @@ export async function runPaidOrderHooks(order: Order): Promise<void> {
     }
   }
 }
+
+const cashHooks: PaidOrderHook[] = [];
+
+/** Called once when staff mark an order as paid in cash (ESIR mode fiscalises cash sales too). */
+export function onOrderCash(hook: PaidOrderHook): () => void {
+  cashHooks.push(hook);
+  return () => {
+    const index = cashHooks.indexOf(hook);
+    if (index >= 0) cashHooks.splice(index, 1);
+  };
+}
+
+export async function runCashOrderHooks(order: Order): Promise<void> {
+  for (const hook of cashHooks) {
+    try {
+      await hook(order);
+    } catch (error) {
+      logger.error({ err: error, orderId: order.id }, 'Cash-order hook failed');
+    }
+  }
+}

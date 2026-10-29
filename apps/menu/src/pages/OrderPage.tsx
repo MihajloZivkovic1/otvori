@@ -258,7 +258,8 @@ export function OrderPage() {
           {data.note && <p className="mt-1.5 text-[12.5px] leading-[1.45] text-muted italic">“{data.note}”</p>}
         </div>
 
-        {data.paymentStatus === 'paid' && <FiscalReceipt slug={slug} order={data} t={t} />}
+        {/* Paid online, or (ESIR mode) paid in cash and fiscalised by Octopos for the venue. */}
+        {(data.paymentStatus === 'paid' || data.paymentStatus === 'cash') && <FiscalReceipt slug={slug} order={data} t={t} />}
 
         <div className="mt-auto flex flex-col gap-2.5">
           {data.payments.enabled && canPayOrder(data) && (

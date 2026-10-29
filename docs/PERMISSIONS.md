@@ -81,7 +81,7 @@ The matrix below is enforced server-side by the routers and verified by `apps/ap
 | --- | --- |
 | `GET /payment-config`, `PATCH /payment-config`, `POST /payment-config/test` | **owner** |
 | `GET /pos-config`, `PATCH /pos-config`, `POST /pos-config/test` | **owner** |
-| `GET /pos/products`, `POST /pos/sync` | **owner** |
+| `GET /pos/products`, `POST /pos/sync`, `GET /pos/tables`, `GET /pos/taxes` | **owner** |
 
 ### Owner PIN (`/security`) — owner *role*, deliberately without the elevation gate
 

@@ -20,6 +20,16 @@ export async function testPosConnection(req: Request, res: Response): Promise<vo
   res.json(await service.testPosConnection(restaurantIdOf(req)));
 }
 
+export async function listTables(req: Request, res: Response): Promise<void> {
+  noStore(res);
+  res.json(await service.listPosTables(restaurantIdOf(req)));
+}
+
+export async function listTaxLabels(req: Request, res: Response): Promise<void> {
+  noStore(res);
+  res.json(await service.listPosTaxLabels(restaurantIdOf(req)));
+}
+
 export async function previewSync(req: Request, res: Response): Promise<void> {
   noStore(res);
   res.json(await service.previewPosSync(restaurantIdOf(req)));
@@ -39,6 +49,13 @@ export async function fiscalManual(req: Request, res: Response): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ guest */
+
+export async function receiptPdf(req: Request, res: Response): Promise<void> {
+  const { pdf, filename } = await service.receiptPdf(slugOf(req), req.sessionId!, uuidParam(req.params.id));
+  noStore(res);
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.type('application/pdf').send(pdf);
+}
 
 export async function emailReceipt(req: Request, res: Response): Promise<void> {
   const { email } = receiptEmailSchema.parse(req.body);

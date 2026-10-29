@@ -154,7 +154,7 @@ export function InProgressCard({ order, currency, defaultLocale, busy, compact, 
     <article aria-label={`Order #${order.number}, table ${order.tableNumber}`} className="flex flex-col gap-3 rounded-[14px] border border-line bg-surface px-3.5 pb-3 pt-3.5">
       <OrderHeader order={order} currency={currency} payments={payments} right={<span className="text-[#166534]">accepted {order.acceptedAt ? clock(order.acceptedAt) : ''}</span>} />
       <Lines order={order} currency={currency} defaultLocale={defaultLocale} />
-      {pos && order.paymentStatus === 'paid' ? <FiscalChip order={order} busy={busy} onRetry={onRetryFiscal} onManual={onFiscalManual} /> : null}
+      {pos && (order.paymentStatus === 'paid' || order.paymentStatus === 'cash') ? <FiscalChip order={order} busy={busy} onRetry={onRetryFiscal} onManual={onFiscalManual} /> : null}
       <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-2.5">
         <span className="text-base font-semibold tabular-nums">{formatPrice(order.totalCents, currency)}</span>
         <span className="flex items-center gap-2">

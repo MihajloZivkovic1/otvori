@@ -1,0 +1,52 @@
+{
+  "_note": "Unauthenticated on the sandbox. The receipt header (PIB, name, address) comes from the PFR, not from here.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/BusinessPartner/MyCompany"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 2,
+        "TaxNumber": "000000000",
+        "Code": "",
+        "Name": "Lokal",
+        "PhoneNumber": "",
+        "IsBuyer": true,
+        "IsSupplier": true,
+        "IsActive": true,
+        "PaymentDays": 0,
+        "BranchOffices": [],
+        "BankAccounts": [
+          {
+            "Id": 2,
+            "BusinessPartnerId": 2,
+            "AccountNumber": "2222",
+            "BankName": "Unicredit",
+            "IsDefault": true
+          }
+        ],
+        "RegistryCode": "",
+        "Address": "Adresa",
+        "AddressPlace": "11000 Beograd",
+        "Email": "",
+        "PrintNoteOnInvoice": false,
+        "PostAddressCode": "",
+        "Note": "",
+        "HasVat": true,
+        "CanSubtractVat": false,
+        "ExcludeFromBalanceCumulative": false,
+        "OutputInvoiceMargin": 0.0,
+        "UniquePublicIdentifier": "",
+        "ShouldRemoveVat": false,
+        "IsTaxNumberForeign": false
+      }
+    }
+  }
+}

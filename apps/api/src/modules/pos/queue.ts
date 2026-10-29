@@ -1,8 +1,8 @@
 import { POS_LIMITS } from '@qr-menu/shared';
 import { logger } from '../../utils/logger.js';
 import { onOrderAccepted } from '../ordering/hooks.js';
-import { onOrderPaid } from '../payments/hooks.js';
-import { onOrderAcceptedForPos, onOrderPaidForPos, runDuePosJobs } from './service.js';
+import { onOrderCash, onOrderPaid } from '../payments/hooks.js';
+import { onOrderAcceptedForPos, onOrderCashForPos, onOrderPaidForPos, runDuePosJobs } from './service.js';
 
 let registered = false;
 
@@ -12,6 +12,7 @@ export function registerPosHooks(): void {
   registered = true;
   onOrderAccepted(onOrderAcceptedForPos);
   onOrderPaid(onOrderPaidForPos);
+  onOrderCash(onOrderCashForPos);
 }
 
 /** Polls the persistent queue every 10 s; one API instance only (jobs are claimed with SKIP LOCKED anyway). */

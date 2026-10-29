@@ -25,6 +25,8 @@ import type {
   PaymentConfigDto,
   PosConfigDto,
   PosSyncPreviewDto,
+  PosTableDto,
+  PosTaxLabelDto,
   PosSyncResultDto,
   ApplyPosSyncInput,
   PaginatedDto,
@@ -54,6 +56,8 @@ export const keys = {
   orders: (rid: string) => ['orders', rid] as const,
   paymentConfig: (rid: string) => ['paymentConfig', rid] as const,
   posConfig: (rid: string) => ['posConfig', rid] as const,
+  posTables: (rid: string) => ['posTables', rid] as const,
+  posTaxLabels: (rid: string) => ['posTaxLabels', rid] as const,
   requests: (rid: string) => ['requests', rid] as const,
   qr: (rid: string, tableId: string, format: 'png' | 'svg') => ['qr', rid, tableId, format] as const,
   menuQr: (rid: string, format: 'png' | 'svg') => ['qr', rid, 'menu', format] as const,
@@ -497,6 +501,16 @@ export function useUpdatePosConfig(rid: string) {
 
 export function useTestPosConnection(rid: string) {
   return useMutation({ mutationFn: () => api<{ ok: boolean; message: string }>(`${base(rid)}/pos-config/test`, { method: 'POST', body: {} }) });
+}
+
+/** The register's active tables (POS mode table mapping); only asked for once a provider is configured. */
+export function usePosTables(rid: string, enabled: boolean) {
+  return useQuery({ queryKey: keys.posTables(rid), queryFn: () => api<PosTableDto[]>(`${base(rid)}/pos/tables`), enabled, retry: false, staleTime: 60_000 });
+}
+
+/** The fiscal labels the venue's PFR accepts (tax label picker). */
+export function usePosTaxLabels(rid: string, enabled: boolean) {
+  return useQuery({ queryKey: keys.posTaxLabels(rid), queryFn: () => api<PosTaxLabelDto[]>(`${base(rid)}/pos/taxes`), enabled, retry: false, staleTime: 60_000 });
 }
 
 export function usePosSyncPreview(rid: string) {

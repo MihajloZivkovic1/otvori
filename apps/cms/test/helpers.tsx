@@ -109,7 +109,7 @@ export const restaurant: RestaurantDto = {
   publicUrl: 'http://kafeterija.localhost:5174',
   modules: { ordering: false, payments: false, pos: false },
   paymentConfig: { provider: null, merchantId: null, hasSecret: false, tipPresets: [0, 5, 10, 15], receiptEmailEnabled: false, simulator: false },
-  posConfig: { provider: null, baseUrl: null, hasApiKey: false, tableMapping: {}, sendOrdersToPos: false, closeOnPayment: true, printOnClose: false, closeMode: 'reuse-external-id', simulator: false },
+  posConfig: { provider: null, mode: 'pos', baseUrl: null, hasApiKey: false, taxLabel: 'Ђ', taxNumber: null, tableMapping: {}, sendOrdersToPos: false, closeOnPayment: true, closeStrategy: 'reissue', payPaymentTypeId: null, simulator: false },
   orderingMode: 'off',
   orderingPaused: false,
   pausedMessage: null,
@@ -282,6 +282,7 @@ export const orders: OrderDto[] = [
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalIssuedAt: null,
     fiscalError: null,
     posRef: null,
   },
@@ -315,6 +316,7 @@ export const orders: OrderDto[] = [
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalIssuedAt: null,
     fiscalError: null,
     posRef: null,
   },
@@ -348,6 +350,7 @@ export const orders: OrderDto[] = [
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalIssuedAt: null,
     fiscalError: null,
     posRef: null,
   },
@@ -378,6 +381,7 @@ export const orders: OrderDto[] = [
     fiscalStatus: 'none',
     fiscalInvoiceNumber: null,
     fiscalVerificationUrl: null,
+    fiscalIssuedAt: null,
     fiscalError: null,
     posRef: null,
   },
@@ -613,7 +617,13 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
       return { body: { ...restaurant.posConfig, ...rest, hasApiKey: restaurant.posConfig.hasApiKey || Boolean(apiKey), simulator: rest.provider === 'mock' } };
     }
   }
-  if (path === `${base}/pos-config/test` && method === 'POST') return { body: { ok: true, message: 'Mock register ready — 4 products' } };
+  if (path === `${base}/pos-config/test` && method === 'POST') return { body: { ok: true, message: 'Mock register ready — 4 products, 4 tables' } };
+  if (path === `${base}/pos/tables` && method === 'GET') {
+    return { body: [{ id: 1, name: '01' }, { id: 2, name: '02' }, { id: 3, name: 'B1' }, { id: 4, name: 'B2' }] };
+  }
+  if (path === `${base}/pos/taxes` && method === 'GET') {
+    return { body: [{ label: 'Ђ', name: 'Ђ (20% na jed. cenu)', percent: 20 }, { label: 'Е', name: 'Е (10% na jed. cenu)', percent: 10 }] };
+  }
   if (path === `${base}/pos/products` && method === 'GET') {
     return {
       body: {

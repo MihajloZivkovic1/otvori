@@ -1,0 +1,67 @@
+{
+  "_note": "ESIR mode, instant payment (FiscalPaymentTypeId 6): the receipt says \"Инстант плаћање\".",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "ExternalId": "otvori-dev-probe-1793025947-instant",
+      "Info": "otvori sandbox probe (instant)",
+      "Items": [
+        {
+          "ProductCode": "686",
+          "Quantity": 2,
+          "Price": 250,
+          "Info": "bez leda"
+        }
+      ],
+      "Payments": [
+        {
+          "FiscalPaymentTypeId": 6,
+          "Amount": 500
+        }
+      ],
+      "FiscalReceiptData": {
+        "ReturnTextualRepresentation": true,
+        "LineWidth": 40
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 57692,
+        "TextTop": "=============ФИСКАЛНИ РАЧУН=============\r\n              RS112832835               \r\n          Octopos Software doo          \r\n          Octopos Software doo          \r\n           Vojvode Stepe 101            \r\n                Вождовац                \r\n----------------------------------------\r\nКасир:                     Otvori.Menu .\r\nЕСИР број:                       602/1.0\r\n-------------ПРОМЕТ ПРОДАЈА-------------\r\n                Артикли                 \r\n========================================\r\nНазив    Цена        Кол.         Укупно\r\n----------------------------------------\r\nACQUA PANA 250 CL (F)                   \r\n       250,00           2         500,00\r\n----------------------------------------\r\nУкупан износ:                     500,00\r\nИнстант плаћање:                  500,00\r\n========================================\r\nОзнака    Име       Стопа          Порез\r\nF        ECAL      11,00%          49,55\r\n----------------------------------------\r\nУкупан износ пореза:               49,55\r\n========================================\r\nПФР време:          26.10.2026. 15:45:47\r\nПФР број рачуна: SEU257EZ-Dt1Ov2o0-10370\r\nБројач рачуна:              8989/10370ПП\r\n========================================\r\n",
+        "TextBottom": "=========КРАЈ ФИСКАЛНОГ РАЧУНА==========\r\nYour order number is: 66869             \r\n    @@@@@     @@@@@    @@@@@@     @@@@@ \r\n    @@@@                                \r\n  @@        @@        @@    @@  @@      \r\n  @@    @@                              \r\n  @@        @@        @@    @@  @@      \r\n  @@    @@                              \r\n  @@@@@@    @@@@@@      @@@@    @@@@@@  \r\n    @@@@@@                              \r\n  @@    @@  @@    @@  @@    @@  @@    @@\r\n        @@                              \r\n  @@    @@  @@    @@  @@    @@  @@    @@\r\n        @@                              \r\n    @@@@      @@@@     @@@@@@     @@@@  \r\n   @@@@@@                               \r\n",
+        "ImageBottom": "iVBORw0KGgoAAAANSUhEUgAAAQ0AAACz…(base64 PNG of the verification QR, truncated in the fixture)",
+        "VerificationUrl": "https://sandbox.suf.purs.gov.rs/v/?vl=A1NFVTI1N0VaRHQxT3YybzCCKAAAHSMAAEBLTAAAAAAAAAABoXisuV0AAAC2r%2BtlFjTCrxD7GTZ5iTkza9Xojh%2FNnJ0NsPVqdejMokWbRJ%2FD54mCeK9dP9Sr1XlZDJoNRWrBTQsG0vIqMF70ZrwALdFTP0rVzDRDl%2BNzHMvynQ2aKHJU6Vr6tyoL11RJP4Kc3Di3iGrFBteQhA1oaMrhjF88FVhfIHR26m8A5Z6cgQJjDwT0vbRoq538Kqufg6Z7DqUv4eS3Y4UDHCpwNpVFOQdOocDAcOO165UKRN%2BwUlyrNEUIz5R67zJ5RsYYAmF1CWBVeWEOMjyf%2B11%2BvjsM9A3KH%2BVwi73mV431XXVJ7dawkiyafNu0dx4QylgoI7K5p8i1l0FryoOSFzG4KCycCPT0w%2FWVx%2BfTkrFA9zEm2qUSyUh7cocHKnAi78UsSUhL0A3zEVIHGoPHUJSIwmLL7B%2F7r%2ByQiRJkUS0u8%2BKOl4%2BIhTIOMKu5FeH3rPILgLniCTNu9gppRgWUDeLyAehy3iWo0qZSLExj%2F2ER26MlPwlmzuA%2BH1c7CRm2n%2BX%2FrYY8kkbfaSgECeMD6If5X2GyST4k6DWVcuoFLH84WXYgjUx1Q05RmsABT7ZRS44voO%2BMh1kTC6QycKKwPGyPYXRAkZcqW%2B7UOyqLKlKFwfLoIkmWd4FzcUiD8CFgOHR76sTmAaQLD6VfX72gGCzqHTdQ7p1WYDRHUztTbXCPaqTSumlDjlWZv6j8oYC97K8%3D",
+        "InvoiceNumber": "SEU257EZ-Dt1Ov2o0-10370",
+        "DoubleFontLineIndexes": [],
+        "TextBeforeLineIndexes": [],
+        "TextAfterLineIndexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "SdcDateTime": "2026-10-26T15:45:47.997"
+      }
+    }
+  }
+}

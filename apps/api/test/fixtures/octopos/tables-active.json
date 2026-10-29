@@ -1,0 +1,85 @@
+{
+  "_note": "Unauthenticated on the sandbox. Trimmed to the first 6 of 92 tables; the spec declares PageListDto[] but the sandbox returns a flat array.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/Table/Active"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": [
+        {
+          "Id": 1,
+          "Name": "01",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        },
+        {
+          "Id": 2,
+          "Name": "02",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        },
+        {
+          "Id": 3,
+          "Name": "03",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        },
+        {
+          "Id": 4,
+          "Name": "04",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        },
+        {
+          "Id": 5,
+          "Name": "05",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        },
+        {
+          "Id": 6,
+          "Name": "06",
+          "IsActive": true,
+          "IsDeleted": false,
+          "IsTakeaway": false,
+          "IsHotelRoom": false,
+          "ExcludeFromProductSpecification": false,
+          "AllowAllUsers": false,
+          "IsTookanDelivery": false
+        }
+      ]
+    }
+  }
+}

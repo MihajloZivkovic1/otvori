@@ -1,0 +1,19 @@
+{
+  "_note": "Cancel of an unknown ExternalId → 400 \"Resource not found\". Cancelling twice answers 500 text/plain.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder/otvori-dev-probe-does-not-exist/Cancel"
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "Success": false,
+      "Errors": [
+        "Resource not found"
+      ],
+      "Warnings": []
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "_note": "/Pay with only FiscalPaymentTypeId → \"Sequence contains no elements\": the internal PaymentTypeId is required.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder/57694/Pay",
+    "body": {
+      "Payments": [
+        {
+          "FiscalPaymentTypeId": 6,
+          "Amount": 250
+        }
+      ],
+      "ReturnTextualRepresentation": true,
+      "LineWidth": 40
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "Success": false,
+      "Errors": [
+        "Server error",
+        "System.InvalidOperationException: Sequence contains no elements\r\n   at System.Linq.Enumerable.Single[TSource](IEnumerable`1 source)\r\n   at Fusion.Octopos.Web.Api.Controller.BillCumulativeController.<>c__DisplayClass104_0.<Print>b__5(IBillPayment x)\r\n   at System.Linq.Enumerable.WhereSelectListIterator`2.MoveNext()\r\n   at System.Collections.Generic.List`1..ctor(IEnumerable`1 collection)\r\n   at System.Linq.Enumerable.ToList[TSource](IEnumerable`1 source)\r\n   at Fusion.Octopos.Web.Api.Controller.BillCumulativeController.<Print>d__104.MoveNext()"
+      ],
+      "Warnings": []
+    }
+  }
+}

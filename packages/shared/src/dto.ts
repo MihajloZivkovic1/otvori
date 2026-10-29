@@ -377,6 +377,7 @@ export const orderDtoSchema = z.object({
   fiscalStatus: fiscalStatusSchema,
   fiscalInvoiceNumber: z.string().nullable(),
   fiscalVerificationUrl: z.string().nullable(),
+  fiscalIssuedAt: isoString.nullable(),
   fiscalError: z.string().nullable(),
   posRef: z.string().nullable(),
 });
@@ -423,6 +424,7 @@ export const publicOrderDtoSchema = z.object({
   fiscalStatus: fiscalStatusSchema,
   fiscalInvoiceNumber: z.string().nullable(),
   fiscalVerificationUrl: z.string().nullable(),
+  fiscalIssuedAt: isoString.nullable(),
   fiscalReceiptText: z.string().nullable(),
 });
 export type PublicOrderDto = z.infer<typeof publicOrderDtoSchema>;

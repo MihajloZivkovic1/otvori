@@ -26,7 +26,7 @@ import { publishOrder, toOrderDto } from '../ordering/service.js';
 import { registerMismatch } from '../pos/service.js';
 import { loadPublishedRestaurant } from '../public/service.js';
 import { credentialsOf, storedConfig, toPaymentConfigDto } from './config.js';
-import { runPaidOrderHooks } from './hooks.js';
+import { runCashOrderHooks, runPaidOrderHooks } from './hooks.js';
 import { isPaymentProviderKey, paymentProvider } from './providers/index.js';
 import type { StatusResult, WebhookResult } from './providers/types.js';
 
@@ -340,6 +340,7 @@ export async function markOrderCash(restaurantId: string, orderId: string, now =
   const fresh = await reloadOrder(order.id);
   publishOrder('order.updated', fresh);
   await audit.record({ restaurantId, action: 'order.cash', entity: { type: 'order', id: order.id, label: `#${order.number}` }, after: { tableNumber: order.tableNumber, totalCents: order.totalCents } });
+  await runCashOrderHooks(fresh);
   return toOrderDto(fresh);
 }
 

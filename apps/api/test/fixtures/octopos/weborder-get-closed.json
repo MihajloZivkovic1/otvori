@@ -1,0 +1,64 @@
+{
+  "_note": "A fiscalised ESIR order read back by its bill id (GET /WebOrder/57691 with the BillCumulative id answers 500).",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/WebOrder/66868"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 66868,
+        "BillCumulativeId": 57691,
+        "CreateUserId": 138,
+        "CreateUserUserName": "Otvori.Menu",
+        "CreateUserFullName": "Otvori.Menu .",
+        "TimeCreated": "2026-10-26T15:45:02.627",
+        "TimeCreatedString": "10/26/2026 15:45:02",
+        "TimeCompleted": "2026-10-26T15:45:02.627",
+        "OrderName": "",
+        "ComputerName": "POS-PC",
+        "Completed": true,
+        "IsRevoked": false,
+        "Amount": 250.0,
+        "TotalAmount": 250.0,
+        "DisplayNumber": 66868,
+        "StockWarehouseId": 1,
+        "ValidateOnly": false,
+        "SourceType": 0,
+        "BillItems": [
+          {
+            "InstanceId": "eff9d3cc-6b37-41b5-abe1-62d1ffc1cdef",
+            "Id": 77369,
+            "ProductId": 449,
+            "ProductIsDecimal": false,
+            "ProductIsNFC": false,
+            "ProductCode": "686",
+            "ProductName": "ACQUA PANA 250 CL",
+            "ProductNameWithModifiers": "ACQUA PANA 250 CL",
+            "RevokedQuantity": 0.0,
+            "Quantity": 1.0,
+            "TotalQuantity": 1.0,
+            "TotalAmount": 250.0,
+            "Price": 250.0,
+            "PriceOriginal": 250.0,
+            "TaxValue": 11.0,
+            "ElectronicFiscalizationTaxLabels": "F",
+            "Amount": 250.0,
+            "IsCompleted": true,
+            "IsHold": false,
+            "DeliveryOrdinalNumber": 0
+          }
+        ],
+        "Info": "otvori sandbox probe",
+        "DiscountCalculatedOnOrder": false,
+        "DoNotPrint": false
+      }
+    }
+  }
+}

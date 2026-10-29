@@ -1,0 +1,18 @@
+{
+  "_note": "Unauthenticated on the sandbox: answers 200 even with a wrong key, so it is not a connection test.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/Ping"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": "2026-10-26T14:55:41.740Z"
+    }
+  }
+}

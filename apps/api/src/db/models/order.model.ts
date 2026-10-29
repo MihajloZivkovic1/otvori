@@ -148,6 +148,11 @@ export class Order extends Model<InferAttributes<Order>, InferCreationAttributes
   @Column(DataType.TEXT)
   fiscalError!: CreationOptional<string | null>;
 
+  /** The PFR's time stamp of the receipt (Octopos `SdcDateTime`); shown on the PDF. */
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  fiscalIssuedAt!: CreationOptional<Date | null>;
+
   /** The POS's reference for the opened order. */
   @AllowNull(true)
   @Column(DataType.TEXT)

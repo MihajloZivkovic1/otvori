@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import type { PublicOrderDto } from '@qr-menu/shared';
-import { orderingErrorMessage, sendReceiptEmail } from '../lib/api';
+import { orderingErrorMessage, receiptPdfUrl, sendReceiptEmail } from '../lib/api';
 import type { Dictionary } from '../lib/i18n';
 import { QrCode } from './QrCode';
 
@@ -42,14 +42,24 @@ export function FiscalReceipt({ slug, order, t }: { slug: string | null; order: 
         </div>
         <QrCode value={order.fiscalVerificationUrl} label={t.pay.receiptTitle} className="size-[84px] flex-none rounded-lg border border-line p-1" />
       </div>
-      <a
-        href={order.fiscalVerificationUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="flex h-11 items-center justify-center rounded-[14px] border border-line text-[14px] font-semibold text-ink no-underline"
-      >
-        {t.pay.openReceipt}
-      </a>
+      <div className="grid grid-cols-2 gap-2">
+        <a
+          href={receiptPdfUrl(slug, order.id)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-11 items-center justify-center rounded-[14px] bg-accent text-[14px] font-semibold text-on-accent no-underline"
+        >
+          {t.pay.downloadReceipt}
+        </a>
+        <a
+          href={order.fiscalVerificationUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-11 items-center justify-center rounded-[14px] border border-line text-[14px] font-semibold text-ink no-underline"
+        >
+          {t.pay.openReceipt}
+        </a>
+      </div>
       {order.payments.receiptEmailEnabled &&
         (sent ? (
           <p className="text-[13px] text-ok" role="status">

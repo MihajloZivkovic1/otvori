@@ -32,8 +32,9 @@ const COPY: Record<ModuleKey, ModuleCopy> = {
   pos: {
     title: 'POS integration',
     description:
-      'Accepted orders are opened on your Octopos register automatically, and a fiscal receipt is issued the moment the guest pays online. Menu prices can be synced from the register.',
-    requirements: 'An Octopos POS with API access. We configure the connection together with your POS vendor.',
+      'Fiscal receipts through Octopos for orders paid in otvori. Either Octopos issues them for you (no till needed; the guest gets the receipt as a PDF and by e-mail), or accepted orders open on your own Octopos till and close with a receipt the moment the guest pays online. Menu prices can be synced from the register.',
+    requirements:
+      'An Octopos account with API access and a token for your venue. Without a till: a Tax Authority certificate for the venue, and Octopos charges per receipt. We set it up together with you and Octopos.',
   },
 };
 

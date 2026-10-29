@@ -1,0 +1,21 @@
+{
+  "_note": "Cancels the open table order by ExternalId (the table is freed); Data lists the ids of the bills the cancellation created.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder/otvori-dev-probe-1793026353-idem/Cancel"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": [
+        66874,
+        66875
+      ]
+    }
+  }
+}

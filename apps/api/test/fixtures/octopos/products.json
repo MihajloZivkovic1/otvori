@@ -1,12 +1,215 @@
 {
-  "Success": true,
-  "Errors": [],
-  "Data": [
-    { "Id": 40, "Name": "Abisinth 0,03", "IsActive": true, "IsDecimal": false, "Price": 170, "Code": "96", "HotKeyDesktop": false, "CategoryId": 4, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
-    { "Id": 5252, "Name": "Akcija kafa+kroasan", "IsActive": true, "IsDecimal": false, "Price": 250, "Code": "", "HotKeyDesktop": false, "CategoryId": 14, "ModifierMinCount": 1, "ModifierMaxCount": 1, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
-    { "Id": 5, "Name": "Biter Lemon 0. 25l", "IsActive": true, "IsDecimal": false, "Price": 120, "Code": "53", "HotKeyDesktop": true, "CategoryId": 1, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": "https://demo-api.octopos.rs/Images/Products/5.jpg", "Logo": null, "Modifiers": [], "HappyHours": [ { "DayOfWeek": 1, "TimeFrom": "13:00", "TimeTo": "14:20", "Price": 100 } ] },
-    { "Id": 12268, "Name": "Espreso", "IsActive": true, "IsDecimal": false, "Price": 150, "Code": "ESP", "HotKeyDesktop": true, "CategoryId": 9, "ModifierMinCount": 1, "ModifierMaxCount": 1, "LogoPath": null, "Logo": null, "Modifiers": [ { "ProductId": 12271, "Price": 0 } ], "HappyHours": [], "ProductCategory": "Kafa", "TaxPercent": 20, "IsForSale": true },
-    { "Id": 2127, "Name": "ALPSKI", "IsActive": false, "IsDecimal": false, "Price": 0, "Code": "RA.10004", "HotKeyDesktop": false, "CategoryId": 2020, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] },
-    { "Id": 20, "Name": "Apatinsko 0,6l", "IsActive": true, "IsDecimal": false, "Price": 140.5, "Code": "20", "HotKeyDesktop": false, "CategoryId": 3, "ModifierMinCount": null, "ModifierMaxCount": null, "LogoPath": null, "Logo": null, "Modifiers": [], "HappyHours": [] }
-  ]
+  "_note": "GET /Product?active=true&isForSale=true, trimmed from 877 rows to a sample (4 coded, 1 without code, 1 not for sale). Needs no key on the sandbox.",
+  "recordedAt": "2026-10-26",
+  "request": {
+    "method": "GET",
+    "path": "/Product?active=true&isForSale=true"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": [
+        {
+          "Id": 447,
+          "Name": "7 UP CL nov naziv",
+          "IsActive": true,
+          "IsDecimal": false,
+          "Price": 350.0,
+          "Barcode": "",
+          "Code": "680",
+          "Description": "Gazirano, osvezavajuce pice",
+          "HotKeyDesktop": false,
+          "CategoryId": 39,
+          "SetMenus": [
+            {
+              "ProductId": 447,
+              "Price": 0.0
+            }
+          ],
+          "HappyHours": [],
+          "ModifierGroups": [],
+          "ProductPictures": [],
+          "Components": [],
+          "ProductCategory": {
+            "Id": 39,
+            "Name": "SOKOVI ",
+            "IsActive": true,
+            "IsForSale": true,
+            "WarehouseId": 4
+          },
+          "IsPercent": false,
+          "IsForSale": true,
+          "IsModifierOnly": false,
+          "UnitMeasureName": "KOM",
+          "TaxPercent": 11.0,
+          "ComponentInfo": "7 UP CL nov naziv",
+          "Code2": "",
+          "HasStock": true
+        },
+        {
+          "Id": 724,
+          "Name": "ABSINTH 50 CL ",
+          "IsActive": true,
+          "IsDecimal": false,
+          "Price": 390.0,
+          "Barcode": "",
+          "Code": "0079",
+          "Description": "",
+          "HotKeyDesktop": false,
+          "CategoryId": 41,
+          "SetMenus": [],
+          "HappyHours": [],
+          "ModifierGroups": [],
+          "ProductPictures": [],
+          "Components": [
+            {
+              "Id": 1118,
+              "ParentProductId": 724,
+              "ParentProductCode": "0079",
+              "ChildProductId": 721,
+              "Quantity": 0.03,
+              "ShrinkagePercent": 0.0
+            }
+          ],
+          "ProductCategory": {
+            "Id": 41,
+            "Name": "LIKERI I TEKILA",
+            "IsActive": true,
+            "IsForSale": true,
+            "WarehouseId": 4
+          },
+          "IsPercent": false,
+          "IsForSale": true,
+          "IsModifierOnly": false,
+          "UnitMeasureName": "KOM",
+          "TaxPercent": 11.0,
+          "ComponentInfo": "0.0300 x ",
+          "Code2": "",
+          "HasStock": false
+        },
+        {
+          "Id": 611,
+          "Name": "ABSOLUTE 30 CL",
+          "IsActive": true,
+          "IsDecimal": false,
+          "Price": 360.0,
+          "Barcode": "",
+          "Code": "621",
+          "Description": "",
+          "HotKeyDesktop": false,
+          "CategoryId": 53,
+          "SetMenus": [
+            {
+              "ProductId": 611,
+              "Price": 0.0
+            }
+          ],
+          "HappyHours": [],
+          "ModifierGroups": [],
+          "ProductPictures": [],
+          "Components": [
+            {
+              "Id": 1928,
+              "ParentProductId": 611,
+              "ParentProductCode": "621",
+              "ChildProductId": 605,
+              "Quantity": 0.03,
+              "ShrinkagePercent": 0.0
+            }
+          ],
+          "ProductCategory": {
+            "Id": 53,
+            "Name": "VODKA GIN RUM",
+            "IsActive": true,
+            "IsForSale": true,
+            "WarehouseId": 4
+          },
+          "IsPercent": false,
+          "IsForSale": true,
+          "IsModifierOnly": false,
+          "UnitMeasureName": "KOM",
+          "TaxPercent": 11.0,
+          "ComponentInfo": "0.0300 x ",
+          "Code2": "",
+          "HasStock": false
+        },
+        {
+          "Id": 449,
+          "Name": "ACQUA PANA 250 CL",
+          "IsActive": true,
+          "IsDecimal": false,
+          "Price": 250.0,
+          "Barcode": "",
+          "Code": "686",
+          "Description": "",
+          "HotKeyDesktop": false,
+          "CategoryId": 34,
+          "SetMenus": [],
+          "HappyHours": [],
+          "ModifierGroups": [],
+          "ProductPictures": [],
+          "Components": [],
+          "ProductCategory": {
+            "Id": 34,
+            "Name": "VODE",
+            "IsActive": true,
+            "IsForSale": true,
+            "WarehouseId": 4
+          },
+          "IsPercent": false,
+          "IsForSale": true,
+          "IsModifierOnly": false,
+          "UnitMeasureName": "KOM",
+          "TaxPercent": 11.0,
+          "ComponentInfo": "ACQUA PANA 250 CL",
+          "Code2": "",
+          "HasStock": true
+        },
+        {
+          "Id": 2940,
+          "Name": "AROMATICNI PIRINAC ",
+          "IsActive": true,
+          "IsDecimal": false,
+          "Price": 0.0,
+          "Barcode": "",
+          "Code": "",
+          "Description": "",
+          "HotKeyDesktop": false,
+          "CategoryId": 1067,
+          "SetMenus": [],
+          "HappyHours": [],
+          "ModifierGroups": [],
+          "ProductPictures": [],
+          "Components": [
+            {
+              "Id": 2649,
+              "ParentProductId": 2940,
+              "ParentProductCode": "",
+              "ChildProductId": 26,
+              "Quantity": 0.02,
+              "ShrinkagePercent": 0.0
+            }
+          ],
+          "ProductCategory": {
+            "Id": 1067,
+            "Name": "PRILOZI ",
+            "IsActive": true,
+            "IsForSale": true,
+            "WarehouseId": 3
+          },
+          "IsPercent": false,
+          "IsForSale": true,
+          "IsModifierOnly": false,
+          "UnitMeasureName": "KOM",
+          "TaxPercent": 11.0,
+          "ComponentInfo": "0.0200 x \r\n0.0300 x \r\n0.0500 x \r\n0.0010 x \r\n0.0200 x \r\n0.0200 x \r\n0.0100 x ",
+          "Code2": "",
+          "HasStock": false
+        }
+      ]
+    }
+  }
 }

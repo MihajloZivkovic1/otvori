@@ -1,0 +1,21 @@
+{
+  "_note": "Wrong or missing key on an authenticated route: 401 with an empty body (no JSON envelope).",
+  "recordedAt": "2026-10-26",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder",
+    "body": {
+      "Items": [
+        {
+          "ProductCode": "686",
+          "Quantity": 1,
+          "Price": 250
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 401,
+    "body": ""
+  }
+}

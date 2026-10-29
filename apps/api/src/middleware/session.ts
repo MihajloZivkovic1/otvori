@@ -12,3 +12,14 @@ export function requireSession(req: Request, _res: Response, next: NextFunction)
   req.sessionId = parsed.data;
   next();
 }
+
+/**
+ * Same, but for links a browser opens directly (the receipt PDF): the session may also come as `?s=<uuid>`. The
+ * id is a capability the guest's own tab holds, so the query form is as private as the header one.
+ */
+export function requireSessionOrQuery(req: Request, _res: Response, next: NextFunction): void {
+  const parsed = uuidSchema.safeParse(req.get('x-session-id') ?? req.query.s);
+  if (!parsed.success) throw new AppError(400, 'SESSION_REQUIRED', 'The X-Session-Id header (or ?s=) must be a UUID');
+  req.sessionId = parsed.data;
+  next();
+}

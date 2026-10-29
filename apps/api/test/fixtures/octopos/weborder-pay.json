@@ -1,0 +1,56 @@
+{
+  "_note": "/Pay with PaymentTypeId 2 + FiscalPaymentTypeId 6 closes the table and issues the receipt — but the payment line says \"Готовина\": /Pay labels by the internal PaymentTypeId (2 cash, 3 card, 6 → no payment line) and ignores FiscalPaymentTypeId. Hence closeStrategy \"reissue\" by default.",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "POST",
+    "path": "/WebOrder/57694/Pay",
+    "body": {
+      "Payments": [
+        {
+          "PaymentTypeId": 2,
+          "FiscalPaymentTypeId": 6,
+          "Amount": 250
+        }
+      ],
+      "ReturnTextualRepresentation": true,
+      "LineWidth": 40
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 57694,
+        "TextTop": "=============ФИСКАЛНИ РАЧУН=============\r\n              RS112832835               \r\n          Octopos Software doo          \r\n          Octopos Software doo          \r\n           Vojvode Stepe 101            \r\n                Вождовац                \r\n----------------------------------------\r\nКасир:                     Otvori.Menu .\r\nЕСИР број:                       602/1.0\r\n-------------ПРОМЕТ ПРОДАЈА-------------\r\n                Артикли                 \r\n========================================\r\nНазив    Цена        Кол.         Укупно\r\n----------------------------------------\r\nACQUA PANA 250 CL (F)                   \r\n       250,00           1         250,00\r\n----------------------------------------\r\nУкупан износ:                     250,00\r\nГотовина:                         250,00\r\n========================================\r\nОзнака    Име       Стопа          Порез\r\nF        ECAL      11,00%          24,77\r\n----------------------------------------\r\nУкупан износ пореза:               24,77\r\n========================================\r\nПФР време:          26.10.2026. 15:49:38\r\nПФР број рачуна: SEU257EZ-Dt1Ov2o0-10372\r\nБројач рачуна:              8991/10372ПП\r\n========================================\r\n",
+        "TextBottom": "=========КРАЈ ФИСКАЛНОГ РАЧУНА==========\r\nYour order number is: 66871             \r\n    @@@@@     @@@@@    @@@@@@   @@@@@@@@\r\n     @@@@@                              \r\n  @@        @@        @@    @@       @@ \r\n    @@  @@                              \r\n  @@        @@        @@    @@      @@  \r\n   @@   @@                              \r\n  @@@@@@    @@@@@@      @@@@       @@   \r\n  @@    @@                              \r\n  @@    @@  @@    @@  @@    @@    @@    \r\n        @@                              \r\n  @@    @@  @@    @@  @@    @@   @@     \r\n        @@                              \r\n    @@@@      @@@@     @@@@@@   @@      \r\n        @@                              \r\n",
+        "ImageBottom": "iVBORw0KGgoAAAANSUhEUgAAAQ0AAACz…(base64 PNG of the verification QR, truncated in the fixture)",
+        "VerificationUrl": "https://sandbox.suf.purs.gov.rs/v/?vl=A1NFVTI1N0VaRHQxT3YybzCEKAAAHyMAAKAlJgAAAAAAAAABoXiwPr4AAACtw%2F%2FLYeSni5AMmqk2M%2FkYraqDyfkel7R6K9i5jkEdAipidMwTfXnQP16fciWTCx77iiwIbguHKRYNxDOuJjN%2FNAh%2F2xlAjtbkonDNHKfA%2BfqWl2P34iNf%2FwHZh93qZxR92NWfhS44RRxCCds6ioqNIj1xlwJp%2Bn8lMLFRZYLjgxuTa9y%2BtxkknZmzPnUIZSU1JgfN2ImnqqjZDeYdiONgLiowqTJazYO4sqXb9VyACM6W0nJ717kb%2F7FX%2B9528Jee0J7NKK9Bt9SVRrB1Q3S1wKMZ6VCEZn52W5pCXn9uQRQ9AkB0lgLDZeeU3d9usSGcjHqjrYg8TbbooDPNMeNoJdeR1M3pKJR7MzSO6DP6W1175fr97YEpi8tWmJUzUEVgN81AqfnDBfOfWL5cAlfHxFHED%2BX8Pd57V4A5fE9%2BUF7WoP8yAP4%2B%2F4%2BWC0Alrk1y9EU6uR%2BhFU8Sqlg3LqnvAYriActvDnYwJZI76eSY%2FStrYjwpzWgwoCLDWX%2Be8MeqeqCEUacty6u%2B0AyG5N7sZSuDXRxPBwUytWOZtLyvLX1B42HPqsXjXGVmKgM5b5g%2BRFrg25S9%2B7Xs0bJLYELQD2S2fEQsxmW%2FuctN5lqLi5AMfYFiKjidhbSOKl6NpCGERfO75h2N5jyIZvRmQWumiwGFR9OgFGKerQDvA9b6a1et%2ByH3%2FEJkG6NzuJxb0ZI%3D",
+        "InvoiceNumber": "SEU257EZ-Dt1Ov2o0-10372",
+        "DoubleFontLineIndexes": [],
+        "TextBeforeLineIndexes": [],
+        "TextAfterLineIndexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "SdcDateTime": "2026-10-26T15:49:38.75"
+      }
+    }
+  }
+}

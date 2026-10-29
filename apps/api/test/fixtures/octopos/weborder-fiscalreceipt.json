@@ -1,0 +1,45 @@
+{
+  "_note": "The fiscal receipt of an order by its bill id (the BillCumulative id answers 400 \"Resource not found\").",
+  "recordedAt": "2026-10-26",
+  "sandbox": "https://sandbox.octopos.rs/api (tenant Otvori.Menu)",
+  "request": {
+    "method": "GET",
+    "path": "/WebOrder/66868/FiscalReceipt?lineWidth=40"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "Success": true,
+      "Errors": [],
+      "Warnings": [],
+      "Data": {
+        "Id": 57691,
+        "TextTop": "=============ФИСКАЛНИ РАЧУН=============\r\n              RS112832835               \r\n          Octopos Software doo          \r\n          Octopos Software doo          \r\n           Vojvode Stepe 101            \r\n                Вождовац                \r\n----------------------------------------\r\nКасир:                     Otvori.Menu .\r\nЕСИР број:                       602/1.0\r\n-------------ПРОМЕТ ПРОДАЈА-------------\r\n                Артикли                 \r\n========================================\r\nНазив    Цена        Кол.         Укупно\r\n----------------------------------------\r\nACQUA PANA 250 CL (F)                   \r\n       250,00           1         250,00\r\n----------------------------------------\r\nУкупан износ:                     250,00\r\nГотовина:                         250,00\r\n========================================\r\nОзнака    Име       Стопа          Порез\r\nF        ECAL      11,00%          24,77\r\n----------------------------------------\r\nУкупан износ пореза:               24,77\r\n========================================\r\nПФР време:          26.10.2026. 15:45:04\r\nПФР број рачуна: SEU257EZ-Dt1Ov2o0-10369\r\nБројач рачуна:              8988/10369ПП\r\n========================================\r\n",
+        "TextBottom": "=========КРАЈ ФИСКАЛНОГ РАЧУНА==========\r\nYour order number is: 66868             \r\n    @@@@@     @@@@@    @@@@@@     @@@@@ \r\n   @@@@@@                               \r\n  @@        @@        @@    @@  @@      \r\n  @@    @@                              \r\n  @@        @@        @@    @@  @@      \r\n  @@    @@                              \r\n  @@@@@@    @@@@@@      @@@@    @@@@@@  \r\n    @@@@                                \r\n  @@    @@  @@    @@  @@    @@  @@    @@\r\n  @@    @@                              \r\n  @@    @@  @@    @@  @@    @@  @@    @@\r\n  @@    @@                              \r\n    @@@@      @@@@     @@@@@@     @@@@  \r\n   @@@@@@                               \r\n",
+        "ImageBottom": "iVBORw0KGgoAAAANSUhEUgAAAQ0AAACz…(base64 PNG of the verification QR, truncated in the fixture)",
+        "VerificationUrl": "https://sandbox.suf.purs.gov.rs/v/?vl=A1NFVTI1N0VaRHQxT3YybzCBKAAAHCMAAKAlJgAAAAAAAAABoXisEHgAAABd7qrn220tgbpifupmJ1C%2Bii5O%2Bk5whoc%2F9wUTuTIJALYjqiExelgQhEHAYUXyBOsTj%2Fz1cjQKZidDulCloqd%2Blq9bLwsiR9NX3S4yBT8VcGnzYkz9ISXC4fKWNtNu7jd9fOM3RrRd99Z%2Bb41%2Bqhso2dvO%2FizECCa0S9qWYrF9KIB%2F2j3Sq6YC%2ByNXh8GtdKLqcABkvVJUXOWLkcBFMzdMWumurnveMlI7mKCpef0kckKAUbPq146LdOMBWTb2w9tvOtEZxaQcspYI1%2BmxLRKO5vH4j7Gyiwjef3hEUTHHbllPCcqkv52wkLmwp6ofqhCB1j1jgMatF6BvdWCrRC3sFQv%2BHuZMkUuT17Zg%2FfHXo2X%2F8fO1%2F60SpyAbdIzUWHEGysVRSFmzAYBafdK7ULK0I8K1%2B3%2BmwK0AG0V2UMWufxfIaXN0FvOJ4CFWlNhFZBNtgVeT%2BsqdJRAMnuobHkw2xS%2BVMbBv7%2Bzct%2B%2B%2BDAD%2F6lPFrgfTVYHFnI%2BKmDlahgigQ7ax8GYcKmfi26kkx5qru5UU53SmfyZoOtzGuzj1tweyEHkWCyFaZpXvokRY9omfus9xQIYlboExY6AOOjR2DUdSmHMDjt2MA8zFo8Jw6Ut9PKFoohPxqkY883KZZ9vzywcCSEpVXrFIPv0fuglc50lYb0PUixhw4ezwDfxMYya9PBRA%2FAWj7gWPEbpahGA%3D",
+        "InvoiceNumber": "SEU257EZ-Dt1Ov2o0-10369",
+        "DoubleFontLineIndexes": [],
+        "TextBeforeLineIndexes": [],
+        "TextAfterLineIndexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "SdcDateTime": "2026-10-26T15:45:04.76"
+      }
+    }
+  }
+}

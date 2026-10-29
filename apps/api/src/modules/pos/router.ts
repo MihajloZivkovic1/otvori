@@ -3,7 +3,7 @@ import { requireOwner } from '../../middleware/membership.js';
 import { requireModule } from '../../middleware/modules.js';
 import * as controller from './controller.js';
 
-/** /api/admin/restaurants/:restaurantId/pos-config and …/pos/* — POS module on; writes and the sync are owner-only. */
+/** /api/admin/restaurants/:restaurantId/pos-config and …/pos/* — POS module on; everything here is owner-only. */
 export const posConfigRouter = Router({ mergeParams: true });
 posConfigRouter.use(requireModule('pos'));
 posConfigRouter.get('/', requireOwner, controller.getPosConfig);
@@ -14,3 +14,5 @@ export const posRouter = Router({ mergeParams: true });
 posRouter.use(requireModule('pos'));
 posRouter.get('/products', requireOwner, controller.previewSync);
 posRouter.post('/sync', requireOwner, controller.applySync);
+posRouter.get('/tables', requireOwner, controller.listTables);
+posRouter.get('/taxes', requireOwner, controller.listTaxLabels);
