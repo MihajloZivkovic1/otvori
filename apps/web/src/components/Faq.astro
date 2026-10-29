@@ -1,13 +1,13 @@
 ---
 import { contact } from '../config';
-import { featurePayments } from '../features';
 import type { Dictionary } from '../i18n';
+import { faqItems } from '../seo';
 interface Props {
   t: Dictionary;
 }
 const { t } = Astro.props;
-// The online-payment question only exists once the feature is released (FEATURE_PAYMENTS=true at build time).
-const items = featurePayments ? [...t.faq.items, t.faq.payments] : t.faq.items;
+// The same list feeds the FAQPage JSON-LD in Base.astro (the online-payment question only once the feature is released).
+const items = faqItems(t);
 ---
 
 <section

@@ -94,6 +94,8 @@ www.{$DOMAIN} {
 app.{$DOMAIN} {
 	import security
 	header X-Frame-Options DENY
+	# The admin is never search content; the SPA shell also carries <meta name="robots" content="noindex">.
+	header X-Robots-Tag "noindex, nofollow"
 	encode zstd gzip
 	import api_proxy
 	root * /srv/cms
@@ -105,6 +107,7 @@ app.{$DOMAIN} {
 # API for direct access (curl, webhooks, the uploads fallback). TLS ends here; the API sees X-Forwarded-* (TRUST_PROXY=1).
 api.{$DOMAIN} {
 	import security
+	header X-Robots-Tag "noindex, nofollow"
 	encode zstd gzip
 	request_body {
 		max_size 10MB
@@ -124,6 +127,8 @@ api.{$DOMAIN} {
 *.{$DOMAIN} {
 	import security
 	header X-Frame-Options DENY
+	# Guest menus are reached from the QR code, not from search; keeps venue menus out of the index (meta robots too).
+	header X-Robots-Tag "noindex, nofollow"
 	encode zstd gzip
 	import api_proxy
 	root * /srv/menu

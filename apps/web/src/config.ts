@@ -28,6 +28,8 @@ export const brand = {
 /** Prices in RSD; yearly = 10 × monthly ("2 meseca gratis"). Pro includes 3 venues; `extraVenue` is each one after that. */
 export const pricing = {
   currency: 'RSD',
+  /** Free trial length shown in the copy and in the structured data. */
+  trialDays: 30,
   starter: { monthly: 1490, yearly: 14900 },
   pro: { monthly: 2990, yearly: 29900, extraVenue: { monthly: 990, yearly: 9900 } },
 } as const;

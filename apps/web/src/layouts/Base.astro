@@ -1,7 +1,8 @@
 ---
 import '../styles/global.css';
-import { brand, contact, pricing } from '../config';
+import { brand } from '../config';
 import { localePath, locales, t, type Locale } from '../i18n';
+import { faqItems, faqPageSchema, organizationSchema, softwareSchema } from '../seo';
 
 interface Props {
   locale: Locale;
@@ -9,18 +10,25 @@ interface Props {
   path?: string;
   title?: string;
   description?: string;
-  /** Emit canonical/hreflang/OG/JSON-LD (landing pages only). */
+  /** Emit canonical/OG/JSON-LD. Off for the 404 and print pages. */
   seo?: boolean;
+  /** The page exists in both locales at `localePath(l)` (the landing pages): emit hreflang + the SoftwareApplication and FAQPage schemas. */
+  landing?: boolean;
+  /** Extra JSON-LD objects (blog: Article + FAQPage). */
+  jsonLd?: object[];
+  ogType?: 'website' | 'article';
+  /** Absolute URL; defaults to the locale's landing OG image. */
+  ogImage?: string;
   noindex?: boolean;
 }
-const { locale, title, description, seo = true, noindex = false } = Astro.props;
+const { locale, title, description, seo = true, landing = true, ogType = 'website', noindex = false } = Astro.props;
 const dict = t(locale);
 const site = Astro.site ?? new URL('https://otvori.menu');
 const path = Astro.props.path ?? localePath(locale);
 const canonical = new URL(path, site).href;
 const pageTitle = title ?? dict.meta.title;
 const pageDescription = description ?? dict.meta.description;
-const ogImage = new URL(`/og-${locale}.png`, site).href;
+const ogImage = Astro.props.ogImage ?? new URL(`/og-${locale}.png`, site).href;
 const analyticsSrc = import.meta.env.PUBLIC_ANALYTICS_SRC;
 const analyticsDomain = import.meta.env.PUBLIC_ANALYTICS_DOMAIN;
 
@@ -31,43 +39,13 @@ const preloadFonts = [
   ...(locale === 'sr' ? ['figtree-latin-ext', 'libre-baskerville-latin-ext'] : []),
 ];
 
-const organization = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: brand.name,
-  alternateName: brand.domain,
-  url: site.href,
-  logo: new URL('/icons/icon-512.png', site).href,
-  email: contact.email,
-  address: { '@type': 'PostalAddress', addressLocality: contact.city, addressCountry: 'RS' },
-};
-const software = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: brand.name,
-  alternateName: brand.domain,
-  url: site.href,
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description: pageDescription,
-  inLanguage: locales,
-  offers: [
-    {
-      '@type': 'Offer',
-      name: 'Starter',
-      price: pricing.starter.monthly,
-      priceCurrency: pricing.currency,
-      url: canonical + '#cene',
-    },
-    {
-      '@type': 'Offer',
-      name: 'Pro',
-      price: pricing.pro.monthly,
-      priceCurrency: pricing.currency,
-      url: canonical + '#cene',
-    },
-  ],
-};
+const jsonLd = [
+  organizationSchema(site),
+  ...(landing
+    ? [softwareSchema({ site, canonical, description: pageDescription, locales }), faqPageSchema(faqItems(dict))]
+    : []),
+  ...(Astro.props.jsonLd ?? []),
+];
 ---
 
 <!doctype html>
@@ -89,11 +67,11 @@ const software = {
     {seo ? (
       <>
         <link rel="canonical" href={canonical} />
-        {locales.map((l) => (
-          <link rel="alternate" hreflang={l} href={new URL(localePath(l), site).href} />
-        ))}
-        <link rel="alternate" hreflang="x-default" href={new URL(localePath('sr'), site).href} />
-        <meta property="og:type" content="website" />
+        {landing
+          ? locales.map((l) => <link rel="alternate" hreflang={l} href={new URL(localePath(l), site).href} />)
+          : null}
+        {landing ? <link rel="alternate" hreflang="x-default" href={new URL(localePath('sr'), site).href} /> : null}
+        <meta property="og:type" content={ogType} />
         <meta property="og:site_name" content={brand.name} />
         <meta property="og:locale" content={dict.ogLocale} />
         <meta property="og:url" content={canonical} />
@@ -107,8 +85,9 @@ const software = {
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={ogImage} />
-        <script type="application/ld+json" set:html={JSON.stringify(organization)} />
-        <script type="application/ld+json" set:html={JSON.stringify(software)} />
+        {jsonLd.map((schema) => (
+          <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+        ))}
       </>
     ) : null}
     {analyticsSrc && analyticsDomain ? (
