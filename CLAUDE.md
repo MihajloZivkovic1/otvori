@@ -779,8 +779,22 @@ npm run og -w @qr-menu/web           # renders public/og-sr.png / og-en.png with
   number, the tagline and the short link. Params `venue`, `logo` (image URL), `table`, `qr` (URL to encode, rendered client-side with
   `qrcode-generator` as SVG) or `qrImage` (ready image URL), `url` (short link text), `lang`. Headless Chrome `--print-to-pdf` yields
   a single 255.12 × 255.12 pt page.
-- Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav.
-  `typecheck` = `astro check`; `lint` = prettier check.
+- **SEO**: `src/seo.ts` owns the JSON-LD (Organization on every indexable page; SoftwareApplication with monthly
+  `UnitPriceSpecification` offers + a free-trial Offer from `pricing.trialDays`, and FAQPage from `faqItems(dict)` — the
+  same list `Faq.astro` renders — on the landing pages only). `Base.astro` props: `landing` (hreflang + those schemas; false
+  on the blog), `jsonLd`, `ogType`, `ogImage`, `path`. The sitemap sets hreflang per URL (`serialize` in `astro.config.mjs`),
+  only for `/` and `/en/`. `app.`, `api.` and `*.DOMAIN` answer `X-Robots-Tag: noindex` (Caddyfiles) and the CMS/menu
+  shells carry `<meta name="robots" content="noindex">`: only the apex is search content.
+- **Blog** (`/blog/`, Serbian only): posts are `content/blog/*.md` (content collection `src/content.config.ts`, frontmatter
+  `title, description, slug, date, updated?, keyword, category: smena|poslovanje|uporedbe, faq[{q,a}]`); `src/blog.ts` has
+  the helpers (`publishedPosts()` hides future dates, `readingMinutes()`, `articleSchema()`, `breadcrumbSchema()`).
+  `pages/blog/index.astro` (grouped by category), `pages/blog/[slug].astro` (H1, dates, `.post` prose styles in
+  `global.css`, `components/blog/PostFaq.astro` = the landing accordion markup + `scripts/faq.ts`, `BlogCta.astro`, JSON-LD
+  Article + FAQPage + BreadcrumbList, OG `article`), `pages/blog/rss.xml.ts` (`@astrojs/rss`). Shared OG image
+  `public/og-blog.png` (from `scripts/og.mjs`). Shell copy under `blog` in the dictionaries; the footer links "Blog";
+  `Header onLanding={false}` / `Footer home="/"` point the section links back at the landing page.
+- Tests (`test/*.test.ts`, vitest + jsdom): pricing toggle, locale helpers + language switch, FAQ accordion, phone nav,
+  structured data (`seo.test.ts`), blog helpers (`blog.test.ts`). `typecheck` = `astro check`; `lint` = prettier check.
 - Deploy: `deploy/Dockerfile.caddy` builds it with `SITE_URL=https://$DOMAIN` into `/srv/web`, served at the apex; `www.` redirects to the apex.
 
 ## Deployment (`deploy/`)

@@ -1,0 +1,117 @@
+---
+import { getCollection, render } from 'astro:content';
+import {
+  BLOG_PATH,
+  articleSchema,
+  breadcrumbSchema,
+  formatDate,
+  isoDate,
+  postPath,
+  publishedPosts,
+  readingMinutes,
+} from '../../blog';
+import BlogCta from '../../components/blog/BlogCta.astro';
+import PostFaq from '../../components/blog/PostFaq.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { t as dict, localePath } from '../../i18n';
+import Base from '../../layouts/Base.astro';
+import { faqPageSchema } from '../../seo';
+
+export async function getStaticPaths() {
+  const posts = publishedPosts(await getCollection('blog'));
+  return posts.map((post) => ({ params: { slug: post.data.slug }, props: { post } }));
+}
+
+const locale = 'sr';
+const t = dict(locale);
+const { post } = Astro.props;
+const { Content } = await render(post);
+const site = Astro.site ?? new URL('https://otvori.menu');
+const path = postPath(post.data.slug);
+const url = new URL(path, site).href;
+const ogImage = new URL('/og-blog.png', site).href;
+const minutes = readingMinutes(post.body ?? '');
+---
+
+<Base
+  locale={locale}
+  landing={false}
+  path={path}
+  title={`${post.data.title} — otvori`}
+  description={post.data.description}
+  ogType="article"
+  ogImage={ogImage}
+  jsonLd={[
+    articleSchema({ post: post.data, url, site, image: ogImage }),
+    faqPageSchema(post.data.faq),
+    breadcrumbSchema(site, [
+      { name: 'otvori', path: '/' },
+      { name: t.blog.eyebrow, path: BLOG_PATH },
+      { name: post.data.title, path },
+    ]),
+  ]}
+>
+  <meta slot="head" property="article:published_time" content={isoDate(post.data.date)} />
+  {post.data.updated ? (
+    <meta slot="head" property="article:modified_time" content={isoDate(post.data.updated)} />
+  ) : null}
+  <meta slot="head" property="article:section" content={t.blog.categories[post.data.category]} />
+  <link
+    slot="head"
+    rel="alternate"
+    type="application/rss+xml"
+    title={`otvori — ${t.blog.eyebrow}`}
+    href="/blog/rss.xml"
+  />
+  <Header locale={locale} t={t} onLanding={false} />
+  <main class="mx-auto w-full max-w-[720px] px-5 pt-10 pb-16 lg:px-8 lg:pt-16 lg:pb-24">
+    <article>
+      <header class="flex flex-col gap-3 lg:gap-4">
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-paper lg:text-[13px]">
+          <a href={BLOG_PATH} class="font-semibold tracking-[.06em] text-plum uppercase no-underline">
+            {t.blog.eyebrow}
+          </a>
+          <span class="font-semibold tracking-[.06em] text-muted-paper uppercase">
+            {t.blog.categories[post.data.category]}
+          </span>
+        </p>
+        <h1 class="text-[32px] leading-[1.12] tracking-[-.015em] lg:text-[46px] lg:leading-[1.08]">
+          {post.data.title}
+        </h1>
+        <p class="text-[17px] leading-normal text-muted-paper lg:text-xl">{post.data.description}</p>
+        <p class="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-muted-paper lg:text-sm">
+          <span>
+            {t.blog.published} <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+          </span>
+          {post.data.updated ? (
+            <span>
+              · {t.blog.updated} <time datetime={isoDate(post.data.updated)}>{formatDate(post.data.updated)}</time>
+            </span>
+          ) : null}
+          <span>
+            · {minutes} {t.blog.minutes}
+          </span>
+        </p>
+      </header>
+      <div class="post mt-8 lg:mt-10">
+        <Content />
+      </div>
+      <PostFaq items={post.data.faq} t={t} />
+    </article>
+    <BlogCta t={t} />
+    <p class="mt-8 text-sm">
+      <a href={BLOG_PATH} class="font-medium text-plum no-underline">
+        ← {t.blog.back}
+      </a>
+    </p>
+  </main>
+  <Footer t={t} home={localePath(locale)} />
+</Base>
+
+<script>
+  import { initFaq } from '../../scripts/faq';
+  import { initNav } from '../../scripts/nav';
+  initFaq(document);
+  initNav(document);
+</script>

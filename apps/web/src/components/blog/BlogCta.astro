@@ -1,0 +1,21 @@
+---
+import { links } from '../../config';
+import type { Dictionary } from '../../i18n';
+import Mark from '../Mark.astro';
+interface Props {
+  t: Dictionary;
+}
+const { t } = Astro.props;
+---
+
+<aside class="relative mt-12 overflow-hidden rounded-[20px] border-l-[6px] border-plum-light bg-plum px-6 py-9 text-white lg:mt-16 lg:rounded-3xl lg:border-l-8 lg:px-12 lg:py-12">
+  <Mark
+    size={260}
+    class="pointer-events-none absolute top-1/2 right-[-90px] -translate-y-1/2 text-white opacity-[.07]"
+  />
+  <h2 class="relative text-[26px] leading-[1.15] tracking-[-.015em] text-white lg:text-[34px]">{t.blog.ctaH}</h2>
+  <p class="relative mt-2 text-[15px] text-plum-pale lg:text-lg">{t.blog.ctaP}</p>
+  <a href={links.register} class="btn btn-white relative mt-5 h-12 w-full text-[15px] lg:w-auto lg:px-7">
+    {t.hero.cta}
+  </a>
+</aside>

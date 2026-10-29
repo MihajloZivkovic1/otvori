@@ -104,5 +104,24 @@ export interface Dictionary {
   cta: { h: string };
   footer: { desc: string; contact: string; links: { label: string; href: string }[]; copyright: string };
   card: { logo: string; note: string };
+  /** Blog shell copy (the posts themselves are Serbian only, content/blog). */
+  blog: {
+    title: string;
+    description: string;
+    eyebrow: string;
+    /** The H1 of /blog/ (`title` is the <title>/OG title). */
+    h: string;
+    all: string;
+    categories: Record<'smena' | 'poslovanje' | 'uporedbe', string>;
+    published: string;
+    updated: string;
+    minutes: string;
+    faq: string;
+    back: string;
+    ctaH: string;
+    ctaP: string;
+    empty: string;
+    rss: string;
+  };
   langSwitch: { label: string; sr: string; en: string };
 }

@@ -4,8 +4,10 @@ import type { Dictionary } from '../i18n';
 import Wordmark from './Wordmark.astro';
 interface Props {
   t: Dictionary;
+  /** Prefix for the `#section` links; '' on the landing page, the landing path ('/') elsewhere. */
+  home?: string;
 }
-const { t } = Astro.props;
+const { t, home = '' } = Astro.props;
 ---
 
 <footer class="flex flex-col gap-6 border-t border-ink/8 px-5 pt-9 pb-10 lg:grid lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-12 lg:px-20 lg:pt-12 xl:px-[120px]">
@@ -20,7 +22,10 @@ const { t } = Astro.props;
       t.footer.links
         .filter((l) => l.href !== '#')
         .map((l) => (
-          <a href={l.href} class="text-sm font-medium text-ink no-underline hover:text-plum">
+          <a
+            href={l.href.startsWith('#') ? `${home}${l.href}` : l.href}
+            class="text-sm font-medium text-ink no-underline hover:text-plum"
+          >
             {l.label}
           </a>
         ))

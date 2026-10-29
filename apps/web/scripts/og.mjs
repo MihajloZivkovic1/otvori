@@ -1,5 +1,7 @@
 // Renders the 1200×630 Open Graph images (design/otvori-brand.html "05 · OG image") with headless Chrome:
 // plum field, the mark + "otvori" lockup, the tagline in the page's language and the domain. Run: npm run og -w @qr-menu/web
+// `og-blog.png` is the shared image of every blog page (the second line names the blog instead of the tagline).
+// `og-blog.png` is the shared image of every blog page (the second line names the blog instead of the tagline).
 import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import fs from 'node:fs/promises';
@@ -32,12 +34,12 @@ svg{display:block}
 <rect width="1200" height="630" fill="${brand.plum}"/>
 <g transform="translate(120 150) scale(4.25)">${MARK}</g>
 <text x="290" y="262" font-family="'Libre Baskerville',Georgia,serif" font-size="128" letter-spacing="-3" fill="#fff">otvori</text>
-<text x="120" y="400" font-family="Figtree,sans-serif" font-size="52" font-weight="500" letter-spacing="-0.5" fill="#fff">${t.tagline}</text>
+<text x="120" y="400" font-family="Figtree,sans-serif" font-size="${t.tagline.length > 30 ? 40 : 52}" font-weight="500" letter-spacing="-0.5" fill="#fff">${t.tagline}</text>
 <text x="120" y="530" font-family="Figtree,sans-serif" font-size="26" font-weight="500" letter-spacing="1" fill="#fff" opacity=".78">${brand.domain}</text>
 </svg></body></html>`;
 
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'otvori-og-'));
-for (const [locale, t] of [['sr', sr], ['en', en]]) {
+for (const [locale, t] of [['sr', sr], ['en', en], ['blog', { tagline: `${sr.blog.eyebrow} · ${sr.blog.h.toLowerCase()}` }]]) {
   const file = path.join(tmp, `${locale}.html`);
   await fs.writeFile(file, html(t));
   const out = path.join(root, 'public', `og-${locale}.png`);
