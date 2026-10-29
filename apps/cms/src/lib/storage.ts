@@ -7,6 +7,9 @@ const INSTALL_DISMISSED = 'tabla.cms.installDismissed';
 const ORDERS_MUTED = 'tabla.cms.ordersMuted';
 const NOTIFICATIONS_ASKED = 'tabla.cms.notificationsAsked';
 const UNLOCK_WINDOW = 'tabla.cms.unlockWindow';
+const LOCALE = 'tabla.cms.locale';
+const THEME = 'tabla.cms.theme';
+const LAST_PATH = 'tabla.cms.lastPath';
 
 function read(storage: Storage, key: string): string | null {
   try {
@@ -61,6 +64,27 @@ export const ordersMuted = {
 export const notificationsAsked = {
   get: (): boolean => read(localStorage, NOTIFICATIONS_ASKED) === '1',
   set: (): void => write(localStorage, NOTIFICATIONS_ASKED, '1'),
+};
+
+/** CMS interface language (Phase 13c). */
+export const cmsLocale = {
+  get: (): 'en' | 'sr' => (read(localStorage, LOCALE) === 'sr' ? 'sr' : 'en'),
+  set: (locale: 'en' | 'sr'): void => write(localStorage, LOCALE, locale),
+};
+
+/** CMS appearance: system (default), light or dark. */
+export const cmsTheme = {
+  get: (): 'system' | 'light' | 'dark' => {
+    const value = read(localStorage, THEME);
+    return value === 'light' || value === 'dark' ? value : 'system';
+  },
+  set: (theme: 'system' | 'light' | 'dark'): void => write(localStorage, THEME, theme === 'system' ? null : theme),
+};
+
+/** The last page the person was on, per user, so "/" and a re-login return there. */
+export const lastPath = {
+  get: (userId: string): string | null => read(localStorage, `${LAST_PATH}.${userId}`),
+  set: (userId: string, path: string | null): void => write(localStorage, `${LAST_PATH}.${userId}`, path),
 };
 
 /** Owner PIN keypad: the window picked last time on this device (1 / 5 / 15 minutes or until sign-out). */

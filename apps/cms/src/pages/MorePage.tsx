@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { CMS_LOCALES, CMS_THEMES } from '@qr-menu/shared';
+import { ProfileModal } from '../components/account/ProfileModal';
+import { Segmented } from '../components/ui/Segmented';
+import { LOCALE_LABELS, useT } from '../lib/i18n';
+import { THEME_LABELS, useTheme } from '../lib/theme';
 import { Icon, type IconName } from '../components/icons';
 import { LogoTile } from '../components/LogoTile';
 import { useOrdering } from '../components/orders/OrderingProvider';
@@ -17,6 +22,9 @@ export function MorePage() {
   const me = useMe();
   const { signOut } = useAuth();
   const [switching, setSwitching] = useState(false);
+  const [profile, setProfile] = useState(false);
+  const { t, locale, setLocale } = useT();
+  const [theme, setTheme] = useTheme();
   const ordering = useOrdering();
   const venues = me.memberships.length;
 
@@ -63,6 +71,21 @@ export function MorePage() {
         </nav>
 
         <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
+          <button type="button" onClick={() => setProfile(true)} className={`${ROW} cursor-pointer bg-transparent`}>
+            <Icon name="user" size={20} className="text-muted" />
+            <span className="flex-1">{t('Account')}</span>
+            <Icon name="chevronRight" size={16} strokeWidth={1.8} className="text-muted" />
+          </button>
+          <div className="flex h-14 items-center gap-3 border-b border-line-2 px-4 text-base font-medium">
+            <Icon name="globe" size={20} className="text-muted" />
+            <span className="flex-1">{t('Language')}</span>
+            <Segmented size="sm" label={t('Language')} value={locale} onChange={setLocale} options={CMS_LOCALES.map((value) => ({ value, label: LOCALE_LABELS[value] }))} />
+          </div>
+          <div className="flex h-14 items-center gap-3 border-b border-line-2 px-4 text-base font-medium">
+            <Icon name="branding" size={20} className="text-muted" />
+            <span className="flex-1">{t('Theme')}</span>
+            <Segmented size="sm" label={t('Theme')} value={theme} onChange={setTheme} options={CMS_THEMES.map((value) => ({ value, label: t(THEME_LABELS[value]).replace(' theme', '') }))} />
+          </div>
           <button type="button" onClick={() => void signOut()} className={`${ROW} cursor-pointer bg-transparent text-danger-text`}>
             <Icon name="signOut" size={20} />
             Log out
@@ -74,6 +97,7 @@ export function MorePage() {
         </p>
       </div>
       <VenueSheet open={switching} onClose={() => setSwitching(false)} currentId={restaurant.id} />
+      {profile ? <ProfileModal onClose={() => setProfile(false)} /> : null}
     </div>
   );
 }

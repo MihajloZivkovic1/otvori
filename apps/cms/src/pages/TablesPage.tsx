@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { OrderDto, ServiceRequestDto, TableDto } from '@qr-menu/shared';
 import { Icon } from '../components/icons';
 import { useOrdering } from '../components/orders/OrderingProvider';
@@ -21,7 +22,8 @@ import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
 import { downloadBlob } from '../lib/download';
 import { clock, displayUrl, relativeTime } from '../lib/format';
-import { downloads, useBlockTable, useDeleteTable, useTables } from '../lib/queries';
+import { downloads, keys, useBlockTable, useDeleteTable, useTables } from '../lib/queries';
+import { useUndoableDelete } from '../lib/undo';
 
 const GRID = 'grid grid-cols-[56px_1fr_140px_120px_220px] items-center gap-3';
 /** With ordering on: scans + last scan share a column to make room for "Ordering" (block / blocked chip). */
@@ -114,10 +116,11 @@ const BLOCKED_NOTE = (
 export function TablesPage() {
   const { restaurant, isOwner, isMobile } = useRestaurantContext();
   const { guard } = useGuard();
-  const toast = useToast();
   const query = useTables(restaurant.id);
   const remove = useDeleteTable(restaurant.id);
   const ordering = useOrdering();
+  const client = useQueryClient();
+  const undoableDelete = useUndoableDelete();
   const [editing, setEditing] = useState<TableDto | null | 'new'>(null);
   const [deleting, setDeleting] = useState<TableDto | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -133,21 +136,21 @@ export function TablesPage() {
       <ConfirmModal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        onConfirm={() =>
-          deleting &&
-          remove.mutate(deleting.id, {
-            onSuccess: () => {
-              toast.success(`${deleting.label} deleted`);
-              setDeleting(null);
-            },
-            onError: (error) => toast.error(errorMessage(error)),
-          })
-        }
+        onConfirm={() => {
+          if (!deleting) return;
+          const table = deleting;
+          setDeleting(null);
+          undoableDelete({
+            message: `${table.label} deleted`,
+            apply: () => client.setQueryData<TableDto[]>(keys.tables(restaurant.id), (prev) => prev?.filter((t) => t.id !== table.id)),
+            rollback: () => client.setQueryData<TableDto[]>(keys.tables(restaurant.id), (prev) => (prev && !prev.some((t) => t.id === table.id) ? [...prev, table].sort((a, b) => a.sortOrder - b.sortOrder || a.number - b.number) : prev)),
+            commit: () => remove.mutateAsync(table.id),
+          });
+        }}
         title={`Delete ${deleting?.label ?? 'table'}?`}
-        description="Its QR code stops working. Past scans stay in analytics without a table."
+        description="Its QR code stops working. Past scans stay in analytics without a table. You can undo for a few seconds afterwards."
         confirmLabel="Delete table"
         danger
-        loading={remove.isPending}
       />
     </>
   );

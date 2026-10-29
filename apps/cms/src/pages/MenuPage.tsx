@@ -25,10 +25,13 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmModal } from '../components/ui/Modal';
 import { Switch } from '../components/ui/Switch';
 import { useToast } from '../components/ui/Toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../lib/api';
 import { cn } from '../lib/cn';
+import { useUndoableDelete } from '../lib/undo';
 import { formatPrice, plural, text } from '../lib/format';
 import {
+  keys,
   useCategories,
   useCreateCategory,
   useDeleteItem,
@@ -50,6 +53,8 @@ function useMenuState() {
   const { restaurant } = useRestaurantContext();
   const rid = restaurant.id;
   const toast = useToast();
+  const client = useQueryClient();
+  const undoableDelete = useUndoableDelete();
   const categoriesQuery = useCategories(rid);
   const itemsQuery = useItems(rid);
   const [params, setParams] = useSearchParams();
@@ -106,6 +111,14 @@ function useMenuState() {
     toggleAvailable: (item: MenuItemDto, available: boolean) =>
       setAvailability.mutate({ id: item.id, input: { available } }, { onError }),
     deleteItem,
+    /** "Deleted · Undo": the row goes at once, the request six seconds later unless undone. */
+    removeItem: (item: MenuItemDto) =>
+      undoableDelete({
+        message: `“${text(item.name, restaurant.defaultLocale)}” deleted`,
+        apply: () => client.setQueryData<MenuItemDto[]>(keys.items(rid), (prev) => prev?.filter((i) => i.id !== item.id)),
+        rollback: () => client.setQueryData<MenuItemDto[]>(keys.items(rid), (prev) => (prev && !prev.some((i) => i.id === item.id) ? [...prev, item].sort((a, b) => a.sortOrder - b.sortOrder) : prev)),
+        commit: () => deleteItem.mutateAsync(item.id),
+      }),
     createCategory: async (name: string) => {
       try {
         const created = await createCategory.mutateAsync({ name: { [primaryLocale(restaurant.defaultLocale)]: name } });
@@ -145,7 +158,6 @@ function DesktopMenu() {
   const state = useMenuState();
   const { restaurant, isOwner } = useRestaurantContext();
   const { guard } = useGuard();
-  const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [renaming, setRenaming] = useState<CategoryDto | null>(null);
@@ -259,21 +271,15 @@ function DesktopMenu() {
       <ConfirmModal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        onConfirm={() =>
-          deleting &&
-          state.deleteItem.mutate(deleting.id, {
-            onSuccess: () => {
-              toast.success('Item deleted');
-              setDeleting(null);
-            },
-            onError: (error) => toast.error(errorMessage(error)),
-          })
-        }
+        onConfirm={() => {
+          if (!deleting) return;
+          state.removeItem(deleting);
+          setDeleting(null);
+        }}
         title={`Delete “${deleting ? text(deleting.name, restaurant.defaultLocale) : ''}”?`}
-        description="Guests will no longer see it. This cannot be undone."
+        description="Guests will no longer see it. You can undo for a few seconds afterwards."
         confirmLabel="Delete item"
         danger
-        loading={state.deleteItem.isPending}
       />
     </div>
   );
@@ -285,7 +291,6 @@ function MobileMenu() {
   const state = useMenuState();
   const { restaurant, isOwner } = useRestaurantContext();
   const { guard, locked } = useGuard();
-  const toast = useToast();
   const [reorderMode, setReorderMode] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -460,22 +465,16 @@ function MobileMenu() {
       <ConfirmModal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        onConfirm={() =>
-          deleting &&
-          state.deleteItem.mutate(deleting.id, {
-            onSuccess: () => {
-              toast.success('Item deleted');
-              setDeleting(null);
-              setOpenRow(null);
-            },
-            onError: (error) => toast.error(errorMessage(error)),
-          })
-        }
+        onConfirm={() => {
+          if (!deleting) return;
+          state.removeItem(deleting);
+          setDeleting(null);
+          setOpenRow(null);
+        }}
         title={`Delete “${deleting ? text(deleting.name, restaurant.defaultLocale) : ''}”?`}
-        description="Guests will no longer see it. This cannot be undone."
+        description="Guests will no longer see it. You can undo for a few seconds afterwards."
         confirmLabel="Delete item"
         danger
-        loading={state.deleteItem.isPending}
       />
     </div>
   );

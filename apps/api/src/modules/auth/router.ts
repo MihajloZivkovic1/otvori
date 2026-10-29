@@ -14,6 +14,12 @@ authRouter.get('/magic-link/:token', controller.consumeMagicLink);
 authRouter.post('/forgot-password', authLimiter, controller.forgotPassword);
 authRouter.post('/reset-password', authLimiter, controller.resetPassword);
 authRouter.get('/me', requireAuth, controller.me);
+// Account (Phase 13c): profile, password change, the devices list.
+authRouter.patch('/me', requireAuth, controller.updateProfile);
+authRouter.post('/change-password', requireAuth, authLimiter, controller.changePassword);
+authRouter.get('/sessions', requireAuth, controller.listSessions);
+authRouter.delete('/sessions', requireAuth, controller.revokeOtherSessions);
+authRouter.delete('/sessions/:id', requireAuth, controller.revokeSession);
 // Team (Phase 11): e-mail invites and the 6-digit join code both end in a signed-in session.
 authRouter.get('/invite/:token', authLimiter, controller.inviteInfo);
 authRouter.post('/invite', authLimiter, controller.acceptInvite);

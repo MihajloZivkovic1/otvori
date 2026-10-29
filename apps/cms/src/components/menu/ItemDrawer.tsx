@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Locale, MenuItemDto } from '@qr-menu/shared';
+import { useSaveShortcut } from '../../hooks/useFormGuards';
 import { errorMessage } from '../../lib/api';
 import { useDeleteItem } from '../../lib/queries';
 import { useRestaurantContext } from '../shell/RestaurantLayout';
@@ -27,6 +28,7 @@ export function ItemDrawer({ item, categoryId, onClose }: ItemDrawerProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const deleteItem = useDeleteItem(restaurant.id);
   const editor = useItemForm({ restaurant, categoryId, item, onSaved: onClose });
+  useSaveShortcut(() => void editor.submit());
 
   const requestClose = () => {
     if (editor.isDirty) setConfirmDiscard(true);

@@ -18,11 +18,11 @@ describe('superadmin area (Phase 13a)', () => {
     expect(within(menu).queryByText('SUPERADMIN')).not.toBeInTheDocument();
   });
 
-  it('keeps /admin away from non-superadmins', async () => {
+  it('keeps /admin away from non-superadmins with a 403 screen', async () => {
     mockApi({ session: sessionFor(user) });
-    const { router } = renderApp('/admin/restaurants');
-    await screen.findByRole('heading', { name: 'Kafa' });
-    expect(router.state.location.pathname).toBe(`/r/${ids.restaurant}/menu`);
+    renderApp('/admin/restaurants');
+    expect(await screen.findByRole('alert')).toHaveTextContent('No access');
+    expect(screen.getByRole('link', { name: 'Go home' })).toBeInTheDocument();
   });
 
   it('opens its own shell from the switcher, with nothing of the last venue in it', async () => {

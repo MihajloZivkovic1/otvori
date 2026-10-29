@@ -18,6 +18,8 @@ export interface AuthContextValue {
   refreshMe(): Promise<MeDto | null>;
   /** True after an explicit sign-out, so the login page does not send the next account back to the old venue. */
   signedOutExplicitly: boolean;
+  /** Set when the session ended on its own (refresh refused), so the sign-in page can say so. */
+  expired: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -27,6 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(() => (sessionFlags.shouldRestore() ? 'restoring' : 'anonymous'));
   const [me, setMe] = useState<MeDto | null>(null);
   const [signedOutExplicitly, setSignedOutExplicitly] = useState(false);
+  const [expired, setExpired] = useState(false);
+  const [expiresIn, setExpiresIn] = useState<number | null>(null);
   const restoreStarted = useRef(false);
 
   // Silent restore via the refresh cookie (only when "remember me" or an open tab session allows it).
@@ -38,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshSession().then((session) => {
       if (session) {
         setMe({ user: session.user, memberships: session.memberships });
+        setExpiresIn(session.expiresIn);
         setStatus('authenticated');
       } else {
         sessionFlags.clear();
@@ -53,11 +58,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       elevationStore.clearAll();
       impersonationStore.clear();
       setMe(null);
+      setExpired(true);
       setStatus('anonymous');
       queryClient.clear();
     });
     return () => setUnauthorizedHandler(null);
   }, [queryClient]);
+
+  // Refresh a minute before the access token expires, so a save never hits a 401 mid-request and a tab left open
+  // stays signed in for as long as the refresh cookie lives.
+  useEffect(() => {
+    if (status !== 'authenticated' || !expiresIn) return;
+    const delay = Math.max(30_000, (expiresIn - 60) * 1000);
+    const timer = window.setTimeout(() => {
+      void refreshSession().then((session) => {
+        if (session) setExpiresIn(session.expiresIn);
+      });
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [status, expiresIn]);
 
   const signIn = useCallback((session: AuthResponseDto, remember = true) => {
     tokenStore.set(session.accessToken);
@@ -66,7 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     elevationStore.clearAll();
     session.elevations?.forEach((e) => elevationStore.setFromDto(e));
     setMe({ user: session.user, memberships: session.memberships });
+    setExpiresIn(session.expiresIn);
     setSignedOutExplicitly(false);
+    setExpired(false);
     setStatus('authenticated');
   }, []);
 
@@ -82,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     impersonationStore.clear();
     setMe(null);
     setSignedOutExplicitly(true);
+    setExpired(false);
     setStatus('anonymous');
     queryClient.clear();
   }, [queryClient]);
@@ -97,8 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, me, signIn, signOut, refreshMe, signedOutExplicitly }),
-    [status, me, signIn, signOut, refreshMe, signedOutExplicitly],
+    () => ({ status, me, signIn, signOut, refreshMe, signedOutExplicitly, expired }),
+    [status, me, signIn, signOut, refreshMe, signedOutExplicitly, expired],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

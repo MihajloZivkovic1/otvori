@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import type { CategoryDto, TranslatedText } from '@qr-menu/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import type { CategoryDto, MenuItemDto, TranslatedText } from '@qr-menu/shared';
 import { LOCALES } from '@qr-menu/shared';
 import { errorMessage } from '../../lib/api';
-import { useCreateCategory, useDeleteCategory, useUpdateCategory } from '../../lib/queries';
+import { text } from '../../lib/format';
+import { keys, useCreateCategory, useDeleteCategory, useUpdateCategory } from '../../lib/queries';
+import { useUndoableDelete } from '../../lib/undo';
 import { useRestaurantContext } from '../shell/RestaurantLayout';
 import { Button } from '../ui/Button';
 import { Field, Input } from '../ui/Field';
@@ -22,6 +25,8 @@ interface CategoryModalProps {
 export function CategoryModal({ category, onClose, onCreated }: CategoryModalProps) {
   const { restaurant, isOwner } = useRestaurantContext();
   const toast = useToast();
+  const client = useQueryClient();
+  const undoableDelete = useUndoableDelete();
   const locales = LOCALES.filter((l) => restaurant.supportedLocales.includes(l));
   const [names, setNames] = useState<TranslatedText>(() =>
     Object.fromEntries(locales.map((l) => [l, category?.name[l] ?? ''])) as TranslatedText,
@@ -101,22 +106,29 @@ export function CategoryModal({ category, onClose, onCreated }: CategoryModalPro
       <ConfirmModal
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={() =>
-          category &&
-          remove.mutate(category.id, {
-            onSuccess: () => {
-              toast.success('Category deleted');
-              setConfirmDelete(false);
-              onClose();
+        onConfirm={() => {
+          if (!category) return;
+          const doomed = category;
+          const items = client.getQueryData<MenuItemDto[]>(keys.items(restaurant.id)) ?? [];
+          setConfirmDelete(false);
+          onClose();
+          undoableDelete({
+            message: `“${text(doomed.name, restaurant.defaultLocale)}” and ${doomed.itemCount} ${doomed.itemCount === 1 ? 'item' : 'items'} deleted`,
+            apply: () => {
+              client.setQueryData<CategoryDto[]>(keys.categories(restaurant.id), (prev) => prev?.filter((c) => c.id !== doomed.id));
+              client.setQueryData<MenuItemDto[]>(keys.items(restaurant.id), (prev) => prev?.filter((i) => i.categoryId !== doomed.id));
             },
-            onError: (err) => toast.error(errorMessage(err)),
-          })
-        }
-        title="Delete this category?"
-        description={`All ${category?.itemCount ?? 0} items in it will be deleted too. This cannot be undone.`}
+            rollback: () => {
+              client.setQueryData<CategoryDto[]>(keys.categories(restaurant.id), (prev) => (prev && !prev.some((c) => c.id === doomed.id) ? [...prev, doomed].sort((a, b) => a.sortOrder - b.sortOrder) : prev));
+              client.setQueryData<MenuItemDto[]>(keys.items(restaurant.id), () => items);
+            },
+            commit: () => remove.mutateAsync(doomed.id),
+          });
+        }}
+        title={`Delete “${category ? text(category.name, restaurant.defaultLocale) : ''}”?`}
+        description={`All ${category?.itemCount ?? 0} items in it will be deleted too. You can undo for a few seconds afterwards.`}
         confirmLabel="Delete category"
         danger
-        loading={remove.isPending}
       />
     </>
   );

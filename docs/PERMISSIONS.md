@@ -22,6 +22,25 @@ never the only gate: a request from devtools without the header gets the same 40
 
 The matrix below is enforced server-side by the routers and verified by `apps/api/test/permissions.test.ts`.
 
+**Superadmin "Open as owner" (Phase 13).** `POST /api/superadmin/restaurants/:id/impersonate` issues a 60-minute access
+token with an `imp` claim. With it the superadmin is the venue's owner (every owner route, no PIN) and nothing else:
+`requireMembership` answers `403 IMPERSONATION_SCOPE` for any other venue, `requireSuperadmin` refuses it (`isSuperadmin`
+reads false), and the account routes (`PATCH /api/auth/me`, `POST /api/auth/change-password`, `/api/auth/sessions`)
+refuse it. Each issue and every change made with it is audited under the superadmin's name with role `superadmin`.
+A plain superadmin token still passes `requireMembership` as an implicit owner (scripts, support), but the CMS only ever
+uses impersonation. Deactivated accounts (`users.deactivated_at`) get `401 ACCOUNT_DEACTIVATED` everywhere.
+
+### `/api/superadmin/*` (superadmin only; verified by `apps/api/test/superadmin.test.ts` and `onboarding.test.ts`)
+
+| Route | Notes |
+| --- | --- |
+| `GET/POST /restaurants`, `GET/PATCH/DELETE /restaurants/:id`, `GET /slug-check` | list/create/detail/update (plan, modules, billing, venue fields, onboarding step)/delete |
+| `POST /restaurants/:id/impersonate` | "Open as owner" |
+| `GET/POST /restaurants/:id/members`, `PATCH/DELETE …/:membershipId`, `POST /restaurants/:id/invites`, `DELETE …/:inviteId` | attach/create accounts, roles (last owner protected), e-mail invites |
+| `POST /restaurants/:id/menu/copy`, `POST /restaurants/:id/welcome-email` | deep copy from another venue; Serbian welcome mail |
+| `GET /users`, `GET/PATCH /users/:id`, `POST /users/:id/{reset-password,magic-link,password,deactivate,activate}` | accounts across venues |
+| `GET /activity`, `GET /system`, `POST /system/pos-jobs/:id/retry`, `GET /search` | global audit log, system status, failed register jobs, ⌘K |
+
 ## `/api/admin/restaurants` (not tenant-scoped)
 
 | Route | Class | Notes |
@@ -37,6 +56,8 @@ The matrix below is enforced server-side by the routers and verified by `apps/ap
 | `GET /` | service |
 | `PATCH /` (name, slug, branding, locale, currency, ordering mode/pause, `modules.ordering`) | **owner** |
 | `POST /logo` | **owner** |
+| `POST /tables/bulk` | **owner** (onboarding: "Sto 1" … "Sto N") |
+| `GET /menu/import/template.csv\|xlsx`, `POST /menu/import/preview`, `POST /menu/import` | **owner** (spreadsheet import) |
 | `POST /publish` | **owner** |
 | `DELETE /` | **owner** |
 

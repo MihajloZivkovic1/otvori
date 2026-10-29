@@ -54,9 +54,9 @@
   --sidebar-w: 0px;
 }
 
-/* Dark variant (design frame M4): phones only, following the device setting. */
+/* Dark variant (design frame M4): phones only, following the device setting — unless the account menu forced a theme. */
 @media (prefers-color-scheme: dark) and (max-width: 640px) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #141416;
     --surface: #1c1c20;
@@ -74,6 +74,26 @@
     --bar-muted: #4a3a3e;
     --swatch-ring: rgba(255, 255, 255, 0.16);
   }
+}
+
+/* Forced dark (account menu → Theme → Dark), at every width. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141416;
+  --surface: #1c1c20;
+  --ink: #fafafa;
+  --ink-2: #d4d4d8;
+  --ink-3: #e4e4e7;
+  --muted: #a1a1aa;
+  --faint: #8a8a93;
+  --line: #2c2c33;
+  --line2: #222228;
+  --line-strong: #3f3f46;
+  --accent: #b86f7c;
+  --on-accent: #18181b;
+  --accent-soft: #2b2024;
+  --bar-muted: #4a3a3e;
+  --swatch-ring: rgba(255, 255, 255, 0.16);
 }
 
 html {

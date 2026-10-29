@@ -8,7 +8,7 @@ import {
   type SuperadminUserLinkDto,
 } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
-import { AuthToken, Membership, Restaurant, User } from '../../db/models/index.js';
+import { Membership, Restaurant, User } from '../../db/models/index.js';
 import type { AuthUser } from '../../types/express.js';
 import { AppError, conflict, notFound } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
@@ -16,7 +16,7 @@ import { sendMagicLink, sendPasswordReset } from '../../utils/mailer.js';
 import { toIso } from '../../utils/objects.js';
 import { hashPassword } from '../../utils/password.js';
 import * as audit from '../audit/service.js';
-import { issueOneTimeToken } from '../auth/service.js';
+import { issueOneTimeToken, revokeRefreshTokens } from '../auth/service.js';
 import { isSyntheticEmail } from '../team/service.js';
 import { escapeLike } from './service.js';
 
@@ -111,7 +111,7 @@ export async function updateUser(userId: string, admin: AuthUser, input: Superad
 }
 
 async function revokeSessions(userId: string): Promise<void> {
-  await AuthToken.update({ usedAt: new Date() }, { where: { userId, type: 'refresh', usedAt: null } });
+  await revokeRefreshTokens(userId);
 }
 
 /** POST …/users/:id/reset-password — a 24-hour set-password link, mailed when the address is real, returned always. */

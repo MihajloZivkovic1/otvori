@@ -6,12 +6,22 @@ interface ToastItem {
   id: number;
   kind: ToastKind;
   message: string;
+  action?: { label: string; onClick: () => void };
+}
+
+export interface ToastOptions {
+  /** A button inside the toast ("Undo", "View"). */
+  action?: { label: string; onClick: () => void };
+  /** How long it stays (ms); errors default to 5 s, the rest 3.2 s, toasts with an action 6 s. */
+  duration?: number;
 }
 
 interface ToastApi {
-  toast: (message: string, kind?: ToastKind) => void;
-  success: (message: string) => void;
-  error: (message: string) => void;
+  toast: (message: string, kind?: ToastKind, options?: ToastOptions) => number;
+  success: (message: string, options?: ToastOptions) => number;
+  error: (message: string, options?: ToastOptions) => number;
+  /** Remove a toast early (e.g. once its undo was used). */
+  dismiss: (id: number) => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -20,15 +30,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
-  const toast = useCallback((message: string, kind: ToastKind = 'info') => {
-    const id = nextId.current++;
-    setItems((prev) => [...prev.slice(-2), { id, kind, message }]);
-    setTimeout(() => setItems((prev) => prev.filter((item) => item.id !== id)), kind === 'error' ? 5000 : 3200);
-  }, []);
+  const dismiss = useCallback((id: number) => setItems((prev) => prev.filter((item) => item.id !== id)), []);
+
+  const toast = useCallback(
+    (message: string, kind: ToastKind = 'info', options: ToastOptions = {}) => {
+      const id = nextId.current++;
+      setItems((prev) => [...prev.slice(-2), { id, kind, message, action: options.action }]);
+      const duration = options.duration ?? (options.action ? 6000 : kind === 'error' ? 5000 : 3200);
+      setTimeout(() => dismiss(id), duration);
+      return id;
+    },
+    [dismiss],
+  );
 
   const api = useMemo<ToastApi>(
-    () => ({ toast, success: (m) => toast(m, 'success'), error: (m) => toast(m, 'error') }),
-    [toast],
+    () => ({ toast, success: (m, o) => toast(m, 'success', o), error: (m, o) => toast(m, 'error', o), dismiss }),
+    [toast, dismiss],
   );
 
   return (
@@ -56,6 +73,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               )}
             />
             {item.message}
+            {item.action ? (
+              <button
+                type="button"
+                onClick={() => {
+                  dismiss(item.id);
+                  item.action!.onClick();
+                }}
+                className="ml-1 cursor-pointer rounded px-1.5 py-0.5 font-semibold underline underline-offset-2 hover:bg-white/10"
+              >
+                {item.action.label}
+              </button>
+            ) : null}
           </div>
         ))}
       </div>

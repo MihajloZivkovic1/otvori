@@ -23,6 +23,7 @@ import { useRestaurantContext } from '../components/shell/RestaurantLayout';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select } from '../components/ui/Field';
 import { useToast } from '../components/ui/Toast';
+import { useDirtyGuard, useSaveShortcut } from '../hooks/useFormGuards';
 import { errorMessage } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { cn } from '../lib/cn';
@@ -94,6 +95,9 @@ export function SettingsPage() {
       toast.error(errorMessage(error));
     }
   });
+
+  useDirtyGuard(form.formState.isDirty);
+  useSaveShortcut(() => form.formState.isDirty && isOwner && void save());
 
   const errors = form.formState.errors;
   const controlSize = isMobile ? 'lg' : 'md';

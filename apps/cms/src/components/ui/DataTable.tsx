@@ -149,7 +149,7 @@ export function DataTable<T>({
       <button
         type="button"
         onClick={() => onSort(column.key)}
-        className={cn('group -mx-1 inline-flex h-7 cursor-pointer items-center rounded px-1 hover:text-ink', column.align === 'right' && 'justify-end')}
+        className={cn('group -mx-1 inline-flex h-7 cursor-pointer items-center rounded px-1 text-[11px] font-semibold uppercase tracking-[.06em] hover:text-ink', column.align === 'right' && 'justify-end')}
       >
         {content}
       </button>

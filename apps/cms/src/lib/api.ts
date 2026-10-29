@@ -207,14 +207,32 @@ export function apiUpload<T>(path: string, file: Blob, filename: string): Promis
   return api<T>(path, { method: 'POST', body: form });
 }
 
-/** Human-readable message for toasts. */
+/** Codes whose server message is technical; shown as a sentence a venue owner understands. */
+const FRIENDLY: Record<string, string> = {
+  RATE_LIMITED: 'Too many attempts — wait a minute and try again.',
+  UNAUTHORIZED: 'Your session ended. Sign in again.',
+  TOKEN_EXPIRED: 'Your session ended. Sign in again.',
+  ACCOUNT_DEACTIVATED: 'This account was deactivated. Contact zdravo@otvori.menu.',
+  FORBIDDEN: 'You do not have access to that.',
+  ROLE_REQUIRED: 'Only the owner can do this.',
+  IMPERSONATION_SCOPE: 'This "Open as owner" session only covers one venue. Go back to the admin area.',
+  PAYLOAD_TOO_LARGE: 'The file is too large.',
+  UNSUPPORTED_MEDIA_TYPE: 'That file type is not supported.',
+  INTERNAL_ERROR: 'Something went wrong on our side. Try again in a moment.',
+  HTTP_ERROR: 'The server answered unexpectedly. Try again in a moment.',
+};
+
+/** Human-readable message for toasts: never raw JSON or a status line. */
 export function errorMessage(error: unknown, fallback = 'Something went wrong'): string {
   if (error instanceof ApiError) {
     if (error.code === 'VALIDATION_ERROR' && Array.isArray(error.details)) {
-      const first = error.details[0] as { message?: string } | undefined;
-      if (first?.message) return first.message;
+      const first = error.details[0] as { message?: string; path?: string } | undefined;
+      if (first?.message) return first.path && !/^(body|query)$/.test(first.path) ? `${first.path}: ${first.message}` : first.message;
     }
-    return error.message || fallback;
+    if (error.status >= 500 && (!error.message || /internal server error/i.test(error.message))) return FRIENDLY.INTERNAL_ERROR!;
+    const friendly = FRIENDLY[error.code];
+    if (friendly && (!error.message || error.message.length < 12 || error.code === 'HTTP_ERROR' || error.code === 'UNAUTHORIZED')) return friendly;
+    return error.message || friendly || fallback;
   }
   if (error instanceof NetworkError) return 'You appear to be offline';
   if (error instanceof Error && error.message) return error.message;

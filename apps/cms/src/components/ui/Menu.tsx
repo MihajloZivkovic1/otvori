@@ -6,6 +6,8 @@ export interface MenuItemDef {
   onSelect: () => void;
   danger?: boolean;
   disabled?: boolean;
+  /** Why it is disabled; shown as the tooltip. */
+  reason?: string;
 }
 
 interface MenuProps {
@@ -54,6 +56,7 @@ export function Menu({ items, trigger, align = 'right' }: MenuProps) {
               type="button"
               role="menuitem"
               disabled={item.disabled}
+              title={item.disabled ? item.reason : undefined}
               onClick={() => {
                 setOpen(false);
                 item.onSelect();

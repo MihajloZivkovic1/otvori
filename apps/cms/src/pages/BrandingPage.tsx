@@ -11,6 +11,7 @@ import { Button } from '../components/ui/Button';
 import { Field, Input } from '../components/ui/Field';
 import { Segmented } from '../components/ui/Segmented';
 import { useToast } from '../components/ui/Toast';
+import { useDirtyGuard, useSaveShortcut } from '../hooks/useFormGuards';
 import { errorMessage } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { cn } from '../lib/cn';
@@ -82,6 +83,9 @@ export function BrandingPage() {
       toast.error(errorMessage(error));
     }
   });
+
+  useDirtyGuard(form.formState.isDirty);
+  useSaveShortcut(() => form.formState.isDirty && void save());
 
   const onLogoFile = (file: File | undefined) => {
     if (!file) return;

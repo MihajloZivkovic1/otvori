@@ -1,8 +1,8 @@
 import type { CookieOptions, Request, Response } from 'express';
-import { acceptInviteSchema, joinWithCodeSchema, type AuthResponseDto, type InvitePreviewDto, type MeDto, type OkDto } from '@qr-menu/shared';
+import { acceptInviteSchema, changePasswordSchema, joinWithCodeSchema, updateProfileSchema, type AuthResponseDto, type InvitePreviewDto, type MeDto, type OkDto } from '@qr-menu/shared';
 import { env } from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
-import { noStore } from '../../utils/http.js';
+import { noStore, uuidParam } from '../../utils/http.js';
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -11,6 +11,7 @@ import {
   resetPasswordSchema,
   tokenParamSchema,
 } from './schemas.js';
+import * as account from './account.js';
 import * as authService from './service.js';
 import type { Session } from './service.js';
 import { previewInvite } from '../team/service.js';
@@ -102,6 +103,35 @@ export async function me(req: Request, res: Response): Promise<void> {
   const body: MeDto = await authService.me(req.user!.id);
   noStore(res);
   res.json(body);
+}
+
+/* ------------------------------------------------------------------ account (Phase 13c) */
+
+export async function updateProfile(req: Request, res: Response): Promise<void> {
+  const input = updateProfileSchema.parse(req.body);
+  noStore(res);
+  res.json(await account.updateProfile(req.user!, input));
+}
+
+/** The new password signs every other device out; this one gets a fresh session (and cookie) in the answer. */
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  const input = changePasswordSchema.parse(req.body);
+  sendSession(res, await account.changePassword(req.user!, input, { ip: req.ip ?? null, userAgent: req.get('user-agent') ?? null }));
+}
+
+export async function listSessions(req: Request, res: Response): Promise<void> {
+  noStore(res);
+  res.json(await account.listSessions(req.user!));
+}
+
+export async function revokeOtherSessions(req: Request, res: Response): Promise<void> {
+  noStore(res);
+  res.json(await account.revokeOtherSessions(req.user!));
+}
+
+export async function revokeSession(req: Request, res: Response): Promise<void> {
+  noStore(res);
+  res.json(await account.revokeSession(req.user!, uuidParam(req.params.id)));
 }
 
 /* ------------------------------------------------------------------ team (Phase 11) */

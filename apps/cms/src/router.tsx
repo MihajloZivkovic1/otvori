@@ -4,6 +4,7 @@ import { FullPageLoading, RequireAuth } from './components/shell/RequireAuth';
 import { RestaurantIndex, RestaurantLayout } from './components/shell/RestaurantLayout';
 import { RouteError } from './components/shell/RouteError';
 import { AdminLayout } from './components/admin/AdminShell';
+import { NotFoundPage } from './pages/ErrorPages';
 import { HomePage } from './pages/HomePage';
 
 /** Route tree (data router, lazy page chunks). Tests mount it with createMemoryRouter. */
@@ -62,7 +63,7 @@ export const routes: RouteObject[] = [
           },
         ],
       },
-      { path: '*', element: <Navigate to="/" replace /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ];

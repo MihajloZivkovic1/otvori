@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router';
 import { cn } from '../../lib/cn';
+import { useT } from '../../lib/i18n';
 import { Icon, type IconName } from '../icons';
 import { useOrdering } from '../orders/OrderingProvider';
 
@@ -28,6 +29,7 @@ const ORDERING_TABS: Tab[] = [
 /** Bottom tab bar (design frames M2–M11). Home lives under the Menu tab. */
 export function MobileTabBar({ restaurantId }: { restaurantId: string }) {
   const { pathname } = useLocation();
+  const { t } = useT();
   const ordering = useOrdering();
   const segment = /^\/r\/[^/]+\/([^/]+)/.exec(pathname)?.[1];
   const tabs = ordering.enabled ? ORDERING_TABS : TABS;
@@ -50,7 +52,7 @@ export function MobileTabBar({ restaurantId }: { restaurantId: string }) {
             )}
           >
             <Icon name={tab.icon} size={22} strokeWidth={1.8} />
-            {tab.label}
+            {t(tab.label)}
             {badge > 0 ? (
               <span
                 aria-label={`${badge} open`}

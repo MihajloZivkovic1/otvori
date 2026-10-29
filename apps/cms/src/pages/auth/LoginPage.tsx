@@ -28,7 +28,9 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [magicSentTo, setMagicSentTo] = useState<string | null>(null);
   const [sendingMagic, setSendingMagic] = useState(false);
-  const from = (location.state as { from?: string } | null)?.from;
+  const navState = location.state as { from?: string; reason?: string } | null;
+  const from = navState?.from;
+  const [expiredNotice, setExpiredNotice] = useState(navState?.reason === 'expired');
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -39,6 +41,7 @@ export function LoginPage() {
 
   const submit = form.handleSubmit(async (values) => {
     setError(null);
+    setExpiredNotice(false);
     try {
       const session = await api<AuthResponseDto>('/api/auth/login', { method: 'POST', body: values, auth: false });
       signIn(session, remember);
@@ -98,6 +101,11 @@ export function LoginPage() {
     >
       <form onSubmit={submit} noValidate className="flex flex-col gap-4 max-tab:gap-3">
         <FormError message={error} />
+        {expiredNotice && !error ? (
+          <p role="status" className="rounded-lg bg-line-2 px-3 py-2 text-[13px] text-ink-2">
+            Your session expired. Sign in again to continue where you left off.
+          </p>
+        ) : null}
         <Field label={isMobile ? <span className="sr-only">Email</span> : 'Email'} htmlFor="login-email" error={form.formState.errors.email?.message}>
           <Input
             id="login-email"

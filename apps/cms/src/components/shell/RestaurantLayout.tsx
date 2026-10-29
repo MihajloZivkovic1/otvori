@@ -9,6 +9,7 @@ import { useAppConfig } from '../../lib/config';
 import { impersonationStore, setImpersonationRenewHandler, useImpersonation } from '../../lib/impersonation';
 import { useRestaurant } from '../../lib/queries';
 import { lastRestaurant } from '../../lib/storage';
+import { ForbiddenPage } from '../../pages/ErrorPages';
 import { HomePage } from '../../pages/HomePage';
 import { ImpersonationBanner } from '../admin/ImpersonationBanner';
 import { OrderingProvider } from '../orders/OrderingProvider';
@@ -99,7 +100,7 @@ export function RestaurantLayout() {
     if (membership && query.data) lastRestaurant.set(me.user.id, restaurantId);
   }, [membership, query.data, restaurantId, me.user.id]);
 
-  if (!allowed) return <Navigate to="/" replace />;
+  if (!allowed) return <ForbiddenPage />;
   if (impersonating && access.error) {
     return (
       <div className="grid min-h-dvh place-items-center p-6 text-center">

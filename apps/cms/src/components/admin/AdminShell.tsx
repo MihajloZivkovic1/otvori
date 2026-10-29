@@ -1,13 +1,16 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useIsCompact, useIsMobile } from '../../hooks/useMediaQuery';
-import { useAuth, useMe } from '../../lib/auth';
+import { useMe } from '../../lib/auth';
 import { cn } from '../../lib/cn';
+import { useT } from '../../lib/i18n';
 import { impersonationStore } from '../../lib/impersonation';
 import { lastRestaurant } from '../../lib/storage';
+import { ForbiddenPage } from '../../pages/ErrorPages';
+import { AccountMenu } from '../account/AccountMenu';
 import { Icon, type IconName } from '../icons';
 import { OtvoriMark, Wordmark } from '../Wordmark';
-import { IconButton } from '../ui/Button';
+import { GlobalKeys } from '../shell/GlobalKeys';
 import { Badge } from '../ui/Chip';
 import { Tooltip } from '../ui/Tooltip';
 
@@ -25,15 +28,6 @@ export function useAdminSection(): AdminSection {
   const { pathname } = useLocation();
   const segment = /^\/admin\/([^/]+)/.exec(pathname)?.[1];
   return ADMIN_NAV.some((item) => item.key === segment) ? (segment as AdminSection) : 'restaurants';
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('');
 }
 
 /**
@@ -57,11 +51,12 @@ export function AdminLayout() {
     document.title = `${label} · Superadmin · otvori`;
   }, [section]);
 
-  if (!me.user.isSuperadmin) return <Navigate to="/" replace />;
+  if (!me.user.isSuperadmin) return me.memberships.length > 0 ? <ForbiddenPage /> : <Navigate to="/" replace />;
 
   if (isMobile) {
     return (
       <div className="flex h-dvh flex-col bg-canvas">
+        <GlobalKeys context={{ admin: true }} />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           <Outlet />
         </div>
@@ -71,6 +66,7 @@ export function AdminLayout() {
   }
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas">
+      <GlobalKeys context={{ admin: true }} />
       <AdminSidebar section={section} />
       <div className="relative flex min-w-0 flex-1 flex-col">
         <AdminTopbar section={section} />
@@ -83,8 +79,7 @@ export function AdminLayout() {
 }
 
 function AdminSidebar({ section }: { section: AdminSection }) {
-  const me = useMe();
-  const { signOut } = useAuth();
+  const { t } = useT();
   const compact = useIsCompact();
   const wide = !compact;
   return (
@@ -107,39 +102,20 @@ function AdminSidebar({ section }: { section: AdminSection }) {
               )}
             >
               <Icon name={item.icon} size={18} className="shrink-0" />
-              {wide ? <span className="flex-1">{item.label}</span> : <span className="sr-only">{item.label}</span>}
+              {wide ? <span className="flex-1">{t(item.label)}</span> : <span className="sr-only">{t(item.label)}</span>}
             </NavLink>
           );
           return wide ? (
             link
           ) : (
-            <Tooltip key={item.key} label={item.label}>
+            <Tooltip key={item.key} label={t(item.label)}>
               {link}
             </Tooltip>
           );
         })}
       </nav>
-      <div className={cn('mt-auto flex items-center gap-2.5 border-t border-line p-3', !wide && 'flex-col')}>
-        <div className="grid size-7 shrink-0 place-items-center rounded-full bg-line text-[11px] font-semibold text-ink-2" title={me.user.name} aria-hidden="true">
-          {initials(me.user.name)}
-        </div>
-        {wide ? (
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium">{me.user.name}</div>
-            <div className="truncate text-xs text-muted">{me.user.email}</div>
-          </div>
-        ) : null}
-        {wide ? (
-          <IconButton label="Sign out" size={28} onClick={() => void signOut()}>
-            <Icon name="signOut" size={16} />
-          </IconButton>
-        ) : (
-          <Tooltip label="Sign out">
-            <IconButton label="Sign out" size={28} onClick={() => void signOut()}>
-              <Icon name="signOut" size={16} />
-            </IconButton>
-          </Tooltip>
-        )}
+      <div className="mt-auto border-t border-line p-2">
+        <AccountMenu wide={wide} subtitle="Superadmin" />
       </div>
     </aside>
   );
@@ -147,11 +123,12 @@ function AdminSidebar({ section }: { section: AdminSection }) {
 
 /** Breadcrumb "Superadmin / Restaurants"; pages add a third crumb through `AdminCrumb`. */
 function AdminTopbar({ section }: { section: AdminSection }) {
-  const label = ADMIN_NAV.find((item) => item.key === section)?.label ?? 'Restaurants';
+  const { t } = useT();
+  const label = t(ADMIN_NAV.find((item) => item.key === section)?.label ?? 'Restaurants');
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-6">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px] text-muted">
-        <span className="truncate">Superadmin</span>
+        <span className="truncate">{t('Superadmin')}</span>
         <span className="text-line-strong" aria-hidden="true">
           /
         </span>
@@ -206,6 +183,7 @@ export function resetAdminCrumbsForTests(): void {
 }
 
 function AdminTabBar({ section }: { section: AdminSection }) {
+  const { t } = useT();
   return (
     <nav aria-label="Primary" className="grid shrink-0 grid-cols-4 border-t border-line bg-surface px-2 pt-2 pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
       {ADMIN_NAV.map((item) => {
@@ -218,7 +196,7 @@ function AdminTabBar({ section }: { section: AdminSection }) {
             className={cn('flex h-12 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium no-underline', active ? 'text-accent' : 'text-muted')}
           >
             <Icon name={item.icon} size={22} strokeWidth={1.8} />
-            {item.label}
+            {t(item.label)}
           </NavLink>
         );
       })}

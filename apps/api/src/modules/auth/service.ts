@@ -173,6 +173,18 @@ export async function login(input: LoginInput, ip: string | null = null, userAge
   return openSession(user, 'password', ip, undefined, userAgent);
 }
 
+/**
+ * Sign devices out by expiring their refresh tokens (not by marking them used): a device that later presents a
+ * revoked token then simply gets "expired" instead of tripping the reuse detector, which would also kill the
+ * session that did the revoking.
+ */
+export async function revokeRefreshTokens(userId: string, exceptSessionId?: string | null): Promise<void> {
+  await AuthToken.update(
+    { expiresAt: new Date(Date.now() - 1000) },
+    { where: { userId, type: 'refresh', usedAt: null, expiresAt: { [Op.gt]: new Date() }, ...(exceptSessionId ? { sessionId: { [Op.ne]: exceptSessionId } } : {}) } },
+  );
+}
+
 async function pruneRefreshTokens(userId: string): Promise<void> {
   const weekAgo = new Date(Date.now() - 7 * DAY_MS);
   await AuthToken.destroy({
@@ -268,9 +280,9 @@ export async function forgotPassword(email: string): Promise<void> {
 
 export async function resetPassword(raw: string, password: string, ip: string | null = null): Promise<Session> {
   const user = await consumeOneTimeToken(raw, 'password_reset');
-  await user.update({ passwordHash: await hashPassword(password) });
+  await user.update({ passwordHash: await hashPassword(password), mustChangePassword: false });
   // Changing the password signs out every other device.
-  await AuthToken.update({ usedAt: new Date() }, { where: { userId: user.id, type: 'refresh', usedAt: null } });
+  await revokeRefreshTokens(user.id);
   return openSession(user, 'password_reset', ip);
 }
 

@@ -4,6 +4,7 @@ import { useIsCompact, useIsMobile } from '../../hooks/useMediaQuery';
 import { screenTitle, useScreen } from '../../lib/screens';
 import { useOrdering } from '../orders/OrderingProvider';
 import { LockStatus } from '../security/LockStatus';
+import { GlobalKeys } from './GlobalKeys';
 import { InstallHint } from './InstallHint';
 import { MobileTabBar } from './MobileTabBar';
 import { Sidebar } from './Sidebar';
@@ -38,9 +39,12 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
     document.documentElement.style.setProperty('--sidebar-w', isMobile ? '0px' : compact ? '64px' : '240px');
   }, [isMobile, compact]);
 
+  const keys = restaurant ? <GlobalKeys context={{ venue: { id: restaurant.id, defaultLocale: restaurant.defaultLocale, name: restaurant.name, isOwner: role === 'owner' } }} /> : null;
+
   if (isMobile) {
     return (
       <div className="flex h-full flex-col bg-canvas">
+        {keys}
         <LockStatus variant="strip" />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
         <InstallHint />
@@ -51,6 +55,7 @@ export function AppShell({ restaurant, role, title, children }: AppShellProps) {
 
   return (
     <div className="flex h-full overflow-hidden bg-canvas">
+      {keys}
       <Sidebar restaurant={restaurant} role={role} compact={compact} />
       <div className="relative flex min-w-0 flex-1 flex-col">
         <Topbar restaurant={restaurant} role={role} title={title} />

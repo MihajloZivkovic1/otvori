@@ -38,10 +38,13 @@ manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, 
 (`create-superadmin.ts`), `app.ts`, `index.ts` (connects, runs migrations when `MIGRATE_ON_START`, listens, graceful SIGTERM).
 Tests live in `apps/api/test`.
 
-`apps/cms/src`: `main.tsx` (QueryClient → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx` (route
-tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/forgot/magic/reset), `components/ui/` (primitives),
-`components/shell/` (sidebar, top bar, tab bar, layouts, guards), `components/{menu,tables,branding,settings,superadmin,orders}/`,
-`lib/` (api, auth, queries, storage, format, screens, crop, download, color, notify), `hooks/`, `styles.css`. Tests in `apps/cms/test`.
+`apps/cms/src`: `main.tsx` (QueryClient → I18nProvider → ToastProvider → AuthProvider → RouterProvider, SW registration), `router.tsx`
+(route tree, lazy pages), `pages/` (one file per screen, `auth/` for login/register/forgot/magic/reset/change-password, `admin/` for the
+superadmin area, `ErrorPages.tsx`), `components/ui/` (primitives incl. `DataTable`, `Tabs`), `components/shell/` (sidebar, top bar, tab
+bar, layouts, guards, command palette, global keys), `components/admin/` (admin shell, venue pages, onboarding wizard),
+`components/account/` (account menu, profile), `components/audit/` (shared audit list), `components/{menu,tables,branding,settings,orders}/`,
+`lib/` (api, auth, queries, admin, account, impersonation, i18n, theme, undo, storage, format, screens, slug, crop, download, color, notify),
+`hooks/`, `styles.css`. Tests in `apps/cms/test`.
 
 `apps/menu/src`: `main.tsx` (QueryClient, `BrowserRouter`, re-applies the cached tenant theme before first paint), `App.tsx`
 (routes `/r/:slug/t/:table`, `/r/:slug/*`, `/t/:table` and `*`), `pages/MenuPage.tsx` (the one screen: data, locale, theme, events, sheet routing),
@@ -57,7 +60,7 @@ npm run db:up                 # Postgres 16 in Docker (POSTGRES_PORT=5433 npm ru
 cp apps/api/.env.example apps/api/.env   # then edit DATABASE_URL etc.
 npm run build -w @qr-menu/shared         # api imports shared from packages/shared/dist (turbo does this automatically)
 npm run migrate               # umzug up      (apps/api: npm run migrate / migrate:undo / migrate:status)
-npm run seed                  # demo data; re-runnable, wipes + recreates only the seeded rows
+npm run seed                  # demo data (dev only; real venues are created in the CMS at /admin/restaurants/new); re-runnable
 npm run create-superadmin:dev -w @qr-menu/api -- admin@x.y 'password'   # dev; prod image: npm run create-superadmin (dist)
 npm run dev                   # turbo: shared tsc --watch + api tsx watch (+ vite apps)
 npm run typecheck             # all workspaces (apps/web runs `astro check`)
@@ -103,7 +106,8 @@ OWNER_PASSWORD=… npm run seed:fabrika -w @qr-menu/api -- --logo logo.png   # t
   delete, QR files, branding, settings, modules, payment/POS config (reads included), team, audit log, delete venue.
   Service (both roles) = reading, `PATCH /items/:id/availability`, table block, orders, calls, SSE, cash, fiscal
   retry/manual, analytics. `requireOwnerRole` (role only, no PIN) exists for `/security/*`.
-- Superadmins pass membership checks as implicit owners (support use), skip the PIN, and get `/api/superadmin/*`.
+- Superadmins pass membership checks as implicit owners (support use), skip the PIN, and get `/api/superadmin/*`. The CMS never
+  uses that implicit path: a superadmin enters a venue through **impersonation** (Phase 13, below).
 
 ## Data conventions
 
@@ -270,6 +274,67 @@ CMS `components/security/`, `components/settings/{SecurityCard,TeamCard}.tsx`, `
   (`restaurants.digest_sent_on`), to opted-in members with a real e-mail, only when yesterday had entries; subject
   `"<venue> · Juče: 3 promene cena, 1 novi artikal, 2 pogrešna PIN-a"` (`digestSummary()`, Serbian plurals via
   `srPlural()`) with the history link. `runDailyDigest(now)` is the testable entry point.
+
+## Superadmin area, onboarding and admin polish (Phase 13)
+
+Reality: one operator sets venues up for their owners. Code: `apps/api/src/modules/superadmin/` (`service.ts` restaurants +
+impersonation, `members.ts`, `users.ts`, `activity.ts`, `system.ts`, `search.ts`, `onboarding.ts`), `modules/menu-import/`
+(spreadsheet import), `modules/auth/account.ts`, `utils/xlsx.ts`; shared `packages/shared/src/admin.ts` +
+`schemas/{superadmin,account}.ts`; CMS `components/admin/`, `pages/admin/`, `lib/{admin,impersonation,account,i18n,theme,undo}.ts`.
+Tests: `apps/api/test/{superadmin,onboarding,account}.test.ts`, `apps/cms/test/{admin-shell,onboarding}.test.tsx`. Design
+decisions and the open TODO list: `docs/ADMIN-UX-REVIEW.md`.
+
+- **Routes**: the CMS admin area is `/admin/{restaurants,users,activity,system}` with its own shell
+  (`components/admin/AdminShell.tsx`: no venue switcher/nav/publish pill; entering it clears `lastRestaurant` and any
+  impersonation). `/superadmin` redirects there. `/admin/restaurants/:id/:tab?` (overview, members, plan, billing, activity,
+  danger), `/admin/restaurants/new` and `/admin/restaurants/:id/setup/:step` (wizard).
+- **Impersonation ("Open as owner")**: `POST /api/superadmin/restaurants/:id/impersonate` → `ImpersonationDto` with a
+  60-minute access token (`IMPERSONATION_LIMITS.ttlMinutes`) whose `imp` claim names the one venue. `requireAuth` reads it as
+  `isSuperadmin: false` + `req.user.impersonation`, `requireMembership` refuses any other venue (403 `IMPERSONATION_SCOPE`),
+  `/api/superadmin/*` and `/api/auth/{me PATCH,change-password,sessions}` refuse it, every issue is an `auth.impersonate`
+  audit row and later rows name the superadmin (role `superadmin`). The owner's password and sessions are never touched.
+  CMS: `lib/impersonation.ts` keeps it in memory + `sessionStorage['tabla.cms.impersonation']`; `api()` sends it instead of
+  the own token on `/api/admin/restaurants/<rid>/…` and renews it on 401; `RestaurantLayout` requests one automatically for a
+  superadmin who is not a member (so `/r/:id` links work) and shows `ImpersonationBanner` ("Prijavljen kao vlasnik lokala X ·
+  Nazad u admin"); the sidebar switcher's `AdminVenueList` (all venues, grouped by status, searchable) always goes through it.
+- **Superadmin API** (`requireSuperadmin` + `adminActorContext` so `audit.record()` works): restaurants list
+  (`superadminListRestaurantsQuerySchema`: search over name/slug/city/owner e-mail, status/plan/module/onboarding filters,
+  `sort`/`dir` over `RESTAURANT_SORT_KEYS`, pages of 50), `POST /restaurants` (wizard step 1, no owner, `onboardingStep: 2`),
+  `GET/PATCH/DELETE /restaurants/:id` (`SuperadminRestaurantDetailDto`: members, invites, counts, billing; PATCH takes venue
+  fields, plan, modules, `billingNote`, `paidUntil`, `adminNotes`, `onboardingStep`), `GET /slug-check?slug=`,
+  members (`POST` attaches an existing account by e-mail or creates one with an admin-typed password +
+  `mustChangePassword` + `phone`; `PATCH/DELETE :membershipId` with `LAST_OWNER`; `POST /invites`), users
+  (list/search, `PATCH`, `reset-password` / `magic-link` → link returned + mailed when the address is real,
+  `password` (set directly), `deactivate` / `activate` → `users.deactivated_at`, every session revoked, 401
+  `ACCOUNT_DEACTIVATED`; last superadmin and self are protected), `GET /activity` (global audit log,
+  `audit_log.restaurant_id` is nullable for platform rows, `kind=admin`), `GET /system` (`SystemStatusDto`: db, build,
+  flags, mail/storage, mocks, counts, POS/payment queues, failed register jobs) + `POST /system/pos-jobs/:id/retry`,
+  `GET /search?q=` (⌘K), `POST /restaurants/:id/menu/copy`, `POST /restaurants/:id/welcome-email`.
+- **Onboarding wizard** (4 saved steps, `restaurants.onboarding_step`, resumable from the list badge "SETUP n/4", the venue
+  page and the finish screen): venue → owner (`components/admin/MemberForm.tsx`, password generator from
+  `PASSWORD_GENERATOR`, kept only in `sessionStorage['tabla.cms.onboarding.<id>']` for the welcome mail) → plan & modules →
+  setup (bulk tables `POST /tables/bulk { count, prefix, startAt? }`, logo + colour, spreadsheet import, copy menu) → done
+  (Open as owner, QR sheet PDF, welcome e-mail in Serbian: login URL, e-mail, the password or a 7-day set-password link, the
+  admin's name/e-mail/`users.phone`, `WELCOME_STEPS_SR`). Every wizard action is also on the venue page ("Setup actions").
+- **Spreadsheet import** (owner route, also the menu editor's "Import from spreadsheet"): `GET …/menu/import/template.csv|xlsx`,
+  `POST …/menu/import/preview` (multipart `file`, CSV with `,` or `;` or XLSX, sniffed by bytes) → `MenuImportPreviewDto` with
+  per-row errors, `POST …/menu/import { rows, existing: merge|skip }`. Columns `MENU_IMPORT_COLUMNS` with Serbian/English
+  header aliases; prices "1.290,50" / "1,290.50" / "650 RSD"; allergen and tag names. `utils/xlsx.ts` reads and writes XLSX
+  without a dependency (zip + SpreadsheetML, first sheet, shared/inline strings). Audit `menu.import`, `menu.copy`,
+  `table.bulk_create`.
+- **Account** (`/api/auth`): `PATCH /me` (name; e-mail with `currentPassword`), `POST /change-password` (clears
+  `mustChangePassword`, signs other devices out, answers a fresh session), `GET/DELETE /sessions[/:id]`
+  (`SessionDto` from `auth_tokens.session_id` + `ip`/`user_agent`). Revocation **expires** refresh tokens instead of marking
+  them used, so a stale device presenting one gets `TOKEN_EXPIRED` rather than tripping reuse detection against the live
+  session. `UserDto.mustChangePassword` makes `RequireAuth` show `ChangePasswordPage` before the app. `users.last_login_at`
+  is set on every sign-in.
+- **Polish** (Phase 13c, details in `docs/ADMIN-UX-REVIEW.md`): `DataTable` (sticky header, sort, keyboard rows,
+  "Showing 1–50 of 212"), filters in the URL, `useDirtyGuard` + `useSaveShortcut` (⌘S), undo toasts for item/category/table
+  deletes (`lib/undo.ts`: optimistic removal, request after 6 s, flushed on `pagehide`), ⌘K palette + `?` help + `g` jumps
+  (`components/shell/GlobalKeys.tsx`), account menu (`components/account/`), CMS language EN/SR for the shell
+  (`lib/i18n.tsx`, `localStorage['tabla.cms.locale']`) and theme (`lib/theme.ts`, `localStorage['tabla.cms.theme']`,
+  `data-theme` on `<html>`), 403/404/500 pages, readable API errors (`errorMessage()` code map), silent refresh a minute
+  before expiry, `localStorage['tabla.cms.lastPath.<userId>']` for "/" and re-login.
 
 ## Online payment (Phase 9c)
 

@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
 import type { MembershipRole, RestaurantDto } from '@qr-menu/shared';
 import { RESTAURANT_DEFAULTS } from '@qr-menu/shared';
-import { useAuth, useMe } from '../../lib/auth';
+import { useMe } from '../../lib/auth';
 import { cn } from '../../lib/cn';
+import { useT } from '../../lib/i18n';
 import { NAV, restaurantPath, useScreen } from '../../lib/screens';
+import { AccountMenu } from '../account/AccountMenu';
 import { Icon } from '../icons';
 import { LogoTile } from '../LogoTile';
 import { useOrdering } from '../orders/OrderingProvider';
-import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Chip';
 import { Tooltip } from '../ui/Tooltip';
 import { AdminVenueList } from '../admin/AdminVenueList';
@@ -25,18 +26,9 @@ function roleLabel(role: MembershipRole, superadmin: boolean): string {
   return role === 'owner' ? 'Owner' : 'Staff';
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('');
-}
-
 export function Sidebar({ restaurant, role, compact }: SidebarProps) {
   const me = useMe();
-  const { signOut } = useAuth();
+  const { t } = useT();
   const ordering = useOrdering();
   const wide = !compact;
   // "Orders" only exists while the venue takes orders or calls (design B9).
@@ -55,7 +47,7 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
               <NavLink
                 key={item.key}
                 to={`/r/${restaurant.id}/${item.key}`}
-                title={wide ? undefined : item.label}
+                title={wide ? undefined : t(item.label)}
                 className={({ isActive }) =>
                   cn(
                     'relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium no-underline transition-colors',
@@ -65,7 +57,7 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
                 }
               >
                 <Icon name={item.icon} size={18} className="shrink-0" />
-                {wide ? <span className="flex-1">{item.label}</span> : <span className="sr-only">{item.label}</span>}
+                {wide ? <span className="flex-1">{t(item.label)}</span> : <span className="sr-only">{t(item.label)}</span>}
                 {badge > 0 ? (
                   <span
                     aria-label={`${badge} open`}
@@ -82,38 +74,15 @@ export function Sidebar({ restaurant, role, compact }: SidebarProps) {
             return wide ? (
               link
             ) : (
-              <Tooltip key={item.key} label={item.label}>
+              <Tooltip key={item.key} label={t(item.label)}>
                 {link}
               </Tooltip>
             );
           })}
         </nav>
       ) : null}
-      <div className={cn('mt-auto flex items-center gap-2.5 border-t border-line p-3', !wide && 'flex-col')}>
-        <div
-          className="grid size-7 shrink-0 place-items-center rounded-full bg-line text-[11px] font-semibold text-ink-2"
-          title={me.user.name}
-          aria-hidden="true"
-        >
-          {initials(me.user.name)}
-        </div>
-        {wide ? (
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium">{me.user.name}</div>
-            <div className="text-xs text-muted">{roleLabel(role, me.user.isSuperadmin)}</div>
-          </div>
-        ) : null}
-        {wide ? (
-          <IconButton label="Sign out" size={28} onClick={() => void signOut()}>
-            <Icon name="signOut" size={16} />
-          </IconButton>
-        ) : (
-          <Tooltip label="Sign out">
-            <IconButton label="Sign out" size={28} onClick={() => void signOut()}>
-              <Icon name="signOut" size={16} />
-            </IconButton>
-          </Tooltip>
-        )}
+      <div className="mt-auto border-t border-line p-2">
+        <AccountMenu wide={wide} subtitle={roleLabel(role, me.user.isSuperadmin)} />
       </div>
     </aside>
   );
