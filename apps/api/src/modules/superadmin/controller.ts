@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
+  copyMenuSchema,
+  welcomeEmailSchema,
   slugCheckQuerySchema,
   superadminActivityQuerySchema,
   superadminAddMemberSchema,
@@ -15,8 +17,10 @@ import {
 } from '@qr-menu/shared';
 import { noStore, uuidParam } from '../../utils/http.js';
 import { runWithActor } from '../audit/context.js';
+import { copyMenu } from '../menu-import/service.js';
 import * as activity from './activity.js';
 import * as members from './members.js';
+import * as onboarding from './onboarding.js';
 import * as search from './search.js';
 import * as service from './service.js';
 import * as system from './system.js';
@@ -67,6 +71,20 @@ export async function checkSlug(req: Request, res: Response): Promise<void> {
 export async function impersonate(req: Request, res: Response): Promise<void> {
   noStore(res);
   res.status(201).json(await service.impersonate(uuidParam(req.params.id), req.user!));
+}
+
+/* ------------------------------------------------------------------ onboarding (Phase 13b) */
+
+export async function copyMenuFrom(req: Request, res: Response): Promise<void> {
+  const input = copyMenuSchema.parse(req.body);
+  noStore(res);
+  res.status(201).json(await copyMenu(uuidParam(req.params.id), input.sourceRestaurantId));
+}
+
+export async function welcomeEmail(req: Request, res: Response): Promise<void> {
+  const input = welcomeEmailSchema.parse(req.body);
+  noStore(res);
+  res.json(await onboarding.sendWelcome(uuidParam(req.params.id), req.user!, input));
 }
 
 /* ------------------------------------------------------------------ members */

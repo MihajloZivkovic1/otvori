@@ -1,5 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import type { SuperadminRestaurantDetailDto } from '@qr-menu/shared';
+import { apiBlob, errorMessage } from '../../../lib/api';
+import { openBlob } from '../../../lib/download';
+import { downloads } from '../../../lib/queries';
+import { ImportMenuModal } from '../../menu/ImportMenuModal';
+import { useToast } from '../../ui/Toast';
+import { BulkTablesModal, CopyMenuModal, WelcomeEmailModal } from '../onboarding/modals';
 import { displayUrl } from '../../../lib/format';
 import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { cn } from '../../../lib/cn';
@@ -13,6 +20,19 @@ const ORDERING: Record<string, string> = { off: 'Off (view-only)', call_waiter: 
 
 export function OverviewTab({ venue, onTab }: { venue: SuperadminRestaurantDetailDto; onTab: (tab: RestaurantTab) => void }) {
   const isMobile = useIsMobile();
+  const toast = useToast();
+  const [action, setAction] = useState<'tables' | 'import' | 'copy' | 'welcome' | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const qrSheet = async () => {
+    setDownloading(true);
+    try {
+      openBlob(await (venue.tableCount > 0 ? downloads.qrSheet(venue.id) : apiBlob(`/api/admin/restaurants/${venue.id}/qr-card.pdf`)), `qr-${venue.slug}.pdf`);
+    } catch (error) {
+      toast.error(errorMessage(error, 'Could not build the PDF'));
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <>
       {venue.onboardingStep ? (
@@ -93,6 +113,34 @@ export function OverviewTab({ venue, onTab }: { venue: SuperadminRestaurantDetai
           />
         </Card>
       </div>
+      <Card title="Setup actions" description="Everything the onboarding wizard does, available any time.">
+        <div className={cn('grid gap-2', isMobile ? 'grid-cols-1' : 'grid-cols-3')}>
+          <Button icon={<Icon name="tables" size={14} />} onClick={() => setAction('tables')}>
+            Add tables
+          </Button>
+          <Button icon={<Icon name="upload" size={14} />} onClick={() => setAction('import')}>
+            Import spreadsheet
+          </Button>
+          <Button icon={<Icon name="copy" size={14} />} onClick={() => setAction('copy')}>
+            Copy menu from…
+          </Button>
+          <Button icon={<Icon name="print" size={14} />} loading={downloading} onClick={() => void qrSheet()}>
+            {venue.tableCount > 0 ? 'QR sheet PDF' : 'Menu QR PDF'}
+          </Button>
+          <Button icon={<Icon name="mail" size={14} />} disabled={!venue.owner} title={venue.owner ? undefined : 'Add an owner first'} onClick={() => setAction('welcome')}>
+            Send welcome e-mail
+          </Button>
+          <Link to={`/admin/restaurants/${venue.id}/setup/${venue.onboardingStep ?? 1}`} className="no-underline">
+            <Button block icon={<Icon name="sparkle" size={14} />}>
+              {venue.onboardingStep ? 'Resume wizard' : 'Run the wizard'}
+            </Button>
+          </Link>
+        </div>
+      </Card>
+      {action === 'tables' ? <BulkTablesModal restaurantId={venue.id} existing={venue.tableCount} onClose={() => setAction(null)} /> : null}
+      {action === 'import' ? <ImportMenuModal restaurantId={venue.id} currency={venue.currency} onClose={() => setAction(null)} /> : null}
+      {action === 'copy' ? <CopyMenuModal restaurantId={venue.id} onClose={() => setAction(null)} /> : null}
+      {action === 'welcome' ? <WelcomeEmailModal venue={venue} onClose={() => setAction(null)} /> : null}
       {venue.adminNotes ? (
         <Card title="Internal notes" actions={<Button size="sm" onClick={() => onTab('plan')}>Edit</Button>}>
           <p className="whitespace-pre-wrap text-[13px] text-ink-2">{venue.adminNotes}</p>

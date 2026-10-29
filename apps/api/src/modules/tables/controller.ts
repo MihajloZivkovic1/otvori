@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { restaurantIdOf } from '../../middleware/membership.js';
+import { bulkTablesSchema } from '@qr-menu/shared';
 import { noStore, uuidParam } from '../../utils/http.js';
 import { createTableSchema, reorderSchema, updateTableSchema } from './schemas.js';
 import * as service from './service.js';
@@ -12,6 +13,11 @@ export async function listTables(req: Request, res: Response): Promise<void> {
 export async function createTable(req: Request, res: Response): Promise<void> {
   const input = createTableSchema.parse(req.body);
   res.status(201).json(await service.createTable(restaurantIdOf(req), input));
+}
+
+export async function bulkCreateTables(req: Request, res: Response): Promise<void> {
+  const input = bulkTablesSchema.parse(req.body);
+  res.status(201).json(await service.bulkCreateTables(restaurantIdOf(req), input));
 }
 
 export async function updateTable(req: Request, res: Response): Promise<void> {

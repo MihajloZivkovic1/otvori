@@ -7,6 +7,7 @@ import type { CategoryDto, MenuItemDto } from '@qr-menu/shared';
 import { Icon } from '../components/icons';
 import { CategoryList } from '../components/menu/CategoryList';
 import { CategoryModal } from '../components/menu/CategoryModal';
+import { ImportMenuModal } from '../components/menu/ImportMenuModal';
 import { verticalOnly } from '../components/menu/dnd';
 import { ItemDrawer } from '../components/menu/ItemDrawer';
 import { ItemSheet } from '../components/menu/ItemSheet';
@@ -146,6 +147,7 @@ function DesktopMenu() {
   const { guard } = useGuard();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [renaming, setRenaming] = useState<CategoryDto | null>(null);
   const [deleting, setDeleting] = useState<MenuItemDto | null>(null);
 
@@ -174,7 +176,7 @@ function DesktopMenu() {
                 <Button variant="primary" icon={<LockGlyph />} onClick={guard(() => setCreating(true))}>
                   Add first category
                 </Button>
-                <Button disabled title="Coming soon">
+                <Button icon={<LockGlyph />} onClick={guard(() => setImporting(true))}>
                   Import from spreadsheet
                 </Button>
               </>
@@ -184,6 +186,7 @@ function DesktopMenu() {
           }
         />
         {creating ? <CategoryModal category={null} onClose={() => setCreating(false)} onCreated={(c) => state.select(c.id)} /> : null}
+        {importing ? <ImportMenuModal restaurantId={restaurant.id} currency={restaurant.currency} onClose={() => setImporting(false)} /> : null}
       </>
     );
   }

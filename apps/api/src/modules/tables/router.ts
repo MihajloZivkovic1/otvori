@@ -8,6 +8,7 @@ export const tablesRouter = Router({ mergeParams: true });
 
 tablesRouter.get('/', controller.listTables);
 tablesRouter.post('/', requireOwner, controller.createTable);
+tablesRouter.post('/bulk', requireOwner, controller.bulkCreateTables);
 tablesRouter.put('/reorder', requireOwner, controller.reorderTables);
 tablesRouter.get('/qr-sheet.pdf', requireOwner, controller.qrSheet);
 tablesRouter.get('/:id/qr.png', requireOwner, controller.qrPng);

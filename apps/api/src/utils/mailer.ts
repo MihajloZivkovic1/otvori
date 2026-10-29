@@ -116,6 +116,43 @@ export function sendTeamInvite(
   });
 }
 
+/* ------------------------------------------------------------------ Phase 13: onboarding */
+
+export interface WelcomeInfo {
+  venue: string;
+  ownerName: string;
+  loginUrl: string;
+  email: string;
+  /** Exactly one of the two: the admin-typed password, or a set-password link. */
+  password: string | null;
+  setPasswordUrl: string | null;
+  publicUrl: string;
+  contact: { name: string; email: string; phone: string | null };
+  steps: readonly string[];
+  note: string | null;
+}
+
+/** The Serbian welcome mail for a new venue owner; the text is also returned to the admin to read back. */
+export function welcomeEmailText(info: WelcomeInfo): string {
+  const credentials = info.password
+    ? `Prijava: ${info.loginUrl}\nE-mail: ${info.email}\nLozinka: ${info.password}\n(Pri prvoj prijavi zatražićemo da je promeniš.)`
+    : `Prijava: ${info.loginUrl}\nE-mail: ${info.email}\nPostavi lozinku ovim linkom (važi 7 dana): ${info.setPasswordUrl}`;
+  const contact = [info.contact.name, info.contact.email, info.contact.phone].filter(Boolean).join(' · ');
+  return (
+    `Zdravo ${info.ownerName},\n\n` +
+    `Tvoj lokal „${info.venue}“ je spreman na otvori.menu — digitalni meni koji gosti otvaraju skeniranjem QR koda.\n\n` +
+    `${credentials}\n\n` +
+    (info.note ? `${info.note}\n\n` : '') +
+    `Prva tri koraka:\n${info.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\n` +
+    `Javni meni: ${info.publicUrl}\n\n` +
+    `Za sva pitanja tu sam: ${contact}\n\n— otvori.menu`
+  );
+}
+
+export function sendWelcomeEmail(info: WelcomeInfo): Promise<void> {
+  return sendMail({ to: info.email, subject: `Dobrodošli u otvori — ${info.venue}`, text: welcomeEmailText(info) });
+}
+
 export interface DigestCounts {
   priceChanges: number;
   newItems: number;

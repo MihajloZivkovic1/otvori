@@ -1,5 +1,5 @@
 import { literal, type FindAttributeOptions, type Order } from 'sequelize';
-import { ORDERING_LIMITS, type CreateTableInput, type TableDto, type UpdateTableInput } from '@qr-menu/shared';
+import { ORDERING_LIMITS, type BulkTablesInput, type BulkTablesResultDto, type CreateTableInput, type TableDto, type UpdateTableInput } from '@qr-menu/shared';
 import { Restaurant, RestaurantTable } from '../../db/models/index.js';
 import { sequelize } from '../../db/sequelize.js';
 import { conflict, notFound } from '../../utils/errors.js';
@@ -99,6 +99,37 @@ export async function createTable(restaurantId: string, input: CreateTableInput)
   const dto = await getTable(restaurantId, id);
   await audit.record({ restaurantId, action: 'table.create', entity: { type: 'table', id, label: dto.label }, after: { number: dto.number, label: dto.label } });
   return dto;
+}
+
+/**
+ * POST /tables/bulk — "Sto 1" … "Sto N" (onboarding step 4). Numbers start at `startAt` (default: after the
+ * highest existing) and skip taken ones, so running it twice never collides.
+ */
+export async function bulkCreateTables(restaurantId: string, input: BulkTablesInput): Promise<BulkTablesResultDto> {
+  await loadRestaurant(restaurantId);
+  const numbers: number[] = [];
+  await sequelize.transaction(async (transaction) => {
+    const existing = new Set((await RestaurantTable.findAll({ where: { restaurantId }, attributes: ['number'], transaction })).map((t) => t.number));
+    const highest = existing.size ? Math.max(...existing) : 0;
+    let number = input.startAt ?? highest + 1;
+    while (numbers.length < input.count && number <= 9999) {
+      if (!existing.has(number)) numbers.push(number);
+      number += 1;
+    }
+    if (numbers.length === 0) throw conflict('TABLE_NUMBER_TAKEN', 'No free table numbers left');
+    await RestaurantTable.bulkCreate(
+      numbers.map((n) => ({ restaurantId, number: n, label: `${input.prefix} ${n}`, sortOrder: n })),
+      { transaction },
+    );
+    await touchRestaurant(restaurantId, transaction);
+  });
+  await audit.record({
+    restaurantId,
+    action: 'table.bulk_create',
+    entity: { type: 'table' },
+    after: { count: numbers.length, prefix: input.prefix, from: numbers[0], to: numbers[numbers.length - 1] },
+  });
+  return { created: numbers.length, tables: await listTables(restaurantId) };
 }
 
 export async function updateTable(restaurantId: string, tableId: string, input: UpdateTableInput): Promise<TableDto> {

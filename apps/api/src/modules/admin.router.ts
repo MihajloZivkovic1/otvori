@@ -6,6 +6,7 @@ import { analyticsRouter } from './analytics/router.js';
 import { auditRouter } from './audit/router.js';
 import { categoriesRouter } from './categories/router.js';
 import { itemsRouter } from './items/router.js';
+import { menuImportRouter } from './menu-import/router.js';
 import * as orderingController from './ordering/controller.js';
 import { ordersRouter, requestsRouter } from './ordering/router.js';
 import * as paymentsController from './payments/controller.js';
@@ -37,6 +38,8 @@ const scoped = Router({ mergeParams: true });
 scoped.use('/categories', categoriesRouter);
 scoped.use('/items', itemsRouter);
 scoped.use('/tables', tablesRouter);
+// Spreadsheet import (Phase 13b): template, preview with per-row errors, import.
+scoped.use('/menu/import', menuImportRouter);
 scoped.use('/analytics', analyticsRouter);
 // Ordering module (Phase 9b): 403 MODULE_DISABLED for venues without it, whatever the UI shows.
 scoped.use('/orders', requireModule('ordering'), ordersRouter);

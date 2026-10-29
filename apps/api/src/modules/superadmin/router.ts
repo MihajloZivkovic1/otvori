@@ -17,6 +17,8 @@ superadminRouter.get('/restaurants/:id', controller.getRestaurant);
 superadminRouter.patch('/restaurants/:id', controller.updateRestaurant);
 superadminRouter.delete('/restaurants/:id', controller.deleteRestaurant);
 superadminRouter.post('/restaurants/:id/impersonate', controller.impersonate);
+superadminRouter.post('/restaurants/:id/menu/copy', controller.copyMenuFrom);
+superadminRouter.post('/restaurants/:id/welcome-email', controller.welcomeEmail);
 
 superadminRouter.get('/restaurants/:id/members', controller.listMembers);
 superadminRouter.post('/restaurants/:id/members', controller.addMember);
