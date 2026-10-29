@@ -19,8 +19,8 @@ ENDPOINT_ARGS=()
 if [[ -n "$ENDPOINT" ]]; then ENDPOINT_ARGS=(--endpoint-url "$ENDPOINT"); fi
 PREFIX="$(envval BACKUP_PREFIX)"; PREFIX="${PREFIX:-backups}"
 KEEP_DAYS="$(envval BACKUP_KEEP_DAYS)"; KEEP_DAYS="${KEEP_DAYS:-14}"
-DB_USER="$(envval POSTGRES_USER)"; DB_USER="${DB_USER:-salveta}"
-DB_NAME="$(envval POSTGRES_DB)"; DB_NAME="${DB_NAME:-salveta}"
+DB_USER="$(envval POSTGRES_USER)"; DB_USER="${DB_USER:-otvori}"
+DB_NAME="$(envval POSTGRES_DB)"; DB_NAME="${DB_NAME:-otvori}"
 export AWS_ACCESS_KEY_ID="$(envval S3_ACCESS_KEY_ID)"
 export AWS_SECRET_ACCESS_KEY="$(envval S3_SECRET_ACCESS_KEY)"
 export AWS_DEFAULT_REGION="$(envval S3_REGION)"; AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-eu-central-1}"

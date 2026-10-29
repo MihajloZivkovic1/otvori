@@ -16,8 +16,8 @@ app inlines the mark in `components/Footer.tsx`, the PDF QR sheet draws the same
 **Historical identifiers that deliberately keep old names** (renaming them would break existing installs, sessions and
 saved browser state for no user-visible gain): the repo and npm scope (`qr-menu`, `@qr-menu/*`), env var names, the refresh
 cookie `tabla_refresh`, every `tabla.*` localStorage / sessionStorage key, the service-worker cache name `tabla-cms-shell-*`,
-the Postgres role/database defaults (`salveta`, baked into the production data volume), the compose project name `salveta`
-(prefixes the volume names) and the demo passwords `tabla1234`. Anything a user can read — UI copy, mail, PDF, titles,
+and the demo passwords `tabla1234`. The GitHub repo (`MihajloZivkovic1/otvori`), the compose project name, the volume
+names and the Postgres role/database are `otvori` since 2026-10-29 (`deploy/rename-to-otvori.sh` did the production move). Anything a user can read — UI copy, mail, PDF, titles,
 manifests, docs, image names, domains, the superadmin seed `admin@otvori.menu`, the mail sender `otvori <zdravo@otvori.menu>`
 — says otvori.
 
@@ -670,7 +670,7 @@ sets the session flag and lets the app restore through the mocked `POST /api/aut
 Stack: Astro 7 (`output: 'static'`, `trailingSlash: 'always'`, `compressHTML`, stylesheet inlined), TypeScript strict, Tailwind v4
 via `@tailwindcss/vite`, `@astrojs/sitemap`. **No React**: the only interactivity (SR/EN switch, monthly/yearly pricing, FAQ accordion,
 phone nav) is plain TypeScript in `src/scripts/*.ts` (`init*(root)` functions, < 1 KB gzipped, inlined by Astro). Design sources:
-`design/otvori-brand.html` for the brand (Phase 7) and the Phase 5 export `design/salveta.menu website.html` for the page structure,
+`design/otvori-brand.html` for the brand (Phase 7) and the Phase 5 export `design/otvori.menu website.html` for the page structure,
 spacing and type scale only — its napkin motif is gone (Claude Design exports: markup in the `__bundler/template` script tag, fonts
 base64 in `__bundler/manifest`). Lighthouse mobile on the preview: 100/100/100/100 (sr), 99/100/100/100 (en).
 

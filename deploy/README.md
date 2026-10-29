@@ -52,20 +52,20 @@ Everything below is the top-to-bottom checklist for a fresh setup. Commands pref
 | --- | --- |
 | Droplet | DigitalOcean **fra1**, Ubuntu 24.04, Premium Intel 1 vCPU / 1 GB / 35 GB NVMe (Basic-Regular was unavailable in FRA1), hostname `otvori`, IPv4 **46.101.242.76**, 1 GB swap, ufw 22/80/443 |
 | Users | `root` (SSH key only) and `deploy` (your laptop key + the GitHub Actions key; no sudo; docker group) |
-| Checkout | `/opt/otvori` = clone of `https://github.com/MihajloZivkovic1/salveta.git` (the repo was renamed from `qr-menu`; the old URL redirects), `deploy/.env.prod` chmod 600 |
+| Checkout | `/opt/otvori` = clone of `https://github.com/MihajloZivkovic1/otvori.git` (the repo was `qr-menu`, then `salveta`; the old URLs redirect), `deploy/.env.prod` chmod 600 |
 | DNS | Cloudflare zone `otvori.menu` (registrar: Vercel/Name.com, nameservers `rosemary`/`yoxall.ns.cloudflare.com`): A `@`, `www`, `app`, `api`, `*` → 46.101.242.76, all **DNS only**; Resend records on `send`/`resend._domainkey`; DMARC `_dmarc` TXT `v=DMARC1; p=none;` optional |
 | Hosts | `otvori.menu` (marketing), `www` → 301, `app.otvori.menu` (CMS), `api.otvori.menu` (API; `/` is 404 by design), `*.otvori.menu` (menus). Certificates: Let's Encrypt via Cloudflare DNS-01, wildcard included (first issued 2026-10-23, 90-day renewal by Caddy) |
 | Images | `ghcr.io/mihajlozivkovic1/otvori-api` and `otvori-caddy`, tags = git short SHA + `latest`; first live tag `d0fe2ba` |
 | Flags | `FEATURE_PAYMENTS=false`, `FEATURE_POS=true` — visible at `https://api.otvori.menu/api/config` |
 | Storage | AWS S3 `otvori-media` (eu-central-1), IAM user `otvori-api` / policy `otvori-media-rw`, bucket policy public-read on `restaurants/*`; image URLs `https://otvori-media.s3.eu-central-1.amazonaws.com/restaurants/<id>/…` |
 | Mail | Resend, domain `otvori.menu` verified (EU, Ireland), API key `otvori-api` (sending only, domain-scoped), sender `otvori <zdravo@otvori.menu>` |
-| Backups | cron `15 3 * * *` as `deploy` → `s3://otvori-media/backups/salveta-<stamp>.sql.gz`, 14 days; log `/home/deploy/otvori-backup.log`; restore drill done 2026-10-23 into `salveta_scratch` (1 restaurant, 4 items, 1 order, 2 users, 7 migrations) |
+| Backups | cron `15 3 * * *` as `deploy` → `s3://otvori-media/backups/otvori-<stamp>.sql.gz` (`salveta-<stamp>` before 2026-10-29), 14 days; log `/home/deploy/otvori-backup.log`; restore drill done 2026-10-23 into a scratch database (1 restaurant, 4 items, 1 order, 2 users, 7 migrations) |
 | Monitoring | **to do**: UptimeRobot HTTP monitor on `https://api.otvori.menu/api/health`, 5 min (the endpoint returns 503 when Postgres is down) |
 | Accounts | superadmin `admin@otvori.menu` (password in the owner's password manager); first venue `x-caffe` (`https://x-caffe.otvori.menu/t/1`) |
 | Memory at idle | api ≈ 130 MB, postgres ≈ 50 MB, caddy ≈ 65 MB of 961 MB; swap barely used |
 | Logs | `ssh deploy@46.101.242.76`, then `cd /opt/otvori/deploy && docker compose --env-file .env.prod -f docker-compose.yml logs -f --tail=100 api` (JSON; `"level":50` = errors) |
 | Deploy / rollback | push to `main` → CI → Deploy; by hand `./deploy/deploy.sh <tag>`; `cat /opt/otvori/deploy/.deployed-tag` shows what runs |
-| GitHub | repo `MihajloZivkovic1/salveta`, secrets `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY` (Actions-only ed25519 key, public half in `/home/deploy/.ssh/authorized_keys`); no variables set |
+| GitHub | repo `MihajloZivkovic1/otvori`, secrets `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY` (Actions-only ed25519 key, public half in `/home/deploy/.ssh/authorized_keys`); no variables set |
 
 ## 1. Cloudflare DNS (zone `otvori.menu`)
 
@@ -200,7 +200,7 @@ Only `deploy/` is used at runtime (compose file, scripts, `.env.prod`), but `dep
 ```bash
 droplet$ ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519 -C 'otvori droplet'   # if the GitHub repo is private
 droplet$ cat ~/.ssh/id_ed25519.pub        # → GitHub repo → Settings → Deploy keys → Add (read-only)
-droplet$ git clone git@github.com:MihajloZivkovic1/salveta.git /opt/otvori      # or the https URL for a public repo
+droplet$ git clone git@github.com:MihajloZivkovic1/otvori.git /opt/otvori      # or the https URL for a public repo
 ```
 
 ## 6. `.env.prod`
@@ -290,7 +290,7 @@ Restore (stops the API for the duration):
 
 ```bash
 droplet$ ./deploy/restore.sh --list
-droplet$ ./deploy/restore.sh backups/salveta-20261021-031500.sql.gz   # dumps are named after POSTGRES_DB, which stays "salveta"
+droplet$ ./deploy/restore.sh backups/otvori-20261029-031500.sql.gz   # dumps are named after POSTGRES_DB
 ```
 
 ## 11. Rollback
@@ -314,7 +314,7 @@ alias sc='docker compose --env-file /opt/otvori/deploy/.env.prod -f /opt/otvori/
 sc ps                               # health of the three containers
 sc logs -f --tail=100 api           # JSON lines (pino); grep '"level":50' for errors, '"mail"' for mails
 sc logs -f --tail=100 caddy         # access + certificate log
-sc exec postgres psql -U salveta   # SQL shell (POSTGRES_USER keeps the historical name)
+sc exec postgres psql -U otvori     # SQL shell
 docker stats --no-stream            # memory per container (limits: 256m / 256m / 128m)
 free -m                             # host memory + swap
 sc exec api node dist/db/migrate.js pending   # migrations not yet applied (should be none)

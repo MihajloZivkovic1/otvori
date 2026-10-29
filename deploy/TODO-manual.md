@@ -88,7 +88,7 @@ on one under `backups/` (commands in README section 2.5).
 
 ```bash
 ssh deploy@<IP>
-git clone https://github.com/MihajloZivkovic1/salveta.git /opt/otvori     # public repo; a read-only deploy key only for a private one (README § 5)
+git clone https://github.com/MihajloZivkovic1/otvori.git /opt/otvori     # public repo; a read-only deploy key only for a private one (README § 5)
 cd /opt/otvori/deploy && cp .env.prod.example .env.prod && chmod 600 .env.prod
 openssl rand -hex 32        # → POSTGRES_PASSWORD
 openssl rand -base64 48     # → JWT_ACCESS_SECRET
@@ -168,13 +168,13 @@ Settings → Modules → switch **Ordering** on, mode *order*.
 ## 13. Backups
 
 ```bash
-/opt/otvori/deploy/backup.sh                     # → "uploaded s3://otvori-media/backups/salveta-<stamp>.sql.gz"
+/opt/otvori/deploy/backup.sh                     # → "uploaded s3://otvori-media/backups/otvori-<stamp>.sql.gz"
 /opt/otvori/deploy/restore.sh --list
 # restore test into a scratch database (does not touch the live one):
-docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -c 'CREATE DATABASE salveta_scratch'
-aws s3 cp s3://otvori-media/backups/<file> - | gunzip | docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -d salveta_scratch -q
-docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -d salveta_scratch -c 'SELECT count(*) FROM restaurants'
-docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U salveta -c 'DROP DATABASE salveta_scratch'
+docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U otvori -c 'CREATE DATABASE otvori_scratch'
+aws s3 cp s3://otvori-media/backups/<file> - | gunzip | docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U otvori -d otvori_scratch -q
+docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U otvori -d otvori_scratch -c 'SELECT count(*) FROM restaurants'
+docker compose --env-file .env.prod -f docker-compose.yml exec -T postgres psql -U otvori -c 'DROP DATABASE otvori_scratch'
 crontab -e     # 15 3 * * * /opt/otvori/deploy/backup.sh >> /home/deploy/otvori-backup.log 2>&1   (deploy has no sudo → log in $HOME)
 ```
 

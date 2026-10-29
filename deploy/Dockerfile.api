@@ -18,7 +18,7 @@ RUN npm run build -w @qr-menu/shared && npm run build -w @qr-menu/api
 # so the root manifest is narrowed to the two workspaces and the lockfile trimmed to match — pinned versions are kept.
 FROM node:22-alpine
 ARG APP_VERSION=dev
-ARG SOURCE_URL=https://github.com/MihajloZivkovic1/salveta
+ARG SOURCE_URL=https://github.com/MihajloZivkovic1/otvori
 LABEL org.opencontainers.image.source=$SOURCE_URL org.opencontainers.image.revision=$APP_VERSION
 ENV NODE_ENV=production APP_VERSION=$APP_VERSION
 WORKDIR /app

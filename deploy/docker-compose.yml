@@ -1,8 +1,8 @@
 # otvori production stack for one small host (1 GB droplet). Images are built in GitHub Actions and pulled here;
 # nothing is built on the host. Run through deploy/deploy.sh (it passes --env-file .env.prod and the image tag).
-# Compose project name. Kept as the historical "salveta": it prefixes the volume names (salveta_pgdata, …) of the
-# running stack, so renaming it would detach the existing database and upload volumes.
-name: salveta
+# Compose project name: prefixes the container, network and volume names (otvori_pgdata, …). The stack was renamed
+# from the historical "salveta" on 2026-10-29 with deploy/rename-to-otvori.sh (volumes copied, database and role renamed).
+name: otvori
 
 x-logging: &logging
   driver: json-file
@@ -38,13 +38,13 @@ services:
       - -c
       - log_min_duration_statement=500
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-salveta}
+      POSTGRES_USER: ${POSTGRES_USER:-otvori}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.prod}
-      POSTGRES_DB: ${POSTGRES_DB:-salveta}
+      POSTGRES_DB: ${POSTGRES_DB:-otvori}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-salveta} -d ${POSTGRES_DB:-salveta}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-otvori} -d ${POSTGRES_DB:-otvori}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -67,7 +67,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Pending migrations run before the server listens (idempotent on every start).
       MIGRATE_ON_START: 1
-      DATABASE_URL: postgres://${POSTGRES_USER:-salveta}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-salveta}
+      DATABASE_URL: postgres://${POSTGRES_USER:-otvori}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-otvori}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in deploy/.env.prod}
       APP_URL: https://app.${DOMAIN:?set DOMAIN in deploy/.env.prod}
       API_URL: https://api.${DOMAIN}

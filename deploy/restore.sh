@@ -3,8 +3,8 @@
 # statements drop and recreate every table), starts the API again (which re-runs migrations, a no-op after a restore).
 #
 #   ./deploy/restore.sh --list                                   # backups available in the bucket
-#   ./deploy/restore.sh backups/salveta-20261021-031500.sql.gz   # object key in the bucket (dumps are named after POSTGRES_DB)
-#   ./deploy/restore.sh /path/to/salveta-20261021-031500.sql.gz  # local file
+#   ./deploy/restore.sh backups/otvori-20261029-031500.sql.gz   # object key in the bucket (dumps are named after POSTGRES_DB)
+#   ./deploy/restore.sh /path/to/otvori-20261029-031500.sql.gz  # local file
 #   ./deploy/restore.sh --yes <key-or-file>                      # skip the confirmation prompt
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -17,8 +17,8 @@ ENDPOINT="$(envval S3_ENDPOINT)"
 ENDPOINT_ARGS=()
 if [[ -n "$ENDPOINT" ]]; then ENDPOINT_ARGS=(--endpoint-url "$ENDPOINT"); fi
 PREFIX="$(envval BACKUP_PREFIX)"; PREFIX="${PREFIX:-backups}"
-DB_USER="$(envval POSTGRES_USER)"; DB_USER="${DB_USER:-salveta}"
-DB_NAME="$(envval POSTGRES_DB)"; DB_NAME="${DB_NAME:-salveta}"
+DB_USER="$(envval POSTGRES_USER)"; DB_USER="${DB_USER:-otvori}"
+DB_NAME="$(envval POSTGRES_DB)"; DB_NAME="${DB_NAME:-otvori}"
 export AWS_ACCESS_KEY_ID="$(envval S3_ACCESS_KEY_ID)"
 export AWS_SECRET_ACCESS_KEY="$(envval S3_SECRET_ACCESS_KEY)"
 export AWS_DEFAULT_REGION="$(envval S3_REGION)"; AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-eu-central-1}"
