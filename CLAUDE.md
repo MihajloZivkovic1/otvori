@@ -69,6 +69,7 @@ npm run lint                  # eslint in shared, api, cms, menu; prettier --che
 npm test                      # every suite, turbo --concurrency=2 (api needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
 OWNER_PASSWORD=… npm run seed:fabrika -w @qr-menu/api -- --logo logo.png   # the real Fabrika Kafeterija venue (scripts/fabrika-menu.ts); replaces slug "fabrika"
 npm run seed:fabrika -w @qr-menu/api -- --photos-only   # live venue untouched; items without a photo get theirs from scripts/fabrika-photos.ts
+npm run seed:fabrika -w @qr-menu/api -- --photos-only --replace-category Kafa   # re-sync one category with the list, over existing photos
 ```
 
 Fabrika's own photos live in `apps/api/assets/fabrika-photos/` (800×800 JPEGs, pre-cropped around the dish because the item

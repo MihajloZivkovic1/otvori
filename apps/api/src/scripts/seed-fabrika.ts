@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { readFile } from 'node:fs/promises';
 import { Op, type Transaction } from 'sequelize';
 import { env } from '../config/env.js';
-import { Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
+import { Category, Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
 import { sequelize } from '../db/sequelize.js';
 import { touchRestaurant } from '../modules/shared/touch-restaurant.js';
 import { processItemImage, processItemThumbnail, processLogo } from '../utils/images.js';
@@ -23,6 +23,7 @@ import { insertMenu } from './menu-catalog.js';
  *   docker compose … exec -e OWNER_PASSWORD=… api node dist/scripts/seed-fabrika.js --logo /tmp/logo.png   (production)
  *   … seed-fabrika.js --promo-only   (keeps the live venue and its menu untouched; only upserts the promotions by title)
  *   … seed-fabrika.js --photos-only  (keeps the live venue; gives the items in `fabrika-photos.ts` that have no photo yet theirs)
+ *   … seed-fabrika.js --photos-only --replace-category Kafa   (re-syncs that one category with the list, over existing photos)
  *
  * The owner account is created when missing; an existing one keeps its other venues and only gets the password reset.
  * The previous venue's owner (`fabrika@otvori.menu`, from the pilot seed) is removed when no other venue is left to it.
@@ -41,8 +42,8 @@ const OWNER = { email: 'milanjorovic@gmail.com', name: 'Milan Jorović' };
 const PASSWORD = process.env.OWNER_PASSWORD ?? '';
 const TRIAL_DAYS = 14;
 
-function logoPathArg(): string | null {
-  const index = process.argv.indexOf('--logo');
+function argValue(flag: string): string | null {
+  const index = process.argv.indexOf(flag);
   return index === -1 ? null : (process.argv[index + 1] ?? null);
 }
 
@@ -77,22 +78,35 @@ async function promotionsOnly(): Promise<void> {
 
 /**
  * Stores the photo of every item named in `FABRIKA_PHOTOS` through the same 800×800 + 160×160 WebP pipeline as a CMS
- * upload. Items that already have a photo are left alone, so the live venue keeps whatever the owner uploaded.
+ * upload. Items that already have a photo are left alone, so the live venue keeps whatever the owner uploaded — except
+ * in `replaceCategoryId`, which is re-synced with the list: its listed items get their photo over an existing one and
+ * its unlisted items lose theirs. The replaced files are deleted from storage afterwards.
  */
-async function attachFabrikaPhotos(restaurantId: string): Promise<{ attached: number; kept: string[]; notInMenu: string[] }> {
+async function attachFabrikaPhotos(
+  restaurantId: string,
+  replaceCategoryId: string | null = null,
+): Promise<{ attached: number; cleared: number; kept: string[]; notInMenu: string[] }> {
   const items = await MenuItem.findAll({ where: { restaurantId } });
   const byName = new Map(items.map((item) => [item.name.sr, item]));
-  const result = { attached: 0, kept: [] as string[], notInMenu: [] as string[] };
+  const result = { attached: 0, cleared: 0, kept: [] as string[], notInMenu: [] as string[] };
+  const replacedUrls: (string | null)[] = [];
+  for (const item of items) {
+    if (item.categoryId !== replaceCategoryId || !item.imageUrl || Object.hasOwn(FABRIKA_PHOTOS, item.name.sr ?? '')) continue;
+    replacedUrls.push(item.imageUrl, item.thumbnailUrl);
+    await item.update({ imageUrl: null, thumbnailUrl: null });
+    result.cleared++;
+  }
   for (const [name, file] of Object.entries(FABRIKA_PHOTOS)) {
     const item = byName.get(name);
     if (!item) {
       result.notInMenu.push(name);
       continue;
     }
-    if (item.imageUrl) {
+    if (item.imageUrl && item.categoryId !== replaceCategoryId) {
       result.kept.push(name);
       continue;
     }
+    if (item.imageUrl) replacedUrls.push(item.imageUrl, item.thumbnailUrl);
     const original = await readFile(`${FABRIKA_PHOTOS_DIR}${file}`);
     const [webp, thumb] = await Promise.all([processItemImage(original), processItemThumbnail(original)]);
     const key = `restaurants/${restaurantId}/items/${item.id}-${Date.now()}`;
@@ -103,7 +117,8 @@ async function attachFabrikaPhotos(restaurantId: string): Promise<{ attached: nu
     await item.update({ imageUrl, thumbnailUrl });
     result.attached++;
   }
-  if (result.attached) await touchRestaurant(restaurantId);
+  if (result.attached || result.cleared) await touchRestaurant(restaurantId);
+  for (const url of replacedUrls) await deleteStoredUrl(url);
   return result;
 }
 
@@ -113,9 +128,21 @@ async function photosOnly(): Promise<void> {
     process.stderr.write(`No venue with slug "${VENUE.slug}" — run the full seeder first.\n`);
     process.exit(2);
   }
-  const { attached, kept, notInMenu } = await attachFabrikaPhotos(restaurant.id);
+  const replaceCategory = argValue('--replace-category');
+  let replaceCategoryId: string | null = null;
+  if (replaceCategory) {
+    const categories = await Category.findAll({ where: { restaurantId: restaurant.id } });
+    const category = categories.find((candidate) => candidate.name.sr === replaceCategory);
+    if (!category) {
+      process.stderr.write(`No category "${replaceCategory}" in ${VENUE.name} (${categories.map((c) => c.name.sr).join(', ')}).\n`);
+      process.exit(2);
+    }
+    replaceCategoryId = category.id;
+  }
+  const { attached, cleared, kept, notInMenu } = await attachFabrikaPhotos(restaurant.id, replaceCategoryId);
   process.stdout.write(
     `${VENUE.name}: ${attached} photo(s) attached` +
+      `${replaceCategory ? `, ${cleared} removed (category "${replaceCategory}" re-synced with the list)` : ''}` +
       `${kept.length ? `\nAlready had a photo (left alone): ${kept.join(', ')}` : ''}` +
       `${notInMenu.length ? `\nNo item with that name in the menu: ${notInMenu.join(', ')}` : ''}\n`,
   );
@@ -150,7 +177,7 @@ async function main(): Promise<void> {
     process.stderr.write("Set OWNER_PASSWORD (at least 8 characters) to the owner's password.\n");
     process.exit(2);
   }
-  const logoPath = logoPathArg();
+  const logoPath = argValue('--logo');
   const logoPng = logoPath ? await processLogo(await readFile(logoPath)) : null;
   const passwordHash = await hashPassword(PASSWORD);
 

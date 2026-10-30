@@ -15,7 +15,7 @@ steak-sendvic, truffle-fries, zacinski-krompir
 | File(s) | Source |
 | --- | --- |
 | zdravko, gari, dzindzer-greni, dark-madnes, detoks, greni, kamimajl, blek-mango, red-mednes | Coffee Bazaar (Mad Hatter teas), https://coffeebazaar.rs/cajevi/ |
-| topla-cokolada, espreso-kafa-250g (bags 001 + 007), sifon, v60, frenc-pres | Java Coffee, https://javacoffee.rs/ |
+| java-blendovi (bags 001, 007, Guatemala "kafa meseca", Colombia), java-blendovi-001-007, topla-cokolada, sifon, v60, frenc-pres | Java Coffee, https://javacoffee.rs/ |
 | kola | Coca-Cola HBC, https://www.coca-cola.com/bg/bg/brands/coca-cola |
 | fanta, tonik, biter | Coca-Cola HBC Serbia, https://www.coca-cola.com/rs/sr/brands/fanta · …/brands/schweppes |
 | rosa | Basta promet (shop), https://www.bastapromet.rs/Shop/Product/Details?productId=9251 |
@@ -40,26 +40,6 @@ steak-sendvic, truffle-fries, zacinski-krompir
 
 | File | Commons file | Author | Licence |
 | --- | --- | --- | --- |
-| espreso.jpg | [Espresso BW 1.jpg](https://commons.wikimedia.org/wiki/File:Espresso_BW_1.jpg) | Berthold Werner | Public domain |
-| ristreto.jpg | [Espresso Coffee 01.jpg](https://commons.wikimedia.org/wiki/File:Espresso_Coffee_01.jpg) | Jubair1985 | CC0 |
-| dupli-espreso.jpg | [Espresso cup and saucer, 2011.jpg](https://commons.wikimedia.org/wiki/File:Espresso_cup_and_saucer,_2011.jpg) | studio tdes | CC BY 2.0 |
-| makijato.jpg | [Caffè Espresso Macchiato Schiumato.jpg](https://commons.wikimedia.org/wiki/File:Caff%C3%A8_Espresso_Macchiato_Schiumato.jpg) | Marcingietorigie | CC BY-SA 3.0 |
-| bebicino.jpg | [Cappuccino at ARS Cafe.jpg](https://commons.wikimedia.org/wiki/File:Cappuccino_at_ARS_Cafe.jpg) | Robert Smith | CC BY 4.0 |
-| kapucino.jpg | [Hearts in latte art, Kraków, Poland, 2023.jpg](https://commons.wikimedia.org/wiki/File:Hearts_in_latte_art,_Krak%C3%B3w,_Poland,_2023.jpg) | Kgbo | CC BY-SA 4.0 |
-| kapucino-xl.jpg | [A cup of cappuccino at Indooroopilly Shopping Centre.JPG](https://commons.wikimedia.org/wiki/File:A_cup_of_cappuccino_at_Indooroopilly_Shopping_Centre.JPG) | Kgbo | CC BY-SA 4.0 |
-| kafe-late.jpg | [Caffe Latte at Pulse Cafe.jpg](https://commons.wikimedia.org/wiki/File:Caffe_Latte_at_Pulse_Cafe.jpg) | B adger1 | CC0 |
-| late-makijato.jpg | [Latte macchiato with coffee beans.jpg](https://commons.wikimedia.org/wiki/File:Latte_macchiato_with_coffee_beans.jpg) | א (Aleph) | CC BY-SA 2.5 |
-| aromatizovani-kafe-late.jpg | [Latte macchiato biscuits.jpg](https://commons.wikimedia.org/wiki/File:Latte_macchiato_biscuits.jpg) | Wedesoft at English Wikipedia | CC BY-SA 3.0 |
-| moka-espreso.jpg | [Black Mocha - Black Mocha 2024-01-08.jpg](https://commons.wikimedia.org/wiki/File:Black_Mocha_-_Black_Mocha_2024-01-08.jpg) | Andy Li | CC0 |
-| kafa-afogato.jpg | [Vinoteca, Smithfield, London (4485849609).jpg](https://commons.wikimedia.org/wiki/File:Vinoteca,_Smithfield,_London_(4485849609).jpg) | Ewan Munro from London, UK | CC BY-SA 2.0 |
-| fredo-espreso.jpg | [Espresso freddo.jpg](https://commons.wikimedia.org/wiki/File:Espresso_freddo.jpg) | Irini Xasiotou | CC BY-SA 4.0 |
-| fredo-kapucino.jpg | [Cappuccino Freddo - Milos 2025-08-11.jpg](https://commons.wikimedia.org/wiki/File:Cappuccino_Freddo_-_Milos_2025-08-11.jpg) | Andy Li | CC0 |
-| ledena-kafa.jpg | [Iced latte - Trading Post Coffee Roasters 2024-06-21.jpg](https://commons.wikimedia.org/wiki/File:Iced_latte_-_Trading_Post_Coffee_Roasters_2024-06-21.jpg) | Andy Li | CC0 |
-| amerikano.jpg | [Caffè americano in the Philippines.jpg](https://commons.wikimedia.org/wiki/File:Caff%C3%A8_americano_in_the_Philippines.jpg) | Ramon FVelasquez | CC BY-SA 3.0 |
-| nes-frape.jpg | [Cafe-frape-glas-holztisch-unscharf.jpg](https://commons.wikimedia.org/wiki/File:Cafe-frape-glas-holztisch-unscharf.jpg) | philleb | CC0 |
-| aromatizovani-nes-frape.jpg | [Frappé.jpg](https://commons.wikimedia.org/wiki/File:Frapp%C3%A9.jpg) | Kritzolina | CC BY-SA 4.0 |
-| srpska-kafa.jpg | [Turkish coffee in a traditional design cup.jpg](https://commons.wikimedia.org/wiki/File:Turkish_coffee_in_a_traditional_design_cup.jpg) | Garrett Ziegler | CC BY-SA 4.0 |
-| maca-late.jpg | [Matcha tea latte with rosetta latte art.jpg](https://commons.wikimedia.org/wiki/File:Matcha_tea_latte_with_rosetta_latte_art.jpg) | Irvan Ary Maulana | CC BY-SA 4.0 |
 | kemeks.jpg | [Die Chemex 6 Cup.jpg](https://commons.wikimedia.org/wiki/File:Die_Chemex_6_Cup.jpg) | Coffee Circle from Berlin, Deutschland | CC BY 2.0 |
 | aero-pres.jpg | [Aeropress brew method.jpg](https://commons.wikimedia.org/wiki/File:Aeropress_brew_method.jpg) | Bex Walton | CC BY 2.0 |
 | sok-od-jabuke.jpg | [Apple juice with 3apples.jpg](https://commons.wikimedia.org/wiki/File:Apple_juice_with_3apples.jpg) | Flunse (Patrick Geltinger) | CC BY-SA 3.0 |
