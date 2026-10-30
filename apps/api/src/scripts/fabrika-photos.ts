@@ -7,16 +7,39 @@ export const FABRIKA_PHOTOS_DIR = fileURLToPath(new URL('../../assets/fabrika-ph
  * Item photos, already squared to 800×800 so the item pipeline's centre crop keeps the dish or bottle whole. Keyed by
  * the item's Serbian name in `fabrika-menu.ts`; items not listed here have no photo yet. Used by `seed-fabrika.ts`.
  *
- * Food and the F2/F3 juices are the venue's own photos. The drinks were taken from the web with the owner's consent:
- * packshots from the producers (Coca-Cola HBC Serbia, Knjaz Miloš, Red Bull, Heineken, Budějovický Budvar, Trebjesa,
- * Dogma Brewery, Vinarija Grumen, the Bavaria importer Calix, Coffee Bazaar for the Mad Hatter teas, the distilleries
- * Belgrade Urban Distillery, Pruna, BB Klekovača and Zarić) or their retailers (Manastir Kovilj, Stara pesma), and
- * Wikimedia Commons photos, of which these ask for credit: apple juice (CC BY-SA 3.0,
- * File:Apple_juice_with_3apples.jpg), blueberry (CC BY-SA 3.0, File:Blueberry_smoothie.jpg) and prosecco (CC BY 2.0,
- * laura.foto, File:Prosecco_and_snacks_in_Tuscany.jpg) and ice cream (CC BY 2.0, File:Mango_gelato_(9368461646).jpg);
- * the orange juice (File:Orange_juice_1_edit1.jpg) is public domain and the other cakes are CC0.
+ * Food and the F2/F3 juices are the venue's own photos; the rest come from producers, shops and Wikimedia Commons with
+ * the owner's consent. Where each file came from, and the Commons authors and licences to credit, is in
+ * `assets/fabrika-photos/SOURCES.md` — keep it in step when a photo is added or replaced.
  */
 export const FABRIKA_PHOTOS: Record<string, string> = {
+  Espreso: 'espreso.jpg',
+  Ristreto: 'ristreto.jpg',
+  'Dupli espreso': 'dupli-espreso.jpg',
+  Makijato: 'makijato.jpg',
+  Bebićino: 'bebicino.jpg',
+  Kapućino: 'kapucino.jpg',
+  'Kapućino XL': 'kapucino-xl.jpg',
+  'Kafe late': 'kafe-late.jpg',
+  'Late makijato': 'late-makijato.jpg',
+  'Aromatizovani kafe late': 'aromatizovani-kafe-late.jpg',
+  'Moka espreso': 'moka-espreso.jpg',
+  'Kafa afogato': 'kafa-afogato.jpg',
+  'Fredo hladni espreso': 'fredo-espreso.jpg',
+  'Fredo kapućino': 'fredo-kapucino.jpg',
+  'Ledena kafa': 'ledena-kafa.jpg',
+  Amerikano: 'amerikano.jpg',
+  'Nes frape': 'nes-frape.jpg',
+  'Aromatizovani nes frape': 'aromatizovani-nes-frape.jpg',
+  'Topla čokolada': 'topla-cokolada.jpg',
+  'Srpska kafa': 'srpska-kafa.jpg',
+  'Mača late': 'maca-late.jpg',
+  'Espreso kafa 250 g': 'espreso-kafa-250g.jpg',
+  Sifon: 'sifon.jpg',
+  V60: 'v60.jpg',
+  Kemeks: 'kemeks.jpg',
+  'Frenč pres': 'frenc-pres.jpg',
+  'Aero pres': 'aero-pres.jpg',
+
   'Kapreze sendvič': 'kapreze-sendvic.jpg',
   'Mortadela i pistaći': 'mortadela-i-pistaci.jpg',
   'Kafeterija klub sendvič': 'kafeterija-klub-sendvic.jpg',
