@@ -68,7 +68,11 @@ npm run typecheck             # all workspaces (apps/web runs `astro check`)
 npm run lint                  # eslint in shared, api, cms, menu; prettier --check in web
 npm test                      # every suite, turbo --concurrency=2 (api needs Postgres; uses "<db>_test" or TEST_DATABASE_URL)
 OWNER_PASSWORD=… npm run seed:fabrika -w @qr-menu/api -- --logo logo.png   # the real Fabrika Kafeterija venue (scripts/fabrika-menu.ts); replaces slug "fabrika"
+npm run seed:fabrika -w @qr-menu/api -- --photos-only   # live venue untouched; items without a photo get theirs from scripts/fabrika-photos.ts
 ```
+
+Fabrika's own photos live in `apps/api/assets/fabrika-photos/` (800×800 JPEGs, pre-cropped around the dish because the item
+pipeline centre-crops), mapped by Serbian item name in `scripts/fabrika-photos.ts`; the full seed attaches them too.
 
 `@qr-menu/shared` is a compiled package: consumers import `dist/`. After editing shared, rebuild it (or keep `npm run dev` running).
 

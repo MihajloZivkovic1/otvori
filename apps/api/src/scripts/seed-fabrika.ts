@@ -5,12 +5,13 @@ import { env } from '../config/env.js';
 import { Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
 import { sequelize } from '../db/sequelize.js';
 import { touchRestaurant } from '../modules/shared/touch-restaurant.js';
-import { processLogo } from '../utils/images.js';
+import { processItemImage, processItemThumbnail, processLogo } from '../utils/images.js';
 import { logger } from '../utils/logger.js';
 import { hashPassword } from '../utils/password.js';
 import { buildMenuUrl } from '../utils/public-url.js';
 import { deleteStoredUrl, storage } from '../utils/storage.js';
 import { FABRIKA_MENU } from './fabrika-menu.js';
+import { FABRIKA_PHOTOS, FABRIKA_PHOTOS_DIR } from './fabrika-photos.js';
 import { FABRIKA_PROMOTIONS, type SeedPromotion } from './fabrika-promotions.js';
 import { insertMenu } from './menu-catalog.js';
 
@@ -21,6 +22,7 @@ import { insertMenu } from './menu-catalog.js';
  *   OWNER_PASSWORD=… npm run seed:fabrika -- --logo path/to/logo.png          (dev: tsx)
  *   docker compose … exec -e OWNER_PASSWORD=… api node dist/scripts/seed-fabrika.js --logo /tmp/logo.png   (production)
  *   … seed-fabrika.js --promo-only   (keeps the live venue and its menu untouched; only upserts the promotions by title)
+ *   … seed-fabrika.js --photos-only  (keeps the live venue; gives the items in `fabrika-photos.ts` that have no photo yet theirs)
  *
  * The owner account is created when missing; an existing one keeps its other venues and only gets the password reset.
  * The previous venue's owner (`fabrika@otvori.menu`, from the pilot seed) is removed when no other venue is left to it.
@@ -73,6 +75,53 @@ async function promotionsOnly(): Promise<void> {
   await sequelize.close();
 }
 
+/**
+ * Stores the photo of every item named in `FABRIKA_PHOTOS` through the same 800×800 + 160×160 WebP pipeline as a CMS
+ * upload. Items that already have a photo are left alone, so the live venue keeps whatever the owner uploaded.
+ */
+async function attachFabrikaPhotos(restaurantId: string): Promise<{ attached: number; kept: string[]; notInMenu: string[] }> {
+  const items = await MenuItem.findAll({ where: { restaurantId } });
+  const byName = new Map(items.map((item) => [item.name.sr, item]));
+  const result = { attached: 0, kept: [] as string[], notInMenu: [] as string[] };
+  for (const [name, file] of Object.entries(FABRIKA_PHOTOS)) {
+    const item = byName.get(name);
+    if (!item) {
+      result.notInMenu.push(name);
+      continue;
+    }
+    if (item.imageUrl) {
+      result.kept.push(name);
+      continue;
+    }
+    const original = await readFile(`${FABRIKA_PHOTOS_DIR}${file}`);
+    const [webp, thumb] = await Promise.all([processItemImage(original), processItemThumbnail(original)]);
+    const key = `restaurants/${restaurantId}/items/${item.id}-${Date.now()}`;
+    const [imageUrl, thumbnailUrl] = await Promise.all([
+      storage.put(`${key}.webp`, webp, 'image/webp'),
+      storage.put(`${key}-thumb.webp`, thumb, 'image/webp'),
+    ]);
+    await item.update({ imageUrl, thumbnailUrl });
+    result.attached++;
+  }
+  if (result.attached) await touchRestaurant(restaurantId);
+  return result;
+}
+
+async function photosOnly(): Promise<void> {
+  const restaurant = await Restaurant.findOne({ where: { slug: VENUE.slug } });
+  if (!restaurant) {
+    process.stderr.write(`No venue with slug "${VENUE.slug}" — run the full seeder first.\n`);
+    process.exit(2);
+  }
+  const { attached, kept, notInMenu } = await attachFabrikaPhotos(restaurant.id);
+  process.stdout.write(
+    `${VENUE.name}: ${attached} photo(s) attached` +
+      `${kept.length ? `\nAlready had a photo (left alone): ${kept.join(', ')}` : ''}` +
+      `${notInMenu.length ? `\nNo item with that name in the menu: ${notInMenu.join(', ')}` : ''}\n`,
+  );
+  await sequelize.close();
+}
+
 async function removeVenue(restaurant: Restaurant, transaction: Transaction): Promise<string[]> {
   const items = await MenuItem.findAll({ where: { restaurantId: restaurant.id }, attributes: ['imageUrl', 'thumbnailUrl'], transaction });
   const urls = [restaurant.logoUrl, ...items.flatMap((item) => [item.imageUrl, item.thumbnailUrl])];
@@ -91,6 +140,10 @@ async function removeVenue(restaurant: Restaurant, transaction: Transaction): Pr
 async function main(): Promise<void> {
   if (process.argv.includes('--promo-only')) {
     await promotionsOnly();
+    return;
+  }
+  if (process.argv.includes('--photos-only')) {
+    await photosOnly();
     return;
   }
   if (PASSWORD.length < 8) {
@@ -154,9 +207,10 @@ async function main(): Promise<void> {
     await restaurant.update({ logoUrl: url });
     await touchRestaurant(restaurant.id);
   }
+  const photos = await attachFabrikaPhotos(restaurant.id);
 
   process.stdout.write(
-    `${VENUE.name}: ${FABRIKA_MENU.length} categories, ${itemCount} items, ${VENUE.tables} tables, ${FABRIKA_PROMOTIONS.length} promotion(s)` +
+    `${VENUE.name}: ${FABRIKA_MENU.length} categories, ${itemCount} items, ${photos.attached} photos, ${VENUE.tables} tables, ${FABRIKA_PROMOTIONS.length} promotion(s)` +
       `${logoPng ? ', logo uploaded' : ', no logo (--logo not given)'}${replaced ? ` (${replaced} old venue(s) replaced)` : ''}\n` +
       `Menu: ${buildMenuUrl(VENUE.slug)}\nSign in at ${env.APP_URL}: ${OWNER.email}\n`,
   );
