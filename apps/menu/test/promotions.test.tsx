@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PublicPromotionDto } from '@qr-menu/shared';
@@ -105,6 +105,42 @@ describe('promotions on the guest menu', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(document.body.style.position).toBe('');
     expect(await screen.findByRole('region', { name: 'Promocija: Cocktail Menu' })).toBeInTheDocument();
+  });
+
+  it('closes on a one-finger swipe down, but not on a pinch, a sideways pan or while the page is zoomed in', async () => {
+    mockFetch(serve([cocktail]));
+    renderMenu();
+    const user = userEvent.setup();
+    await user.click(within(await screen.findByRole('region', { name: 'Promocija: Cocktail Menu' })).getByText('Pogledaj'));
+    const dialog = await screen.findByRole('dialog', { name: 'Cocktail Menu' });
+    const point = (clientX: number, clientY: number) => ({ clientX, clientY });
+    const drag = (from: { clientX: number; clientY: number }, to: { clientX: number; clientY: number }) => {
+      fireEvent.touchStart(dialog, { touches: [from] });
+      fireEvent.touchEnd(dialog, { touches: [], changedTouches: [to] });
+    };
+
+    // Pinch: a second finger joins, then both lift well below where the first one started.
+    fireEvent.touchStart(dialog, { touches: [point(150, 100)] });
+    fireEvent.touchStart(dialog, { touches: [point(150, 100), point(200, 300)] });
+    fireEvent.touchEnd(dialog, { touches: [point(150, 260)], changedTouches: [point(240, 420)] });
+    fireEvent.touchEnd(dialog, { touches: [], changedTouches: [point(150, 260)] });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Zoomed in, a one-finger drag pans the zoomed page instead.
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: { scale: 2 } });
+    try {
+      drag(point(150, 100), point(150, 300));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    } finally {
+      Reflect.deleteProperty(window, 'visualViewport');
+    }
+
+    // A diagonal pan is not a close either.
+    drag(point(100, 100), point(300, 190));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    drag(point(150, 100), point(158, 200));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('collapses the banner to a pill that opens the promotion directly, and stays collapsed for the tab', async () => {

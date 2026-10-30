@@ -22,31 +22,44 @@ interface Props {
 /** How far a downward swipe (started with the content scrolled to the top) must travel to close. */
 const SWIPE_CLOSE_PX = 72;
 
+/** Pinch-zoomed page: a one-finger drag then pans the zoomed view, it is never a swipe. */
+function pageZoomed(): boolean {
+  return (window.visualViewport?.scale ?? 1) > 1.01;
+}
+
 /**
  * The full view of a promotion: a centred modal (a tall portrait card for the drink list) with a backdrop. Closes on
  * X, a tap outside, Escape or a swipe down; focus is trapped, body scroll locked, `aria-modal` set.
  */
 export function PromotionModal({ promotion, primaryColor, currency, locale, t, onClose, onOpenItem = null }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const touchStart = useRef<number | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   useLockBodyScroll(true);
   useFocusTrap(dialogRef, onClose);
   const titleId = `promo-title-${promotion.id}`;
   const accent = promotionAccent(promotion, primaryColor);
 
+  // A second finger (a pinch) fires touchstart again with two touches, which cancels the swipe until every finger is up.
   const onTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
-    const node = event.currentTarget;
-    touchStart.current = node.scrollTop <= 0 ? (event.touches[0]?.clientY ?? null) : null;
+    const touch = event.touches[0];
+    const candidate = event.touches.length === 1 && touch && event.currentTarget.scrollTop <= 0 && !pageZoomed();
+    swipeStart.current = candidate ? { x: touch.clientX, y: touch.clientY } : null;
   }, []);
   const onTouchEnd = useCallback(
     (event: TouchEvent<HTMLDivElement>) => {
-      const start = touchStart.current;
-      touchStart.current = null;
-      const end = event.changedTouches[0]?.clientY;
-      if (start !== null && end !== undefined && end - start > SWIPE_CLOSE_PX) onClose();
+      const start = swipeStart.current;
+      swipeStart.current = null;
+      const end = event.changedTouches[0];
+      if (!start || !end || event.touches.length > 0 || pageZoomed()) return;
+      const dy = end.clientY - start.y;
+      // Mostly vertical, so a sideways or diagonal pan never closes.
+      if (dy > SWIPE_CLOSE_PX && dy > 2 * Math.abs(end.clientX - start.x)) onClose();
     },
     [onClose],
   );
+  const onTouchCancel = useCallback(() => {
+    swipeStart.current = null;
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50" data-testid="promotion-modal">
@@ -60,6 +73,7 @@ export function PromotionModal({ promotion, primaryColor, currency, locale, t, o
           tabIndex={-1}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchCancel}
           style={promotion.style?.backgroundColor ? { background: promotion.style.backgroundColor, color: promotion.style.textColor ?? undefined } : undefined}
           className="sheet-enter no-scrollbar pointer-events-auto relative max-h-[94dvh] w-full max-w-[440px] overflow-y-auto overscroll-contain rounded-t-[28px] bg-surface text-ink outline-none sm:max-h-[90vh] sm:rounded-[28px]"
         >
