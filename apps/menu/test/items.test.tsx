@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { eventBodies, ids, mockFetch, renderMenu, serveFixtures } from './helpers';
@@ -18,6 +18,43 @@ describe('menu items', () => {
 
     await user.click(within(row!).getByText('Tost sa avokadom'));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('closes when the handle is dragged down far enough, springs back otherwise, and ignores drags on the content', async () => {
+    mockFetch(serveFixtures);
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(await screen.findByRole('button', { name: /Espresso/ }));
+    const dialog = await screen.findByRole('dialog');
+    const handle = within(dialog).getByTestId('sheet-handle');
+    const point = (clientY: number) => ({ clientX: 150, clientY });
+
+    // A drag that starts on the content (scrolling) never closes.
+    fireEvent.touchStart(dialog, { touches: [point(200)] });
+    fireEvent.touchMove(dialog, { touches: [point(400)] });
+    fireEvent.touchEnd(dialog, { touches: [], changedTouches: [point(400)] });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Too short a pull on the handle: the sheet follows the finger, then springs back.
+    fireEvent.touchStart(handle, { touches: [point(20)] });
+    fireEvent.touchMove(handle, { touches: [point(50)] });
+    expect(dialog.style.transform).toBe('translateY(30px)');
+    fireEvent.touchEnd(handle, { touches: [], changedTouches: [point(50)] });
+    expect(dialog.style.transform).toBe('');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // A second finger (pinch) cancels the pull.
+    fireEvent.touchStart(handle, { touches: [point(20)] });
+    fireEvent.touchStart(handle, { touches: [point(20), point(300)] });
+    fireEvent.touchEnd(handle, { touches: [point(20)], changedTouches: [point(400)] });
+    fireEvent.touchEnd(handle, { touches: [], changedTouches: [point(20)] });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // A long pull on the handle closes.
+    fireEvent.touchStart(handle, { touches: [point(20)] });
+    fireEvent.touchMove(handle, { touches: [point(120)] });
+    fireEvent.touchEnd(handle, { touches: [], changedTouches: [point(120)] });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('shows "od" + the lowest variant price for items with variants', async () => {
