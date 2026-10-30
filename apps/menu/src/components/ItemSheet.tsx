@@ -43,9 +43,9 @@ export function ItemSheet({ item, currency, locale, t, onClose, onAdd = null }: 
     <BottomSheet labelledBy={titleId} onClose={onClose}>
       <div className="safe-bottom flex flex-col gap-[18px] px-5 pt-2">
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt="" width={800} height={800} decoding="async" className="h-60 w-full rounded-[18px] bg-placeholder object-cover" />
+          <img src={item.imageUrl} alt="" width={800} height={800} decoding="async" className="aspect-square max-h-[55vh] w-full rounded-[18px] bg-placeholder object-contain" />
         ) : (
-          <div className="h-60 rounded-[18px] bg-placeholder" aria-hidden="true" />
+          <div className="aspect-square max-h-[55vh] w-full rounded-[18px] bg-placeholder" aria-hidden="true" />
         )}
 
         <div className="flex items-start justify-between gap-3">
