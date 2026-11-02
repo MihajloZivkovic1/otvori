@@ -268,6 +268,8 @@ describe('venue onboarding through the superadmin API', () => {
     expect(mail.text).toContain('1. Prijavi se');
     expect(mail.text).toContain('Mihajlo Admin');
     expect(mail.text).toContain('+381 60 000 0000');
+    expect(mail.text).toContain('Za sva pitanja tu sam: Mihajlo Admin · zdravo@otvori.menu · +381 60 000 0000');
+    expect(mail.text).not.toContain(admin.email);
     expect(mail.text).toContain('bistro-zemun.localhost:5174');
     expect(withPassword.body.text).toBe(mail.text);
 

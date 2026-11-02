@@ -227,7 +227,7 @@ export function WelcomeEmailModal({ venue, onClose }: { venue: SuperadminRestaur
               <Textarea id="welcome-note" rows={2} maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Vidimo se u četvrtak u 10 h da prođemo kroz meni." />
             </Field>
             <div className="rounded-lg bg-line-2 p-3 text-xs text-muted">
-              The mail is in Serbian: login URL, e-mail, {includePassword && canIncludePassword ? 'the password' : 'the set-password link'}, your name/e-mail/phone, and the first three steps:
+              The mail is in Serbian: login URL, e-mail, {includePassword && canIncludePassword ? 'the password' : 'the set-password link'}, your name and phone with zdravo@otvori.menu as the reply address, and the first three steps:
               <ol className="mt-1 list-decimal pl-4">
                 {WELCOME_STEPS_SR.map((step) => (
                   <li key={step}>{step}</li>

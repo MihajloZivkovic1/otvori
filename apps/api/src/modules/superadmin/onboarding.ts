@@ -11,6 +11,12 @@ import { isSyntheticEmail } from '../team/service.js';
 
 const SET_PASSWORD_TTL_MS = 7 * 86_400_000;
 
+/** The bare address of MAIL_FROM: "otvori <zdravo@otvori.menu>" → "zdravo@otvori.menu". */
+export function mailFromAddress(from: string = env.MAIL_FROM): string {
+  const match = /<([^>]+)>/.exec(from);
+  return (match ? match[1] : from).trim();
+}
+
 /**
  * POST /api/superadmin/restaurants/:id/welcome-email — the Serbian welcome mail to the owner: login URL, e-mail,
  * the password (only when the admin sends it along; it is never stored) or a 7-day set-password link, the admin's
@@ -36,7 +42,8 @@ export async function sendWelcome(restaurantId: string, admin: AuthUser, input: 
     password: input.password ?? null,
     setPasswordUrl,
     publicUrl: buildMenuUrl(restaurant.slug),
-    contact: { name: admin.name, email: admin.email, phone: adminUser?.phone ?? null },
+    // Replies go to the address the mail is sent from (MAIL_FROM), not to the superadmin's sign-in e-mail.
+    contact: { name: admin.name, email: mailFromAddress(), phone: adminUser?.phone ?? null },
     steps: WELCOME_STEPS_SR,
     note: input.note ?? null,
   };
