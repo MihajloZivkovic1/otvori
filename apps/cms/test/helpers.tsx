@@ -623,6 +623,12 @@ function defaultApi(state: ApiState, { url, method, body }: MockRequest): FetchR
     const input = body as Partial<MenuItemDto>;
     return { status: 201, body: { ...items[0]!, ...input, id: '12121212-1212-4121-8121-121212121212' } };
   }
+  const image = new RegExp(`^${base}/items/([^/]+)/image$`).exec(path);
+  if (image && method === 'DELETE') {
+    const item = items.find((i) => i.id === image[1]);
+    if (!item) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Menu item not found' } } };
+    return { body: { ...item, imageUrl: null, thumbnailUrl: null } };
+  }
   const availability = new RegExp(`^${base}/items/([^/]+)/availability$`).exec(path);
   if (availability && method === 'PATCH') {
     const item = items.find((i) => i.id === availability[1]);

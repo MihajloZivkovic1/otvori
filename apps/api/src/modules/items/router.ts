@@ -17,3 +17,4 @@ itemsRouter.patch('/:id', requireOwner, controller.updateItem);
 itemsRouter.delete('/:id', requireOwner, controller.deleteItem);
 itemsRouter.patch('/:id/availability', controller.setAvailability);
 itemsRouter.post('/:id/image', requireOwner, imageUpload, controller.uploadImage);
+itemsRouter.delete('/:id/image', requireOwner, controller.deleteImage);

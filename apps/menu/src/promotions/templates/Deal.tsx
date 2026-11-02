@@ -1,3 +1,4 @@
+import { RichText } from '../../components/RichText';
 import { formatPrice } from '../../lib/format';
 import type { TemplateProps } from '../types';
 import { itemById } from '../types';
@@ -20,7 +21,7 @@ export function Deal({ promotion, currency, locale, copy, onOpenItem = null }: T
           </span>
         ) : null}
       </div>
-      {content.description ? <p className="promo-body">{content.description}</p> : null}
+      {content.description ? <RichText text={content.description} className="promo-body" /> : null}
       {item ? (
         <div className={`promo-deal-item${item.isAvailable ? '' : ' promo-unavailable'}`}>
           {item.thumbnailUrl ?? item.imageUrl ? <img src={item.thumbnailUrl ?? item.imageUrl ?? ''} alt="" width={56} height={56} loading="lazy" /> : null}

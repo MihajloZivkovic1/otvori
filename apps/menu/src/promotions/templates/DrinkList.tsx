@@ -1,3 +1,4 @@
+import { RichText } from '../../components/RichText';
 import type { TemplateProps } from '../types';
 import { itemById } from '../types';
 import { HighballIcon, MargaritaIcon, SpritzIcon } from './DrinkIcons';
@@ -62,7 +63,7 @@ export function DrinkList({ promotion, copy }: TemplateProps<'drink_list'>) {
             </ul>
           ))}
         </div>
-        {content.subtitle ? <p className="promo-dl-foot">{content.subtitle}</p> : null}
+        {content.subtitle ? <RichText text={content.subtitle} className="promo-dl-foot" /> : null}
       </div>
     </article>
   );

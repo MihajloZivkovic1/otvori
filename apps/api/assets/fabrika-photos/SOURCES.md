@@ -10,6 +10,11 @@ chicken-nuggets-wedges, crispy-chicken-burrito, curetina-i-brie, diavolo-burger,
 italijanski-tost-sendvic, kafeterija-klub-sendvic, kapreze-sendvic, mortadela-i-pistaci, pomfrit, pulled-pork-burger,
 steak-sendvic, truffle-fries, zacinski-krompir
 
+## Drawn for the menu
+
+bebicino — čiča Gliša with a cup of milk foam, drawn by us in `apps/api/scripts/bebicino.mjs` (regenerate with
+`node apps/api/scripts/bebicino.mjs`); nothing to credit.
+
 ## Producers, importers and shops (their product images)
 
 | File(s) | Source |

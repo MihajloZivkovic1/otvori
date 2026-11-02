@@ -1,3 +1,4 @@
+import { RichText } from '../../components/RichText';
 import { formatPrice } from '../../lib/format';
 import type { TemplateProps } from '../types';
 import { itemById } from '../types';
@@ -9,7 +10,7 @@ export function FeaturedItems({ promotion, currency, locale, copy, onOpenItem = 
     <section className="promo promo-featured" aria-label={promotion.title}>
       <span className="promo-eyebrow">{copy.featured}</span>
       <h2 className="promo-headline">{promotion.title}</h2>
-      {content.intro ? <p className="promo-body promo-muted">{content.intro}</p> : null}
+      {content.intro ? <RichText text={content.intro} className="promo-body promo-muted" /> : null}
       {promotion.imageUrl ? <img className="promo-image" src={promotion.imageUrl} alt="" /> : null}
       <ul className="promo-featured-list">
         {content.items.map((entry) => {

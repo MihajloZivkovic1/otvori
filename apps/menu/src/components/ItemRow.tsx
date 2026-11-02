@@ -3,6 +3,7 @@ import { priceLabel } from '../lib/format';
 import { allergenName, tagLabel, type Dictionary, type UiLocale } from '../lib/i18n';
 import { AllergenGlyph, TagChip } from './Chips';
 import { PlusIcon } from './icons';
+import { RichText } from './RichText';
 
 interface Props {
   /** First rows of the first section: above the fold, so the image is fetched eagerly with high priority (LCP). */
@@ -27,7 +28,10 @@ export function ItemRow({ item, currency, locale, t, onOpen, onAdd = null, eager
         <span className="font-serif text-[17px] leading-[1.3] text-pretty">{item.name}</span>
         <span className="text-[15px] font-semibold whitespace-nowrap tabular-nums">{priceLabel(item, currency, locale, t.from)}</span>
       </span>
-      {item.description && <span className="block text-[13px] leading-[1.45] text-muted text-pretty">{item.description}</span>}
+      {item.description && (
+        // Inside a <button>, so no links here (the sheet has them); line breaks are kept, long texts clamp at three lines.
+        <RichText as="span" links={false} text={item.description} className="line-clamp-3 text-[13px] leading-[1.45] text-muted text-pretty" />
+      )}
       {showMeta && (
         <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
           {item.tags.map((tag) => (

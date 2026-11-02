@@ -68,7 +68,7 @@ uses impersonation. Deactivated accounts (`users.deactivated_at`) get `401 ACCOU
 | `GET /categories` | service |
 | `POST /categories`, `PATCH /categories/:id` (rename, hide/show), `PUT /categories/reorder`, `DELETE /categories/:id` | **owner** |
 | `GET /items`, `GET /items/:id` | service |
-| `POST /items`, `PATCH /items/:id` (price, names, variants, allergens, tags, POS code, category), `PUT /items/reorder`, `DELETE /items/:id`, `POST /items/:id/image` | **owner** |
+| `POST /items`, `PATCH /items/:id` (price, names, variants, allergens, tags, POS code, category), `PUT /items/reorder`, `DELETE /items/:id`, `POST /items/:id/image`, `DELETE /items/:id/image` | **owner** |
 | `PATCH /items/:id/availability` (`{available}` / `until: 'tomorrow-06:00'`) | service |
 
 ### Tables and QR

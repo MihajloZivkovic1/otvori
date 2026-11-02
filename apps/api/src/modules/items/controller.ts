@@ -45,3 +45,7 @@ export async function uploadImage(req: Request, res: Response): Promise<void> {
   const file = uploadedFile(req);
   res.json(await service.uploadItemImage(restaurantIdOf(req), uuidParam(req.params.id), file.buffer));
 }
+
+export async function deleteImage(req: Request, res: Response): Promise<void> {
+  res.json(await service.deleteItemImage(restaurantIdOf(req), uuidParam(req.params.id)));
+}

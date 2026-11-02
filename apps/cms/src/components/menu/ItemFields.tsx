@@ -66,9 +66,10 @@ export function ItemFields({ editor, lang, primaryLang, currency, currentImageUr
 
   const photo = (
     <PhotoField
-      currentUrl={currentImageUrl}
+      currentUrl={editor.removePhoto ? null : currentImageUrl}
       file={editor.photo}
       onFile={editor.setPhoto}
+      onRemove={currentImageUrl && !editor.removePhoto ? () => editor.setRemovePhoto(true) : null}
       zoom={editor.zoom}
       onZoom={editor.setZoom}
       layout={layout}

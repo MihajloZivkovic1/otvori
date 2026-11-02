@@ -319,6 +319,16 @@ export function useUploadItemImage(rid: string) {
   });
 }
 
+export function useDeleteItemImage(rid: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<MenuItemDto>(`${base(rid)}/items/${id}/image`, { method: 'DELETE' }),
+    onSuccess: (item) => {
+      client.setQueryData<MenuItemDto[]>(keys.items(rid), (prev) => prev?.map((i) => (i.id === item.id ? item : i)));
+    },
+  });
+}
+
 /* ------------------------------------------------------------------ tables */
 
 export function useTables(rid: string) {

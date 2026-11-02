@@ -36,6 +36,28 @@ describe('POST /items/:id/image', () => {
     expect(menu.body.categories[0].items[0].thumbnailUrl).toBe(res.body.thumbnailUrl);
   });
 
+  it('DELETE removes the photo and thumbnail from the item, the public menu and storage', async () => {
+    const { owner, url, slug } = await setup();
+    const uploaded = await api.post(url).set(bearer(owner.accessToken)).attach('image', await photo(900, 900), 'photo.png');
+    const file = (u: string) => path.join(env.UPLOADS_DIR, new URL(u).pathname.replace(/^\/uploads\//, ''));
+    expect(existsSync(file(uploaded.body.imageUrl))).toBe(true);
+
+    const res = await api.delete(url).set(bearer(owner.accessToken));
+    expect(res.status).toBe(200);
+    expect(res.body.imageUrl).toBeNull();
+    expect(res.body.thumbnailUrl).toBeNull();
+    expect(existsSync(file(uploaded.body.imageUrl))).toBe(false);
+    expect(existsSync(file(uploaded.body.thumbnailUrl))).toBe(false);
+
+    const menu = await api.get(`/api/public/${slug}/menu`);
+    expect(menu.body.categories[0].items[0].imageUrl).toBeNull();
+
+    // Idempotent: deleting again is still a 200 with no image.
+    const again = await api.delete(url).set(bearer(owner.accessToken));
+    expect(again.status).toBe(200);
+    expect(again.body.imageUrl).toBeNull();
+  });
+
   it('rejects SVG and images with too many pixels instead of decoding them', async () => {
     const { owner, url } = await setup();
     const svg = await api

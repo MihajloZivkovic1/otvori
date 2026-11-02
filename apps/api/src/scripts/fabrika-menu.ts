@@ -18,6 +18,25 @@ const BLENDS = {
   km: 'KM · Kolumbija Medelin',
 } as const;
 
+/** Surcharge for a plant-based or lactose-free milk in any milk drink (the owner's "fejk mleko" line). */
+const PLANT_MILK_RSD = 60;
+const PLANT_MILK_NOTE = t(
+  `Biljno mleko +${PLANT_MILK_RSD} RSD: sojino, bademovo, kokosovo, ovseno ili bez laktoze`,
+  `Plant milk +${PLANT_MILK_RSD} RSD: soy, almond, coconut, oat or lactose-free`,
+);
+
+/** Every drink made with milk carries the plant-milk line under its own description. */
+function withMilk(description: TranslatedText): TranslatedText {
+  return { sr: `${description.sr}\n${PLANT_MILK_NOTE.sr}`, en: `${description.en}\n${PLANT_MILK_NOTE.en}` };
+}
+
+/** The syrups the house has: the same list for the flavoured latte (hot and iced) and the flavoured frappé. */
+const FLAVOURS = ['Lešnik', 'Karamela', 'Vanila', 'Bela čokolada', 'Čoko kuki', 'Pumpkin spice'] as const;
+
+function flavoured(price: number): Pick<CatalogItem, 'variantLabel' | 'variants'> {
+  return { variantLabel: t('Ukus', 'Flavour'), variants: FLAVOURS.map((name) => ({ name, priceCents: rsd(price) })) };
+}
+
 /** An espresso drink with a price per blend (B1, B7 and, when the house offers them, K and KM). */
 function coffee(
   name: TranslatedText,
@@ -34,38 +53,128 @@ function coffee(
   return { name, description, priceCents: rsd(prices.b1), variants, variantLabel: t('Vrsta kafe', 'Coffee blend'), ...extra };
 }
 
+/** Same, for a drink made with milk: the plant-milk line is appended to the description. */
+function milkCoffee(
+  name: TranslatedText,
+  description: TranslatedText,
+  prices: { b1: number; b7: number; k?: number; km?: number },
+  extra: Partial<CatalogItem> = {},
+): CatalogItem {
+  return coffee(name, withMilk(description), prices, { allergens: ['M'], ...extra });
+}
+
+/**
+ * Descriptions follow the owner's live edits (dose in grams, sizes), with the plant-milk line on every milk drink and
+ * the flavour list as variants where the house has syrups.
+ */
 export const FABRIKA_COFFEE: CatalogCategory = {
   name: t('Kafa', 'Coffee'),
   items: [
-    coffee(t('Espreso', 'Espresso'), t('25–30 ml', '25–30 ml'), { b1: 190, b7: 190, k: 200, km: 200 }),
+    coffee(t('Espreso', 'Espresso'), t('25–30 ml / 10 g kafe', '25–30 ml / 10 g of coffee'), { b1: 190, b7: 190, k: 200, km: 200 }),
     coffee(t('Ristreto', 'Ristretto'), t('20 ml, kraći i gušći espreso', '20 ml, a shorter, denser espresso'), { b1: 190, b7: 190, k: 200, km: 200 }),
-    coffee(t('Dupli espreso', 'Double espresso'), t('50–60 ml', '50–60 ml'), { b1: 270, b7: 270, k: 280, km: 280 }),
-    coffee(t('Makijato', 'Macchiato'), t('25–30 ml, espreso sa kapom mlečne pene', '25–30 ml, espresso with a cap of milk foam'), { b1: 200, b7: 200, k: 210, km: 210 }, { allergens: ['M'] }),
-    coffee(t('Bebićino', 'Babyccino'), t('40 ml, topla mlečna pena bez kofeina', '40 ml, warm milk foam, no caffeine'), { b1: 200, b7: 200, k: 210, km: 210 }, { allergens: ['M'] }),
-    coffee(t('Kapućino', 'Cappuccino'), t('180 ml, espreso, toplo mleko i gusta pena', '180 ml, espresso, steamed milk and thick foam'), { b1: 220, b7: 220, k: 230, km: 230 }, { allergens: ['M'] }),
-    coffee(t('Kapućino XL', 'Cappuccino XL'), t('300 ml', '300 ml'), { b1: 310, b7: 310, k: 320, km: 320 }, { allergens: ['M'] }),
-    coffee(t('Kafe late', 'Caffè latte'), t('200 ml, espreso sa puno toplog mleka', '200 ml, espresso with plenty of steamed milk'), { b1: 220, b7: 220, k: 230, km: 230 }, { allergens: ['M'] }),
-    coffee(t('Late makijato', 'Latte macchiato'), t('250 ml, slojevito mleko, pena i espreso', '250 ml, layered milk, foam and espresso'), { b1: 250, b7: 250, k: 260, km: 260 }, { allergens: ['M'] }),
-    coffee(
-      t('Aromatizovani kafe late', 'Flavoured caffè latte'),
-      t('200 ml, lešnik, karamela ili vanila · topla ili hladna', '200 ml, hazelnut, caramel or vanilla · hot or iced'),
-      { b1: 290, b7: 290, k: 300, km: 300 },
-      { allergens: ['M', 'N'] },
+    coffee(t('Dupli espreso', 'Double espresso'), t('50–60 ml / 18 g kafe', '50–60 ml / 18 g of coffee'), { b1: 270, b7: 270, k: 280, km: 280 }),
+    milkCoffee(t('Makijato', 'Macchiato'), t('25–30 ml / 10 g kafe sa malo pene', '25–30 ml / 10 g of coffee with a cap of milk foam'), { b1: 200, b7: 200, k: 210, km: 210 }),
+    {
+      // Coffee for kids — no espresso, so no blend to choose; the sticker drawing is `bebicino.jpg`.
+      name: t('Bebićino', 'Babyccino'),
+      description: withMilk(
+        t(
+          'Kafa za decu ☺ 40 ml tople mlečne pene bez kofeina, posute kakaom. Mala šolja, velika radost.',
+          'Coffee for kids ☺ 40 ml of warm milk foam, no caffeine, dusted with cocoa. Small cup, big smile.',
+        ),
+      ),
+      priceCents: rsd(200),
+      allergens: ['M'],
+    },
+    milkCoffee(t('Kapućino', 'Cappuccino'), t('220 ml / 10 g kafe, toplo mleko i gusta pena', '220 ml / 10 g of coffee, steamed milk and thick foam'), { b1: 220, b7: 220, k: 230, km: 230 }),
+    milkCoffee(t('Kapućino XL', 'Cappuccino XL'), t('300 ml / 18 g kafe, toplo mleko i gusta pena', '300 ml / 18 g of coffee, steamed milk and thick foam'), { b1: 310, b7: 310, k: 320, km: 320 }),
+    milkCoffee(t('Kafe late', 'Caffè latte'), t('200 ml / 10 g kafe i mikropena od toplog mleka', '200 ml / 10 g of coffee and warm milk microfoam'), { b1: 220, b7: 220, k: 230, km: 230 }),
+    milkCoffee(
+      t('Late makijato', 'Latte macchiato'),
+      t('250 ml / 10 g kafe, slojevito mleko, pena i espreso · „nes kafa od espresa“', '250 ml / 10 g of coffee, layered milk, foam and espresso · our "instant coffee made of espresso"'),
+      { b1: 250, b7: 250, k: 260, km: 260 },
     ),
-    coffee(t('Moka espreso', 'Mocha'), t('180 ml, espreso, čokolada i mleko · topla ili hladna', '180 ml, espresso, chocolate and milk · hot or iced'), { b1: 280, b7: 280, k: 290, km: 290 }, { allergens: ['M'] }),
-    coffee(t('Kafa afogato', 'Affogato'), t('30 ml espresa preko kugle gelato sladoleda', 'A 30 ml shot of espresso poured over a scoop of gelato'), { b1: 270, b7: 270, k: 280, km: 280 }, { allergens: ['M'] }),
-    coffee(t('Fredo hladni espreso', 'Freddo espresso'), t('250 ml, espreso umućen sa ledom', '250 ml, espresso shaken over ice'), { b1: 280, b7: 280 }),
-    coffee(t('Fredo kapućino', 'Freddo cappuccino'), t('250 ml, fredo espreso sa hladnom mlečnom penom', '250 ml, freddo espresso topped with cold milk foam'), { b1: 310, b7: 310 }, { allergens: ['M'] }),
-    coffee(t('Ledena kafa', 'Iced coffee'), t('250 ml, espreso, hladno mleko i led', '250 ml, espresso, cold milk and ice'), { b1: 290, b7: 290 }, { allergens: ['M'] }),
-    coffee(t('Amerikano', 'Americano'), t('150 ml, espreso produžen vrelom vodom', '150 ml, espresso lengthened with hot water'), { b1: 270, b7: 270, k: 280, km: 280 }),
-    { name: t('Nes frape', 'Nescafé frappé'), description: t('250 ml, hladna umućena nes kafa', '250 ml, cold whipped instant coffee'), priceCents: rsd(220), allergens: ['M'] },
-    { name: t('Aromatizovani nes frape', 'Flavoured frappé'), description: t('250 ml, lešnik, karamela ili vanila', '250 ml, hazelnut, caramel or vanilla'), priceCents: rsd(270), allergens: ['M', 'N'] },
-    { name: t('Topla čokolada', 'Hot chocolate'), description: t('Premium, crna ili bela', 'Premium, dark or white'), priceCents: rsd(250), allergens: ['M'], variantLabel: t('Vrsta', 'Type'), variants: [{ name: 'Crna', priceCents: rsd(250) }, { name: 'Bela', priceCents: rsd(250) }] },
-    { name: t('Srpska kafa', 'Serbian coffee'), description: t('60 ml, kuvana u džezvi', '60 ml, brewed in a džezva'), priceCents: rsd(220) },
-    { name: t('Mača late', 'Matcha latte'), description: t('Japanski zeleni čaj u prahu sa penastim mlekom', 'Japanese powdered green tea with frothed milk'), priceCents: rsd(400), allergens: ['M'] },
-    { name: t('Biljno mleko', 'Plant milk'), description: t('Sojino ili bez laktoze, dodatak uz bilo koju kafu', 'Soy or lactose-free, added to any coffee'), priceCents: rsd(50), allergens: ['S'] },
+    {
+      name: t('Kafe late sa ukusom', 'Flavoured caffè latte'),
+      description: withMilk(t('200 ml / 10 g kafe · topla ili hladna · K / KM blend +10 RSD', '200 ml / 10 g of coffee · hot or iced · K / KM blend +10 RSD')),
+      priceCents: rsd(290),
+      allergens: ['M', 'N'],
+      ...flavoured(290),
+    },
+    milkCoffee(t('Moka espreso', 'Mocha'), t('200 ml / 10 g kafe, crna čokolada, mleko i mikropena', '200 ml / 10 g of coffee, dark chocolate, milk and microfoam'), { b1: 280, b7: 280, k: 290, km: 290 }),
+    coffee(t('Kafa afogato', 'Affogato'), t('30 ml / 10 g kafe preko kugle gelato sladoleda', '30 ml / 10 g of coffee poured over a scoop of gelato'), { b1: 270, b7: 270, k: 280, km: 280 }, { allergens: ['M'] }),
+    coffee(t('Fredo hladni espreso', 'Freddo espresso'), t('350 ml / 18 g kafe, dupli espreso umućen sa ledom', '350 ml / 18 g of coffee, double espresso shaken over ice'), { b1: 280, b7: 280 }),
+    milkCoffee(t('Fredo kapućino', 'Freddo cappuccino'), t('350 ml / 18 g kafe sa hladnom mlečnom penom', '350 ml / 18 g of coffee topped with cold milk foam'), { b1: 310, b7: 310 }),
+    {
+      name: t('Ledena kafa', 'Iced coffee'),
+      description: withMilk(t('300 ml, nes kafa sa kuglom sladoleda i hladnim mlekom', '300 ml, instant coffee with a scoop of ice cream and cold milk')),
+      priceCents: rsd(290),
+      allergens: ['M'],
+    },
+    {
+      name: t('Hladan kafe late', 'Iced caffè latte'),
+      description: withMilk(t('200 ml / 10 g kafe i mikropena od hladnog mleka', '200 ml / 10 g of coffee and cold milk microfoam')),
+      priceCents: rsd(220),
+      allergens: ['M'],
+    },
+    {
+      name: t('Hladni kafe late sa ukusom', 'Iced flavoured latte'),
+      description: withMilk(t('200 ml / 10 g kafe, hladno mleko i sirup po izboru', '200 ml / 10 g of coffee, cold milk and the syrup of your choice')),
+      priceCents: rsd(290),
+      allergens: ['M', 'N'],
+      ...flavoured(290),
+    },
+    {
+      name: t('Hladna moka', 'Iced mocha'),
+      description: withMilk(t('200 ml / 10 g kafe, crna čokolada, hladno mleko i mikropena', '200 ml / 10 g of coffee, dark chocolate, cold milk and microfoam')),
+      priceCents: rsd(280),
+      allergens: ['M'],
+    },
+    coffee(
+      t('Amerikano', 'Americano'),
+      t('250 ml / 18 g kafe, espreso produžen vrelom vodom · „domaća kafa od espresa“', '250 ml / 18 g of coffee, espresso lengthened with hot water · our "Serbian coffee made of espresso"'),
+      { b1: 270, b7: 270, k: 280, km: 280 },
+    ),
+    { name: t('Nes frape', 'Nescafé frappé'), description: withMilk(t('300 ml, umućena nes kafa i mleko', '300 ml, whipped instant coffee and milk')), priceCents: rsd(220), allergens: ['M'] },
+    {
+      name: t('Nes frape sa ukusom', 'Flavoured frappé'),
+      description: withMilk(t('300 ml, umućena nes kafa, mleko i sirup po izboru', '300 ml, whipped instant coffee, milk and the syrup of your choice')),
+      priceCents: rsd(270),
+      allergens: ['M', 'N'],
+      ...flavoured(270),
+    },
+    {
+      name: t('Topla čokolada', 'Hot chocolate'),
+      description: withMilk(t('Premium, crna ili bela', 'Premium, dark or white')),
+      priceCents: rsd(250),
+      allergens: ['M'],
+      variantLabel: t('Vrsta', 'Type'),
+      variants: [
+        { name: 'Crna', priceCents: rsd(250) },
+        { name: 'Bela', priceCents: rsd(250) },
+      ],
+    },
+    {
+      name: t('Srpska kafa', 'Serbian coffee'),
+      description: t('60 ml, kuvana u džezvi, Fabrika Kafeterija miks · može i na pakovanje od 200 g, mlevena ili u zrnu', '60 ml, brewed in a džezva, the Fabrika Kafeterija mix · also sold in 200 g packs, ground or whole bean'),
+      priceCents: rsd(220),
+    },
+    { name: t('Mača late', 'Matcha latte'), description: withMilk(t('Japanski zeleni čaj u prahu sa penastim mlekom', 'Japanese powdered green tea with frothed milk')), priceCents: rsd(400), allergens: ['M'] },
+    {
+      name: t('Biljno mleko', 'Plant milk'),
+      description: t('Sojino, bademovo, kokosovo, ovseno ili bez laktoze · dodatak uz bilo koju kafu', 'Soy, almond, coconut, oat or lactose-free · added to any coffee'),
+      priceCents: rsd(PLANT_MILK_RSD),
+      allergens: ['S', 'N'],
+    },
     { name: t('Sveže mlevena domaća kafa 200 g', 'Freshly ground Serbian coffee, 200 g'), description: t('Za kuću, mlevena pred vama', 'To take home, ground in front of you'), priceCents: rsd(390) },
-    { name: t('Espreso kafa 250 g', 'Espresso beans, 250 g'), description: t('U zrnu ili mlevena, za kuću', 'Whole bean or ground, to take home'), priceCents: rsd(1600) },
+    {
+      name: t('Espreso kafa 250 g', 'Espresso beans, 250 g'),
+      description: t(
+        ['Uvek na stanju:', '007 – Kućni blend', '001 – Kućni blend', 'Single blend – Kolumbija', 'Single blend – Etiopija', 'Decaf', 'U zrnu ili mlevena, za kuću'].join('\n'),
+        ['Always in stock:', '007 – House blend', '001 – House blend', 'Single blend – Colombia', 'Single blend – Ethiopia', 'Decaf', 'Whole bean or ground, to take home'].join('\n'),
+      ),
+      priceCents: rsd(1600),
+    },
   ],
 };
 

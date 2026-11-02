@@ -3,6 +3,7 @@ import { ORDERING_LIMITS, type PublicMenuItemDto } from '@qr-menu/shared';
 import { formatPrice, priceLabel } from '../lib/format';
 import { allergenName, tagLabel, type Dictionary, type UiLocale } from '../lib/i18n';
 import { BottomSheet } from './BottomSheet';
+import { RichText } from './RichText';
 import { TagChip } from './Chips';
 import { Stepper } from './Stepper';
 
@@ -65,7 +66,7 @@ export function ItemSheet({ item, currency, locale, t, onClose, onAdd = null }: 
           </div>
         )}
 
-        {item.description && <p className="text-[15px] leading-[1.55] text-pretty">{item.description}</p>}
+        {item.description && <RichText text={item.description} className="text-[15px] leading-[1.55] text-pretty" />}
 
         {item.variants.length > 0 &&
           (onAdd ? (

@@ -1,9 +1,33 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { ids, mockApi, renderApp, requests, sessionFor, user } from './helpers';
+import { ids, items, mockApi, renderApp, requests, sessionFor, user } from './helpers';
 
 describe('item drawer', () => {
+  it('removes the stored photo on save, and only then', async () => {
+    const withPhoto = items.map((item) => (item.id === ids.espresso ? { ...item, imageUrl: 'https://img.test/espresso.webp', thumbnailUrl: 'https://img.test/espresso-thumb.webp' } : item));
+    const spy = mockApi({ session: sessionFor(user) }, ({ url, method, body }) => {
+      if (url.pathname.endsWith('/items') && method === 'GET') return { body: withPhoto };
+      if (url.pathname.endsWith(`/items/${ids.espresso}`) && method === 'PATCH') return { body: { ...withPhoto[0]!, ...(body as object) } };
+      return undefined;
+    });
+    renderApp(`/r/${ids.restaurant}/menu?c=${ids.coffee}`);
+    const typist = userEvent.setup();
+    await typist.click(await screen.findByRole('button', { name: 'Edit Espresso' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Edit item' });
+
+    await typist.click(within(drawer).getByRole('button', { name: 'Remove photo' }));
+    // Nothing leaves the form until Save: the preview is cleared and the button is gone.
+    expect(within(drawer).queryByRole('button', { name: 'Remove photo' })).toBeNull();
+    expect(requests(spy).some((r) => r.method === 'DELETE')).toBe(false);
+
+    await typist.click(within(drawer).getByRole('button', { name: /^Save/ }));
+    await waitFor(() => {
+      expect(requests(spy).some((r) => r.method === 'DELETE' && r.url.pathname.endsWith(`/items/${ids.espresso}/image`))).toBe(true);
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit item' })).not.toBeInTheDocument());
+  });
+
   it('validates with the shared createItemSchema before sending anything', async () => {
     const spy = mockApi({ session: sessionFor(user) });
     renderApp(`/r/${ids.restaurant}/menu`);

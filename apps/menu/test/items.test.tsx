@@ -1,9 +1,36 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { eventBodies, ids, mockFetch, renderMenu, serveFixtures } from './helpers';
+import { eventBodies, ids, menuSr, mockFetch, renderMenu, serveFixtures } from './helpers';
 
 describe('menu items', () => {
+  it('keeps the line breaks of a description and links its web addresses in the sheet', async () => {
+    const description = 'Uvek ima na stanju:\n007 - Kućni blend\nVidi www.alidedi.rs/kafa i https://javacoffee.rs/.';
+    const coffee = menuSr.categories[0]!;
+    const menu = {
+      ...menuSr,
+      categories: [{ ...coffee, items: coffee.items.map((item) => (item.id === ids.espresso ? { ...item, description } : item)) }, ...menuSr.categories.slice(1)],
+    };
+    mockFetch((url) => (url.pathname.endsWith('/events') ? { status: 202, body: { ok: true } } : { body: menu }));
+    const user = userEvent.setup();
+    renderMenu();
+
+    // The row keeps the text as typed (no links inside the button).
+    const opener = await screen.findByRole('button', { name: /Espresso/ });
+    expect(within(opener).queryByRole('link')).toBeNull();
+    expect(opener.textContent).toContain('007 - Kućni blend');
+    await user.click(opener);
+
+    const dialog = await screen.findByRole('dialog');
+    const links = within(dialog).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['https://www.alidedi.rs/kafa', 'https://javacoffee.rs/']);
+    expect(links[0]).toHaveAttribute('target', '_blank');
+    expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
+    const paragraph = links[0]!.closest('p')!;
+    expect(paragraph.className).toContain('whitespace-pre-line');
+    expect(paragraph.textContent).toBe(description);
+  });
+
   it('renders unavailable items dimmed, without a button, and never opens the sheet for them', async () => {
     mockFetch(serveFixtures);
     const user = userEvent.setup();

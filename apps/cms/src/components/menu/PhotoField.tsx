@@ -11,13 +11,15 @@ interface PhotoFieldProps {
   currentUrl: string | null;
   file: File | null;
   onFile: (file: File | null) => void;
+  /** Present while the item has a stored photo: "Remove photo" (applied when the item is saved). */
+  onRemove?: (() => void) | null;
   zoom: number;
   onZoom: (zoom: number) => void;
   layout: 'drawer' | 'sheet';
 }
 
 /** Item photo with upload drop zone and client-side crop zoom (the file is sent after the item is saved). */
-export function PhotoField({ currentUrl, file, onFile, zoom, onZoom, layout }: PhotoFieldProps) {
+export function PhotoField({ currentUrl, file, onFile, onRemove = null, zoom, onZoom, layout }: PhotoFieldProps) {
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,18 @@ export function PhotoField({ currentUrl, file, onFile, zoom, onZoom, layout }: P
     </label>
   ) : null;
 
+  const clearFile = file ? (
+    <Button variant="ghost" size={layout === 'sheet' ? 'xl' : 'sm'} onClick={() => onFile(null)}>
+      Keep current photo
+    </Button>
+  ) : null;
+  const removeButton =
+    !file && onRemove ? (
+      <Button variant="danger-ghost" size={layout === 'sheet' ? 'xl' : 'sm'} icon={<Icon name="trash" size={16} strokeWidth={1.8} />} onClick={onRemove}>
+        Remove photo
+      </Button>
+    ) : null;
+
   const hiddenInputs = (
     <>
       <input
@@ -130,6 +144,7 @@ export function PhotoField({ currentUrl, file, onFile, zoom, onZoom, layout }: P
             <Button size="xl" onClick={() => inputRef.current?.click()}>
               Choose from library
             </Button>
+            {removeButton}
           </div>
         </div>
         {zoomSlider}
@@ -165,6 +180,7 @@ export function PhotoField({ currentUrl, file, onFile, zoom, onZoom, layout }: P
           </button>
           {zoomSlider}
           <span className="text-xs text-faint">{file ? 'Square crop, shown at 76px in the menu.' : 'JPEG, PNG or WebP up to 8 MB. Shown at 76px in the menu.'}</span>
+          {removeButton || clearFile ? <div className="flex gap-2">{removeButton ?? clearFile}</div> : null}
         </div>
       </div>
       {hiddenInputs}

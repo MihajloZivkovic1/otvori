@@ -270,3 +270,25 @@ export async function uploadItemImage(restaurantId: string, itemId: string, file
   await audit.record({ restaurantId, action: 'item.image', entity: { type: 'item', id: itemId, label: audit.labelOf(item.name) }, after: { imageUrl: url } });
   return getItem(restaurantId, itemId);
 }
+
+/** Removes the item's photo and thumbnail (the stored files go after the row is cleared). Idempotent. */
+export async function deleteItemImage(restaurantId: string, itemId: string): Promise<MenuItemDto> {
+  const item = await loadItem(restaurantId, itemId);
+  const previous = { imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl };
+  if (previous.imageUrl || previous.thumbnailUrl) {
+    await sequelize.transaction(async (transaction) => {
+      await item.update({ imageUrl: null, thumbnailUrl: null }, { transaction });
+      await touchRestaurant(restaurantId, transaction);
+    });
+    await deleteStoredUrl(previous.imageUrl);
+    await deleteStoredUrl(previous.thumbnailUrl);
+    await audit.record({
+      restaurantId,
+      action: 'item.image',
+      entity: { type: 'item', id: itemId, label: audit.labelOf(item.name) },
+      before: { imageUrl: previous.imageUrl },
+      after: { imageUrl: null },
+    });
+  }
+  return getItem(restaurantId, itemId);
+}

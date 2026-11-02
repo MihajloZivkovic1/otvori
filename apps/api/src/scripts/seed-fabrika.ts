@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { readFile } from 'node:fs/promises';
 import { Op, type Transaction } from 'sequelize';
 import { env } from '../config/env.js';
-import { Category, Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
+import { Category, ItemVariant, Membership, MenuItem, Promotion, Restaurant, RestaurantTable, User } from '../db/models/index.js';
 import { sequelize } from '../db/sequelize.js';
 import { touchRestaurant } from '../modules/shared/touch-restaurant.js';
 import { processItemImage, processItemThumbnail, processLogo } from '../utils/images.js';
@@ -13,7 +13,7 @@ import { deleteStoredUrl, storage } from '../utils/storage.js';
 import { FABRIKA_MENU } from './fabrika-menu.js';
 import { FABRIKA_PHOTOS, FABRIKA_PHOTOS_DIR } from './fabrika-photos.js';
 import { FABRIKA_PROMOTIONS, type SeedPromotion } from './fabrika-promotions.js';
-import { insertMenu } from './menu-catalog.js';
+import { insertMenu, type CatalogCategory } from './menu-catalog.js';
 
 /**
  * Creates the real "Fabrika Kafeterija" venue with its printed menu (`fabrika-menu.ts`), its logo and the owner's
@@ -24,6 +24,8 @@ import { insertMenu } from './menu-catalog.js';
  *   … seed-fabrika.js --promo-only   (keeps the live venue and its menu untouched; only upserts the promotions by title)
  *   … seed-fabrika.js --photos-only  (keeps the live venue; gives the items in `fabrika-photos.ts` that have no photo yet theirs)
  *   … seed-fabrika.js --photos-only --replace-category Kafa   (re-syncs that one category with the list, over existing photos)
+ *   … seed-fabrika.js --sync-menu [--category Kafa]   (keeps the live venue; writes the seed's text, prices, variants,
+ *                     allergens and tags into the items with the same Serbian name, creates the missing ones, deletes nothing)
  *
  * The owner account is created when missing; an existing one keeps its other venues and only gets the password reset.
  * The previous venue's owner (`fabrika@otvori.menu`, from the pilot seed) is removed when no other venue is left to it.
@@ -149,6 +151,81 @@ async function photosOnly(): Promise<void> {
   await sequelize.close();
 }
 
+/**
+ * Syncs the content of `fabrika-menu.ts` into the live venue without replacing it: every seeded item is matched by its
+ * Serbian name (in its category first, then anywhere in the menu, so an item the owner moved keeps its place) and gets
+ * the seed's description, price, variants, variant label, allergens and tags. Ids, photos, availability, the order of
+ * existing items and anything the owner added (items, categories) stay as they are; items and categories missing from
+ * the venue are created at the end. Nothing is deleted.
+ */
+async function syncMenu(restaurantId: string, categories: CatalogCategory[], transaction: Transaction): Promise<{ updated: number; created: number; categoriesCreated: number }> {
+  const result = { updated: 0, created: 0, categoriesCreated: 0 };
+  const existingCategories = await Category.findAll({ where: { restaurantId }, order: [['sortOrder', 'ASC']], transaction });
+  const existingItems = await MenuItem.findAll({ where: { restaurantId }, transaction });
+  let nextCategoryOrder = existingCategories.reduce((max, category) => Math.max(max, category.sortOrder + 1), 0);
+  for (const seedCategory of categories) {
+    let category = existingCategories.find((candidate) => candidate.name.sr === seedCategory.name.sr);
+    if (!category) {
+      category = await Category.create({ restaurantId, name: seedCategory.name, sortOrder: nextCategoryOrder++, isHidden: false }, { transaction });
+      existingCategories.push(category);
+      result.categoriesCreated++;
+    }
+    const categoryId = category.id;
+    let nextItemOrder = existingItems.filter((item) => item.categoryId === categoryId).reduce((max, item) => Math.max(max, item.sortOrder + 1), 0);
+    for (const entry of seedCategory.items) {
+      const values = {
+        name: entry.name,
+        description: entry.description ?? null,
+        variantLabel: entry.variantLabel ?? null,
+        priceCents: entry.priceCents,
+        allergens: entry.allergens ?? [],
+        tags: entry.tags ?? [],
+      };
+      let item =
+        existingItems.find((candidate) => candidate.categoryId === categoryId && candidate.name.sr === entry.name.sr) ??
+        existingItems.find((candidate) => candidate.name.sr === entry.name.sr);
+      if (item) {
+        await item.update(values, { transaction });
+        await ItemVariant.destroy({ where: { menuItemId: item.id }, transaction });
+        result.updated++;
+      } else {
+        item = await MenuItem.create({ restaurantId, categoryId, isAvailable: true, sortOrder: nextItemOrder++, ...values }, { transaction });
+        existingItems.push(item);
+        result.created++;
+      }
+      if (entry.variants?.length) {
+        await ItemVariant.bulkCreate(
+          entry.variants.map((variant, index) => ({ menuItemId: item.id, name: variant.name, priceCents: variant.priceCents, sortOrder: index })),
+          { transaction },
+        );
+      }
+    }
+  }
+  await touchRestaurant(restaurantId, transaction);
+  return result;
+}
+
+async function syncMenuOnly(): Promise<void> {
+  const restaurant = await Restaurant.findOne({ where: { slug: VENUE.slug } });
+  if (!restaurant) {
+    process.stderr.write(`No venue with slug "${VENUE.slug}" — run the full seeder first.\n`);
+    process.exit(2);
+  }
+  const only = argValue('--category');
+  const categories = only ? FABRIKA_MENU.filter((category) => category.name.sr === only) : FABRIKA_MENU;
+  if (only && categories.length === 0) {
+    process.stderr.write(`No category "${only}" in the seed (${FABRIKA_MENU.map((c) => c.name.sr).join(', ')}).\n`);
+    process.exit(2);
+  }
+  const { updated, created, categoriesCreated } = await sequelize.transaction((transaction) => syncMenu(restaurant.id, categories, transaction));
+  const photos = await attachFabrikaPhotos(restaurant.id);
+  process.stdout.write(
+    `${VENUE.name}: ${updated} item(s) updated, ${created} created, ${categoriesCreated} categor${categoriesCreated === 1 ? 'y' : 'ies'} created` +
+      `${only ? ` (category "${only}")` : ''}, ${photos.attached} photo(s) attached to items that had none\n`,
+  );
+  await sequelize.close();
+}
+
 async function removeVenue(restaurant: Restaurant, transaction: Transaction): Promise<string[]> {
   const items = await MenuItem.findAll({ where: { restaurantId: restaurant.id }, attributes: ['imageUrl', 'thumbnailUrl'], transaction });
   const urls = [restaurant.logoUrl, ...items.flatMap((item) => [item.imageUrl, item.thumbnailUrl])];
@@ -171,6 +248,10 @@ async function main(): Promise<void> {
   }
   if (process.argv.includes('--photos-only')) {
     await photosOnly();
+    return;
+  }
+  if (process.argv.includes('--sync-menu')) {
+    await syncMenuOnly();
     return;
   }
   if (PASSWORD.length < 8) {

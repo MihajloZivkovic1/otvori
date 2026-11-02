@@ -29,6 +29,8 @@ describe('permission matrix (Phase 11)', () => {
       ['delete', `${base}/items/${item.id}`],
       ['put', `${base}/items/reorder`, [item.id]],
       ['post', `${base}/items/${item.id}/image`],
+      ['delete', `${base}/items/${item.id}/image`],
+      ['delete', `${base}/items/${item.id}/image`],
       ['post', `${base}/categories`, { name: { sr: 'Nova' } }],
       ['patch', `${base}/categories/${category.id}`, { isHidden: true }],
       ['put', `${base}/categories/reorder`, [category.id]],

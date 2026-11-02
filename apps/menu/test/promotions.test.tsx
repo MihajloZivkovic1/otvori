@@ -190,6 +190,26 @@ describe('promotions on the guest menu', () => {
     }
   });
 
+  it('links a web address written in the notice body', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const withLink: PublicPromotionDto = { ...notice, content: { headline: 'Popust', body: 'Kod za popust na\nhttps://alidedi.rs/otvori' } };
+      mockFetch(serve([withLink]));
+      renderMenu();
+      await screen.findByRole('heading', { name: 'Kafa' });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+      });
+      const dialog = await screen.findByRole('dialog', { name: 'Radno vreme' });
+      const link = await within(dialog).findByRole('link', { name: 'https://alidedi.rs/otvori' });
+      expect(link).toHaveAttribute('href', 'https://alidedi.rs/otvori');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link.closest('p')?.textContent).toBe('Kod za popust na\nhttps://alidedi.rs/otvori');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not show a dismissed modal again, but does after the owner edited it', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

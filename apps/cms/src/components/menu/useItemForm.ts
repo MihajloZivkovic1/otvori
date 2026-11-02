@@ -11,7 +11,7 @@ import {
 } from '@qr-menu/shared';
 import { errorMessage } from '../../lib/api';
 import { cropSquare } from '../../lib/crop';
-import { useCreateItem, useUpdateItem, useUploadItemImage } from '../../lib/queries';
+import { useCreateItem, useDeleteItemImage, useUpdateItem, useUploadItemImage } from '../../lib/queries';
 import { useToast } from '../ui/Toast';
 import { knownAllergens, knownTags } from './labels';
 
@@ -73,12 +73,19 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
   const createItem = useCreateItem(restaurant.id);
   const updateItem = useUpdateItem(restaurant.id);
   const uploadImage = useUploadItemImage(restaurant.id);
+  const deleteImage = useDeleteItemImage(restaurant.id);
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(createItemSchema),
     defaultValues: toFormValues(item, categoryId),
   });
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [photo, setPhotoState] = useState<File | null>(null);
+  /** "Remove photo" was pressed: the stored photo goes when the item is saved (choosing a new file cancels it). */
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const setPhoto = useCallback((file: File | null) => {
+    setPhotoState(file);
+    if (file) setRemovePhoto(false);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [availabilityTouched, setAvailabilityTouched] = useState(false);
 
@@ -110,6 +117,8 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
       if (photo) {
         const blob = await cropSquare(photo, zoom);
         saved = await uploadImage.mutateAsync({ id: saved.id, file: blob });
+      } else if (removePhoto && item?.imageUrl) {
+        saved = await deleteImage.mutateAsync(saved.id);
       }
       toast.success(item ? 'Item saved' : 'Item added');
       onSaved(saved);
@@ -126,10 +135,12 @@ export function useItemForm({ restaurant, categoryId, item, onSaved }: UseItemFo
     saving,
     photo,
     setPhoto,
+    removePhoto,
+    setRemovePhoto,
     zoom,
     setZoom,
     markAvailabilityTouched,
-    isDirty: form.formState.isDirty || photo !== null,
+    isDirty: form.formState.isDirty || photo !== null || removePhoto,
   };
 }
 

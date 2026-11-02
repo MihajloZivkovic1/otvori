@@ -14,23 +14,26 @@ export const FABRIKA_PHOTOS_DIR = fileURLToPath(new URL('../../assets/fabrika-ph
 export const FABRIKA_PHOTOS: Record<string, string> = {
   // Espresso drinks show the Java Coffee bags of the blends they come in (B1 = 001, B7 = 007, K = Guatemala "kafa
   // meseca", KM = Colombia), not a photo of the drink; the iced ones are made with B1/B7 only. Nes frape, srpska kafa
-  // and mača late are not Java blends, so they have no photo.
+  // and mača late are not Java blends, so they have no photo. Bebićino gets the kids' sticker drawn in `scripts/bebicino.mjs`.
   Espreso: 'java-blendovi.jpg',
   Ristreto: 'java-blendovi.jpg',
   'Dupli espreso': 'java-blendovi.jpg',
   Makijato: 'java-blendovi.jpg',
-  Bebićino: 'java-blendovi.jpg',
+  Bebićino: 'bebicino.jpg',
   Kapućino: 'java-blendovi.jpg',
   'Kapućino XL': 'java-blendovi.jpg',
   'Kafe late': 'java-blendovi.jpg',
   'Late makijato': 'java-blendovi.jpg',
-  'Aromatizovani kafe late': 'java-blendovi.jpg',
+  'Kafe late sa ukusom': 'java-blendovi.jpg',
   'Moka espreso': 'java-blendovi.jpg',
   'Kafa afogato': 'java-blendovi.jpg',
   Amerikano: 'java-blendovi.jpg',
   'Fredo hladni espreso': 'java-blendovi-001-007.jpg',
   'Fredo kapućino': 'java-blendovi-001-007.jpg',
   'Ledena kafa': 'java-blendovi-001-007.jpg',
+  'Hladan kafe late': 'java-blendovi-001-007.jpg',
+  'Hladni kafe late sa ukusom': 'java-blendovi-001-007.jpg',
+  'Hladna moka': 'java-blendovi-001-007.jpg',
   'Espreso kafa 250 g': 'java-blendovi.jpg',
   'Topla čokolada': 'topla-cokolada.jpg',
   Sifon: 'sifon.jpg',
