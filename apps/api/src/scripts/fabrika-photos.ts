@@ -47,7 +47,6 @@ export const FABRIKA_PHOTOS: Record<string, string> = {
   'Kafeterija klub sendvič': 'kafeterija-klub-sendvic.jpg',
   'Chicken avocado burrito': 'chicken-avocado-burrito.jpg',
   'Crispy chicken burrito': 'crispy-chicken-burrito.jpg',
-  'Italijanski tost sendvič': 'italijanski-tost-sendvic.jpg',
   'Ćuretina i brie': 'curetina-i-brie.jpg',
   'Pulled pork burger': 'pulled-pork-burger.jpg',
   'Angus bacon cheeseburger': 'angus-bacon-cheeseburger.jpg',
@@ -63,9 +62,9 @@ export const FABRIKA_PHOTOS: Record<string, string> = {
   'Začinski krompir': 'zacinski-krompir.jpg',
   F2: 'f2.jpg',
   F3: 'f3.jpg',
-  'Sok od jabuke': 'sok-od-jabuke.jpg',
   'Sok od narandže': 'sok-od-narandze.jpg',
   'Sok od borovnice': 'sok-od-borovnice.jpg',
+  'Next sok od breskve': 'next-sok-od-breskve.jpg',
 
   Zdravko: 'zdravko.jpg',
   Gari: 'gari.jpg',
@@ -102,7 +101,6 @@ export const FABRIKA_PHOTOS: Record<string, string> = {
   'Tart nutela': 'tart-nutela.jpg',
   'Čokoladni mafin': 'cokoladni-mafin.jpg',
   'Tart čokolada malina': 'tart-cokolada-malina.jpg',
-  Sladoled: 'sladoled.jpg',
 
   'Branko šljiva': 'branko-sljiva.jpg',
   'Kovilj šljiva': 'kovilj-sljiva.jpg',

@@ -7,7 +7,7 @@ use images from the web; this file records where each one came from so credits c
 
 angus-bacon-cheeseburger, bbq-burger, burger-wedges, chicken-avocado-burger, chicken-avocado-burrito,
 chicken-nuggets-wedges, crispy-chicken-burrito, curetina-i-brie, diavolo-burger, f2, f3, garlic-parm,
-italijanski-tost-sendvic, kafeterija-klub-sendvic, kapreze-sendvic, mortadela-i-pistaci, pomfrit, pulled-pork-burger,
+kafeterija-klub-sendvic, kapreze-sendvic, mortadela-i-pistaci, pomfrit, pulled-pork-burger,
 steak-sendvic, truffle-fries, zacinski-krompir
 
 ## Drawn for the menu
@@ -21,8 +21,9 @@ bebicino — čiča Gliša with a cup of milk foam, drawn by us in `apps/api/scr
 | --- | --- |
 | zdravko, gari, dzindzer-greni, dark-madnes, detoks, greni, kamimajl, blek-mango, red-mednes | Coffee Bazaar (Mad Hatter teas), https://coffeebazaar.rs/cajevi/ |
 | java-blendovi (bags 001, 007, Guatemala "kafa meseca", Colombia), java-blendovi-001-007, topla-cokolada, sifon, v60, frenc-pres | Java Coffee, https://javacoffee.rs/ |
-| kola | Coca-Cola HBC, https://www.coca-cola.com/bg/bg/brands/coca-cola |
-| fanta, tonik, biter | Coca-Cola HBC Serbia, https://www.coca-cola.com/rs/sr/brands/fanta · …/brands/schweppes |
+| kola (0,33 l can) | Coca-Cola Serbia packshot, https://www.coca-cola.com/rs/sr/brands/coca-cola |
+| tonik | Coca-Cola HBC Serbia (bottle: no can packshot exists on any Coca-Cola site or on Commons), https://www.coca-cola.com/rs/sr/brands/schweppes |
+| sok-od-narandze, sok-od-borovnice, next-sok-od-breskve | Next packshots (Pomorandža, Moćne bobice, Breskva i jabuka — the 1 l bricks, the only ones published), https://www.coca-cola.com/rs/sr/brands/next |
 | rosa | Basta promet (shop), https://www.bastapromet.rs/Shop/Product/Details?productId=9251 |
 | knjaz-milos | Knjaz Miloš, https://knjaz.rs/portfolio/knjaz-milos/ |
 | red-bull | Red Bull, https://www.redbull.com/rs-sr/energydrink/red-bull-energy-drink |
@@ -47,11 +48,9 @@ bebicino — čiča Gliša with a cup of milk foam, drawn by us in `apps/api/scr
 | --- | --- | --- | --- |
 | kemeks.jpg | [Die Chemex 6 Cup.jpg](https://commons.wikimedia.org/wiki/File:Die_Chemex_6_Cup.jpg) | Coffee Circle from Berlin, Deutschland | CC BY 2.0 |
 | aero-pres.jpg | [Aeropress brew method.jpg](https://commons.wikimedia.org/wiki/File:Aeropress_brew_method.jpg) | Bex Walton | CC BY 2.0 |
-| sok-od-jabuke.jpg | [Apple juice with 3apples.jpg](https://commons.wikimedia.org/wiki/File:Apple_juice_with_3apples.jpg) | Flunse (Patrick Geltinger) | CC BY-SA 3.0 |
-| sok-od-narandze.jpg | [Orange juice 1 edit1.jpg](https://commons.wikimedia.org/wiki/File:Orange_juice_1_edit1.jpg) | Agency of the United States Department of Agriculture Edited Version by: Arad | Public domain |
-| sok-od-borovnice.jpg | [Blueberry smoothie.jpg](https://commons.wikimedia.org/wiki/File:Blueberry_smoothie.jpg) | User:Ɱ | CC BY-SA 3.0 |
+| fanta.jpg (0,33 l can, rotated upright) | [Fanta-Orange-Can-330ml 84177 (7116950883).jpg](https://commons.wikimedia.org/wiki/File:Fanta-Orange-Can-330ml_84177_(7116950883).jpg) | Flickr user (see the file page) | CC BY 2.0 |
+| biter.jpg (0,33 l can) | [Schweppes Bitter Lemon.png](https://commons.wikimedia.org/wiki/File:Schweppes_Bitter_Lemon.png) | Tavruz | CC BY-SA 4.0 |
 | prosecco.jpg | [Prosecco and snacks in Tuscany.jpg](https://commons.wikimedia.org/wiki/File:Prosecco_and_snacks_in_Tuscany.jpg) | laura.foto | CC BY 2.0 |
 | tart-nutela.jpg | [Du Conseil à l'assiette - tartelette au chocolat (juin 2021).jpg](https://commons.wikimedia.org/wiki/File:Du_Conseil_%C3%A0_l%27assiette_-_tartelette_au_chocolat_(juin_2021).jpg) | Benoît Prieur | CC0 |
 | cokoladni-mafin.jpg | [Chocolate muffin - Cosy Cottage 2025-04-21.jpg](https://commons.wikimedia.org/wiki/File:Chocolate_muffin_-_Cosy_Cottage_2025-04-21.jpg) | Andy Li | CC0 |
 | tart-cokolada-malina.jpg | [Chocolate raspberry dessert.jpg](https://commons.wikimedia.org/wiki/File:Chocolate_raspberry_dessert.jpg) | Funknendai | CC0 |
-| sladoled.jpg | [Mango gelato (9368461646).jpg](https://commons.wikimedia.org/wiki/File:Mango_gelato_(9368461646).jpg) | Ruth Hartnup from Vancouver, Canada | CC BY 2.0 |

@@ -158,13 +158,17 @@ async function photosOnly(): Promise<void> {
  * existing items and anything the owner added (items, categories) stay as they are; items and categories missing from
  * the venue are created at the end. Nothing is deleted.
  */
+/** Names compare case-insensitively and ignore spacing/dash differences ("Mafin Sa Sladoledom" = "Mafin sa sladoledom", "Kapreze sendvič - Losos" = "Kapreze sendvič – losos"). */
+const sameName = (a: string | undefined, b: string | undefined): boolean =>
+  (a ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim() === (b ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim();
+
 async function syncMenu(restaurantId: string, categories: CatalogCategory[], transaction: Transaction): Promise<{ updated: number; created: number; categoriesCreated: number }> {
   const result = { updated: 0, created: 0, categoriesCreated: 0 };
   const existingCategories = await Category.findAll({ where: { restaurantId }, order: [['sortOrder', 'ASC']], transaction });
   const existingItems = await MenuItem.findAll({ where: { restaurantId }, transaction });
   let nextCategoryOrder = existingCategories.reduce((max, category) => Math.max(max, category.sortOrder + 1), 0);
   for (const seedCategory of categories) {
-    let category = existingCategories.find((candidate) => candidate.name.sr === seedCategory.name.sr);
+    let category = existingCategories.find((candidate) => sameName(candidate.name.sr, seedCategory.name.sr));
     if (!category) {
       category = await Category.create({ restaurantId, name: seedCategory.name, sortOrder: nextCategoryOrder++, isHidden: false }, { transaction });
       existingCategories.push(category);
@@ -182,8 +186,8 @@ async function syncMenu(restaurantId: string, categories: CatalogCategory[], tra
         tags: entry.tags ?? [],
       };
       let item =
-        existingItems.find((candidate) => candidate.categoryId === categoryId && candidate.name.sr === entry.name.sr) ??
-        existingItems.find((candidate) => candidate.name.sr === entry.name.sr);
+        existingItems.find((candidate) => candidate.categoryId === categoryId && sameName(candidate.name.sr, entry.name.sr)) ??
+        existingItems.find((candidate) => sameName(candidate.name.sr, entry.name.sr));
       if (item) {
         await item.update(values, { transaction });
         await ItemVariant.destroy({ where: { menuItemId: item.id }, transaction });

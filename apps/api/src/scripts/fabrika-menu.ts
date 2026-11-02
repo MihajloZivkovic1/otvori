@@ -204,6 +204,37 @@ export const FABRIKA_TEA: CatalogCategory = {
   ],
 };
 
+export const FABRIKA_GRANOLA: CatalogCategory = {
+  name: t('Granole', 'Granola'),
+  items: [
+    {
+      name: t('Kućna granola', 'House granola'),
+      description: t(
+        [
+          'Hrskava, zapečena u rerni, sa svežom bananom. Dve vrste:',
+          'Brusnica – brusnica, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
+          'Čokolada – čokolada, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
+          `Biljno mleko: sojino, bademovo, kokosovo, ovseno ili bez laktoze`,
+        ].join('\n'),
+        [
+          'Crunchy, oven-baked, with fresh banana. Two kinds:',
+          'Cranberry – cranberry, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
+          'Chocolate – chocolate, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
+          'Plant milk: soy, almond, coconut, oat or lactose-free',
+        ].join('\n'),
+      ),
+      priceCents: rsd(400),
+      allergens: ['G', 'M', 'N'],
+      variantLabel: t('Uz', 'Served with'),
+      variants: [
+        { name: 'Mleko', priceCents: rsd(400) },
+        { name: 'Jogurt', priceCents: rsd(400) },
+        { name: 'Biljno mleko', priceCents: rsd(400) },
+      ],
+    },
+  ],
+};
+
 export const FABRIKA_SANDWICHES: CatalogCategory = {
   name: t('Sendviči', 'Sandwiches'),
   items: [
@@ -212,12 +243,27 @@ export const FABRIKA_SANDWICHES: CatalogCategory = {
       description: t('Fokača, paradajz, bosiljak, pesto đenoveze, sveža mocarela, balzamiko redukcija', 'Focaccia, tomato, basil, pesto genovese, fresh mozzarella, balsamic reduction'),
       priceCents: rsd(590),
       allergens: ['G', 'M', 'N'],
-      variantLabel: t('Veličina i dodaci', 'Size & extras'),
+    },
+    {
+      name: t('Kapreze sendvič – pršuta', 'Caprese sandwich – prosciutto'),
+      description: t('Fokača, paradajz, bosiljak, pesto đenoveze, sveža mocarela, balzamiko redukcija + pršuta', 'Focaccia, tomato, basil, pesto genovese, fresh mozzarella, balsamic reduction + prosciutto'),
+      priceCents: rsd(750),
+      allergens: ['G', 'M', 'N'],
+      variantLabel: t('Veličina', 'Size'),
       variants: [
-        { name: 'Ceo', priceCents: rsd(590) },
-        { name: 'Pola', priceCents: rsd(380) },
-        { name: 'Ceo + pršuta', priceCents: rsd(750) },
-        { name: 'Ceo + dimljeni losos', priceCents: rsd(820) },
+        { name: 'Ceo', priceCents: rsd(750) },
+        { name: 'Pola', priceCents: rsd(540) },
+      ],
+    },
+    {
+      name: t('Kapreze sendvič – losos', 'Caprese sandwich – salmon'),
+      description: t('Fokača, paradajz, bosiljak, pesto đenoveze, sveža mocarela, balzamiko redukcija + dimljeni losos', 'Focaccia, tomato, basil, pesto genovese, fresh mozzarella, balsamic reduction + smoked salmon'),
+      priceCents: rsd(820),
+      allergens: ['G', 'M', 'N', 'F'],
+      variantLabel: t('Veličina', 'Size'),
+      variants: [
+        { name: 'Ceo', priceCents: rsd(820) },
+        { name: 'Pola', priceCents: rsd(610) },
       ],
     },
     {
@@ -357,16 +403,7 @@ export const FABRIKA_CAKES: CatalogCategory = {
     { name: t('Tart nutela', 'Nutella tart'), description: t('Hrskavo testo sa nutelom', 'Crisp pastry with Nutella'), priceCents: rsd(400), allergens: ['G', 'M', 'E', 'N'] },
     { name: t('Čokoladni mafin', 'Chocolate muffin'), priceCents: rsd(250), allergens: ['G', 'M', 'E'] },
     { name: t('Tart čokolada malina', 'Chocolate raspberry tart'), description: t('Tamna čokolada i sveže maline', 'Dark chocolate and fresh raspberries'), priceCents: rsd(400), allergens: ['G', 'M', 'E'] },
-    {
-      name: t('Sladoled', 'Ice cream'),
-      description: t('Kugla, po želji sa prelivom', 'A scoop, with a topping if you like'),
-      priceCents: rsd(100),
-      allergens: ['M'],
-      variants: [
-        { name: 'Kugla', priceCents: rsd(100) },
-        { name: 'Kugla sa prelivom', priceCents: rsd(150) },
-      ],
-    },
+    { name: t('Mafin sa sladoledom', 'Muffin with ice cream'), description: t('Čokoladni mafin sa kuglom sladoleda', 'Chocolate muffin with a scoop of ice cream'), priceCents: rsd(400), allergens: ['G', 'M', 'E'] },
   ],
 };
 
@@ -374,10 +411,22 @@ export const FABRIKA_FRESH_JUICES: CatalogCategory = {
   name: t('Ceđeni sokovi', 'Fresh juices'),
   items: [
     { name: t('Limunada', 'Lemonade'), description: t('0,4 l', '0.4 l'), priceCents: rsd(200), tags: ['vegan'] },
-    { name: t('Voćna limunada', 'Fruit lemonade'), description: t('0,4 l, jagoda ili breskva', '0.4 l, strawberry or peach'), priceCents: rsd(250), tags: ['vegan'], variantLabel: t('Ukus', 'Flavour'), variants: [{ name: 'Jagoda', priceCents: rsd(250) }, { name: 'Breskva', priceCents: rsd(250) }] },
+    {
+      name: t('Limunada sa ukusom', 'Flavoured lemonade'),
+      description: t('0,4 l, jagoda, breskva, malina ili marakuja', '0.4 l, strawberry, peach, raspberry or passion fruit'),
+      priceCents: rsd(250),
+      tags: ['vegan'],
+      variantLabel: t('Ukus', 'Flavour'),
+      variants: [
+        { name: 'Jagoda', priceCents: rsd(250) },
+        { name: 'Breskva', priceCents: rsd(250) },
+        { name: 'Malina', priceCents: rsd(250) },
+        { name: 'Marakuja', priceCents: rsd(250) },
+      ],
+    },
+    { name: t('Limunada jagoda', 'Strawberry lemonade'), description: t('0,4 l, jagoda', '0.4 l, strawberry'), priceCents: rsd(250), tags: ['vegan'] },
     { name: t('Đumbirlada', 'Ginger lemonade'), description: t('0,4 l, limunada sa svežim đumbirom', '0.4 l, lemonade with fresh ginger'), priceCents: rsd(250), tags: ['vegan'] },
     { name: t('F1', 'F1'), description: t('0,25 l, malina, jabuka, med', '0.25 l, raspberry, apple, honey'), priceCents: rsd(400) },
-    { name: t('F2', 'F2'), description: t('Šargarepa, jabuka, narandža, đumbir', 'Carrot, apple, orange, ginger'), priceCents: rsd(350), tags: ['vegan'] },
     { name: t('F3', 'F3'), description: t('Ananas, jabuka, narandža, limun, med', 'Pineapple, apple, orange, lemon, honey'), priceCents: rsd(350) },
     { name: t('F4', 'F4'), description: t('Ceđena narandža', 'Freshly squeezed orange'), priceCents: rsd(350), tags: ['vegan'] },
     { name: t('F5', 'F5'), description: t('Kupina, jabuka, med', 'Blackberry, apple, honey'), priceCents: rsd(450) },
@@ -387,13 +436,14 @@ export const FABRIKA_FRESH_JUICES: CatalogCategory = {
 export const FABRIKA_SOFT_DRINKS: CatalogCategory = {
   name: t('Sokovi i voda', 'Soft drinks & water'),
   items: [
-    { name: t('Kola', 'Cola'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Fanta', 'Fanta'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Tonik', 'Tonic'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Biter', 'Bitter lemon'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Sok od jabuke', 'Apple juice'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Sok od narandže', 'Orange juice'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
-    { name: t('Sok od borovnice', 'Blueberry juice'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
+    // Fizzy drinks come in cans; the still juices are Next (the owner's "gusti sokovi").
+    { name: t('Kola', 'Cola'), description: t('Coca-Cola, limenka 0,33 l', 'Coca-Cola, 0.33 l can'), priceCents: rsd(240) },
+    { name: t('Fanta', 'Fanta'), description: t('Limenka 0,33 l', '0.33 l can'), priceCents: rsd(240) },
+    { name: t('Tonik', 'Tonic'), description: t('Schweppes, limenka 0,33 l', 'Schweppes, 0.33 l can'), priceCents: rsd(240) },
+    { name: t('Biter', 'Bitter lemon'), description: t('Schweppes, limenka 0,33 l', 'Schweppes, 0.33 l can'), priceCents: rsd(240) },
+    { name: t('Sok od narandže', 'Orange juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
+    { name: t('Sok od borovnice', 'Blueberry juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
+    { name: t('Next sok od breskve', 'Peach juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
     { name: t('Rosa', 'Rosa still water'), description: t('Negazirana voda', 'Still water'), priceCents: rsd(190), variants: [{ name: '0,33 l', priceCents: rsd(190) }, { name: '0,75 l', priceCents: rsd(310) }] },
     { name: t('Knjaz Miloš', 'Knjaz Miloš sparkling water'), description: t('Gazirana voda', 'Sparkling water'), priceCents: rsd(190), variants: [{ name: '0,33 l', priceCents: rsd(190) }, { name: '0,75 l', priceCents: rsd(310) }] },
     { name: t('Red Bull', 'Red Bull'), description: t('0,33 l', '0.33 l'), priceCents: rsd(350) },
@@ -464,8 +514,9 @@ export const FABRIKA_RAKIJA: CatalogCategory = {
 /** Coffee first, then food, then the rest of the drinks. */
 export const FABRIKA_MENU: CatalogCategory[] = [
   FABRIKA_COFFEE,
-  FABRIKA_BREWING,
+  // FABRIKA_BREWING is kept above for the day the owner brings the siphon and V60 back; he removed the category live.
   FABRIKA_TEA,
+  FABRIKA_GRANOLA,
   FABRIKA_SANDWICHES,
   FABRIKA_BURGERS,
   FABRIKA_STUFFED_FRIES,
