@@ -49,6 +49,14 @@ export const promotionStyleSchema = z.object({
 });
 export type PromotionStyleInput = z.infer<typeof promotionStyleSchema>;
 
+/** An outbound http(s) link; the guest opens it in a new tab. */
+export const promotionLinkUrlSchema = z
+  .string()
+  .trim()
+  .max(PROMOTION_LIMITS.linkUrlMax)
+  .url('Enter a full link starting with https://')
+  .refine((value) => /^https?:\/\//i.test(value), 'The link must start with http:// or https://');
+
 export const featuredItemsContentSchema = z.object({
   intro: optionalText(PROMOTION_LIMITS.introMax),
   items: z
@@ -90,6 +98,9 @@ const promotionFields = z.object({
   recurrence: promotionRecurrenceSchema.nullable(),
   /** Colour / pill overrides; null = template defaults. */
   style: promotionStyleSchema.nullable(),
+  /** Optional outbound link (null = none) and the label of its button (null = the guest app's default copy). */
+  linkUrl: promotionLinkUrlSchema.nullable(),
+  linkLabel: z.string().trim().min(1).max(PROMOTION_LIMITS.linkLabelMax).nullable(),
   /** Set by the image upload route; a PATCH may only clear it. */
   imageUrl: z.null().optional(),
 });
@@ -103,6 +114,8 @@ const createFields = promotionFields.partial({
   endsAt: true,
   recurrence: true,
   style: true,
+  linkUrl: true,
+  linkLabel: true,
   imageUrl: true,
 });
 

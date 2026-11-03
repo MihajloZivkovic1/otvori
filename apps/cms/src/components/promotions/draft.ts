@@ -45,6 +45,9 @@ export interface PromotionDraft {
   recurrence: DraftRecurrence;
   /** Colour / pill overrides (null fields = template defaults). */
   style: Required<PromotionStyle>;
+  /** Outbound link ('' = none) and the label of its button ('' = the guest app's default). */
+  linkUrl: string;
+  linkLabel: string;
 }
 
 export const DRINK_LIST_VARIANT_META: Record<NonNullable<DrinkListContent['variant']>, { name: string; description: string }> = {
@@ -84,6 +87,8 @@ export function emptyDraft(restaurant: Pick<RestaurantDto, 'name'>): PromotionDr
     endsAt: '',
     recurrence: DEFAULT_RECURRENCE,
     style: { textColor: null, backgroundColor: null, pillPosition: null, pillColor: null, pillStyle: null, pillTextColor: null },
+    linkUrl: '',
+    linkLabel: '',
   };
 }
 
@@ -138,6 +143,8 @@ export function draftFromDto(dto: PromotionDto, restaurant: Pick<RestaurantDto, 
       pillStyle: dto.style?.pillStyle ?? null,
       pillTextColor: dto.style?.pillTextColor ?? null,
     },
+    linkUrl: dto.linkUrl ?? '',
+    linkLabel: dto.linkLabel ?? '',
   };
 }
 
@@ -199,6 +206,8 @@ export function draftToInput(draft: PromotionDraft): Record<string, unknown> {
     endsAt: toIsoOrNull(draft.endsAt),
     recurrence: draft.recurrence.enabled ? { weekdays: [...draft.recurrence.weekdays].sort(), from: draft.recurrence.from, to: draft.recurrence.to } : null,
     style: draftStyle(draft),
+    linkUrl: draft.linkUrl.trim() || null,
+    linkLabel: draft.linkUrl.trim() ? draft.linkLabel.trim() || null : null,
   };
 }
 
@@ -208,7 +217,7 @@ export function draftStyle(draft: PromotionDraft): PromotionStyle | null {
   return entries.length ? (Object.fromEntries(entries) as PromotionStyle) : null;
 }
 
-export type DraftErrors = Partial<Record<'title' | 'content' | 'display' | 'priority' | 'startsAt' | 'endsAt' | 'recurrence' | 'accentColor' | 'style', string>>;
+export type DraftErrors = Partial<Record<'title' | 'content' | 'display' | 'priority' | 'startsAt' | 'endsAt' | 'recurrence' | 'accentColor' | 'style' | 'linkUrl' | 'linkLabel', string>>;
 
 /** Runs the shared schema; returns the typed input or the field errors to show. */
 export function validateDraft(draft: PromotionDraft): { ok: true; input: CreatePromotionInput } | { ok: false; errors: DraftErrors } {
@@ -248,6 +257,8 @@ export function previewOf(draft: PromotionDraft, items: MenuItemDto[], defaultLo
     ...body,
     title: draft.title.trim() || TEMPLATE_META[draft.template].name,
     style: draftStyle(draft),
+    linkUrl: draft.linkUrl.trim() || null,
+    linkLabel: draft.linkUrl.trim() ? draft.linkLabel.trim() || null : null,
     imageUrl,
     items: items.filter((item) => ids.has(item.id)).map((item) => toPreviewItem(item, defaultLocale)),
   };

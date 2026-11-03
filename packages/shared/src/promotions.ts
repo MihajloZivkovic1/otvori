@@ -25,6 +25,9 @@ export const PROMOTION_LIMITS = {
   headlineMax: 80,
   descriptionMax: 300,
   bodyMax: 600,
+  /** Optional outbound link shown as a button under the promotion (delivery page, reservations, Instagram …). */
+  linkUrlMax: 500,
+  linkLabelMax: 40,
   priorityMin: -100,
   priorityMax: 100,
   /** A dismissed modal stays hidden on that phone for this long (or until the owner edits the promotion). */

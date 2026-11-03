@@ -145,6 +145,37 @@ export function DisplayFields({ value, onChange, errors }: Props) {
         </Field>
       ) : null}
 
+      <div className="flex flex-col gap-3 rounded-[10px] border border-line p-3.5">
+        <span className="flex flex-col">
+          <span className="text-sm font-medium">Link</span>
+          <span className="text-xs text-muted">Optional. A button under the promotion that opens a web page: delivery, reservations, Instagram… Opens in a new tab.</span>
+        </span>
+        <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
+          <Field label="Link (URL)" htmlFor="promo-link-url" error={errors.linkUrl}>
+            <Input
+              id="promo-link-url"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              placeholder="https://"
+              maxLength={PROMOTION_LIMITS.linkUrlMax}
+              value={value.linkUrl}
+              onChange={(event) => onChange({ linkUrl: event.target.value })}
+            />
+          </Field>
+          <Field label="Button text" htmlFor="promo-link-label" hint={value.linkUrl.trim() ? 'Default: "Saznaj više"' : undefined} error={errors.linkLabel}>
+            <Input
+              id="promo-link-label"
+              placeholder="Naruči dostavu"
+              maxLength={PROMOTION_LIMITS.linkLabelMax}
+              value={value.linkLabel}
+              disabled={!value.linkUrl.trim()}
+              onChange={(event) => onChange({ linkLabel: event.target.value })}
+            />
+          </Field>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Priority" htmlFor="promo-priority" hint="Higher shows first; the pop-up with the highest priority wins." error={errors.priority}>
           <Input

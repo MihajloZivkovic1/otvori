@@ -128,6 +128,8 @@ export interface PromotionCopy {
   /** Accessible names of the banner controls. */
   collapse: string;
   expand: string;
+  /** Default label of the outbound link button (when the owner set none). */
+  openLink: string;
 }
 
 export interface PaymentCopy {
@@ -308,6 +310,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       oldPrice: 'Previously',
       collapse: 'Hide promotion',
       expand: 'Show promotion',
+      openLink: 'Learn more',
     },
     errors: {
       blocked: 'Ordering from this table is temporarily disabled. Please call the waiter.',
@@ -465,6 +468,7 @@ export const dict: Record<UiLocale, Dictionary> = {
       oldPrice: 'Ranije',
       collapse: 'Sakrij promociju',
       expand: 'Prikaži promociju',
+      openLink: 'Saznaj više',
     },
     errors: {
       blocked: 'Naručivanje sa ovog stola je privremeno onemogućeno. Pozovite konobara.',

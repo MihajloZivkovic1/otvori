@@ -8,6 +8,9 @@ export type PromotionLike = PromotionBody & {
   items: PublicPromotionItemDto[];
   /** Colour overrides (text, background); the pill position is only read by the banner. */
   style?: PromotionStyle | null;
+  /** Optional outbound link rendered as a button under the body; `linkLabel` null = the default copy. */
+  linkUrl?: string | null;
+  linkLabel?: string | null;
 };
 
 export interface TemplateProps<T extends PromotionLike['template'] = PromotionLike['template']> {

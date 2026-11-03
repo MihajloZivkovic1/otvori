@@ -889,6 +889,8 @@ const promotionDtoFields = z.object({
   endsAt: isoString.nullable(),
   recurrence: promotionRecurrenceSchema.nullable(),
   style: promotionStyleSchema.nullable(),
+  linkUrl: z.string().nullable(),
+  linkLabel: z.string().nullable(),
   imageUrl: z.string().nullable(),
   /** Computed server-side in the venue's time zone: active flag, date range and recurrence window. */
   isActiveNow: z.boolean(),
@@ -919,6 +921,8 @@ export const publicPromotionDtoSchema = z.intersection(
     accentColor: z.string().nullable(),
     style: promotionStyleSchema.nullable(),
     priority: z.number().int(),
+    linkUrl: z.string().nullable(),
+    linkLabel: z.string().nullable(),
     imageUrl: z.string().nullable(),
     updatedAt: isoString,
     items: z.array(publicPromotionItemDtoSchema),

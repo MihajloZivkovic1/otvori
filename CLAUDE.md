@@ -359,7 +359,11 @@ routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/
   (`to` at or before `from` = past midnight), `style` JSONB `{ textColor?, backgroundColor?, pillPosition?: 'right'|'left', pillColor?, pillStyle?: 'solid'|'outline', pillTextColor? }`
   (migration `20261102000000-promotion-style`; null = template defaults; applied as `--promo-text` / `--promo-bg` inline on `.promo-root` (the `.promo` tokens read them through
   `var()` fallbacks, so never redeclare them on `.promo`), as the banner / card colours, and the pill's corner, colour and solid /
-  outline look (`promotionChrome()` in the menu's `lib/promotions.ts`)), `image_url`). Content shapes (`PromotionBody`): drink_list `{ subtitle?,
+  outline look (`promotionChrome()` in the menu's `lib/promotions.ts`)), `link_url` + `link_label` (migration
+  `20261103000000-promotion-link`; optional outbound http(s) link ≤ 500 chars, `promotionLinkUrlSchema`, rendered by
+  `PromotionView` under every template as the `.promo-cta` button, `target=_blank rel=noopener`, label = `linkLabel` or
+  `t.promo.openLink` "Saznaj više / Learn more"; the CMS display step has "Link (URL)" + "Button text", the label field is
+  disabled until a URL is typed and is sent as null without one), `image_url`). Content shapes (`PromotionBody`): drink_list `{ subtitle?,
   logoText?, entries: { name, lines[], menuItemId? }[], columns: 1|2, variant?: 'poster'|'simple'|'chalk', icons?: 'cocktails'|'none' }`
   (`poster` = the printed card, `simple` = title across the top without icons, `chalk` = dark board with light type; entries picked
   from the menu copy name + description lines and keep the id), featured_items `{ intro?, items: { menuItemId, badge? }[] }` (1–3), deal `{ headline, description?, priceCents, oldPriceCents?,
@@ -407,7 +411,9 @@ routes, tenant isolation), `apps/menu/test/promotions.test.tsx`, `apps/cms/test/
   `['promotions', rid]`. The CMS chrome stays plum; the tenant accent only appears inside the preview.
 - Seed: the demo venues get no promotions (owners build their own). The real Fabrika venue gets the "Cocktail Menu" drink list
   (`scripts/fabrika-promotions.ts`: accent `#E8453C`, banner, two columns, the twelve cocktails from the reference, logo text
-  "Fabrika Kafeterija") from `seed:fabrika`, which upserts it by title; `seed:fabrika -- --promo-only` adds/refreshes only the
+  "Fabrika Kafeterija") and the owner's delivery notice "Sva pića mogu za poneti i dostava preko Alidede" (title copied from
+  the live row so the upsert finds it; `linkUrl` = `FABRIKA_DELIVERY_URL` alideda.rs page, label "Naruči dostavu") from
+  `seed:fabrika`, which upserts them by title (style is left alone); `seed:fabrika -- --promo-only` adds/refreshes only the
   promotions on the live venue without replacing its menu.
 
 ## Online payment (Phase 9c)

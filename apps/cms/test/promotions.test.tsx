@@ -28,6 +28,8 @@ const cocktail: PromotionDto = {
   endsAt: null,
   recurrence: null,
   style: null,
+  linkUrl: null,
+  linkLabel: null,
   imageUrl: null,
   isActiveNow: true,
   ...stamps,
@@ -161,6 +163,13 @@ describe('promotions (CMS)', () => {
     expect(textHex).toHaveValue('#FFCC00');
     await u.type(screen.getByLabelText('Custom pill colour'), '#123456');
     await u.click(screen.getByRole('button', { name: 'Pill text #FFFFFF' }));
+    // The outbound link: the label field wakes up once a URL is typed and the preview grows the button.
+    const label = screen.getByLabelText('Button text');
+    expect(label).toBeDisabled();
+    await u.type(screen.getByLabelText('Link (URL)'), 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova');
+    expect(within(preview).getByRole('link', { name: 'Saznaj više' })).toHaveAttribute('href', 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova');
+    await u.type(label, 'Naruči dostavu');
+    expect(within(preview).getByRole('link', { name: 'Naruči dostavu' })).toBeInTheDocument();
     await u.click(screen.getByRole('button', { name: 'Create promotion' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/r/${ids.restaurant}/promotions`));
@@ -177,6 +186,8 @@ describe('promotions (CMS)', () => {
       endsAt: null,
       recurrence: { weekdays: [1, 2, 3, 4, 5, 6], from: '16:00', to: '18:00' },
       style: { textColor: '#FFCC00', backgroundColor: '#1F1A17', pillPosition: 'left', pillColor: '#123456', pillStyle: 'outline', pillTextColor: '#FFFFFF' },
+      linkUrl: 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova',
+      linkLabel: 'Naruči dostavu',
     });
   });
 

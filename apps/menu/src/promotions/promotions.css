@@ -99,6 +99,30 @@
 .promo-unavailable {
   opacity: 0.45;
 }
+/* Outbound link button under the body (PromotionView renders it for every template). */
+.promo-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 4px;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+  background: var(--promo-accent);
+  color: var(--promo-on-accent);
+  font-family: var(--font-sans, "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.promo-cta:active {
+  opacity: 0.85;
+}
+.promo-cta-icon {
+  flex: none;
+}
 
 /* ---- notice */
 .promo-notice {

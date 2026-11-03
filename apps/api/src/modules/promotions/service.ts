@@ -46,6 +46,8 @@ export function toPromotionDto(promotion: Promotion, timezone: string, now = new
     endsAt: toIso(promotion.endsAt),
     recurrence: promotion.recurrence,
     style: promotion.style,
+    linkUrl: promotion.linkUrl,
+    linkLabel: promotion.linkLabel,
     imageUrl: promotion.imageUrl,
     isActiveNow: isPromotionActiveNow(promotion, timezone, now),
     createdAt: promotion.createdAt.toISOString(),
@@ -106,6 +108,8 @@ function auditSnapshot(promotion: Promotion): Record<string, unknown> {
     endsAt: toIso(promotion.endsAt),
     recurrence: promotion.recurrence,
     style: promotion.style,
+    linkUrl: promotion.linkUrl,
+    linkLabel: promotion.linkLabel,
     content: promotion.content,
   };
 }
@@ -127,6 +131,8 @@ export async function createPromotion(restaurantId: string, input: CreatePromoti
     endsAt: fields.endsAt ? new Date(fields.endsAt) : null,
     recurrence: fields.recurrence ?? null,
     style: fields.style ?? null,
+    linkUrl: fields.linkUrl ?? null,
+    linkLabel: fields.linkLabel ?? null,
   });
   await audit.record({ restaurantId, action: 'promotion.create', entity: { type: 'promotion', id: promotion.id, label: promotion.title }, after: auditSnapshot(promotion) });
   return toPromotionDto(promotion, restaurant.timezone);
@@ -244,6 +250,8 @@ export async function listPublicPromotions(slug: string, requestedLocale?: strin
     accentColor: promotion.accentColor,
     style: promotion.style,
     priority: promotion.priority,
+    linkUrl: promotion.linkUrl,
+    linkLabel: promotion.linkLabel,
     imageUrl: promotion.imageUrl,
     updatedAt: promotion.updatedAt.toISOString(),
     items: promotionMenuItemIds(bodyOf(promotion))

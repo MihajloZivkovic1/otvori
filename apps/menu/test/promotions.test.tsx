@@ -11,6 +11,8 @@ const cocktail: PublicPromotionDto = {
   display: 'banner',
   accentColor: '#E8453C',
   style: null,
+  linkUrl: null,
+  linkLabel: null,
   priority: 10,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -33,6 +35,8 @@ const notice: PublicPromotionDto = {
   display: 'modal',
   accentColor: null,
   style: null,
+  linkUrl: null,
+  linkLabel: null,
   priority: 1,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -47,6 +51,8 @@ const featured: PublicPromotionDto = {
   display: 'card',
   accentColor: null,
   style: null,
+  linkUrl: null,
+  linkLabel: null,
   priority: 0,
   imageUrl: null,
   updatedAt: '2026-10-29T10:00:00.000Z',
@@ -208,6 +214,25 @@ describe('promotions on the guest menu', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('shows the outbound link as a button that opens in a new tab, with the owner label or the default copy', async () => {
+    mockFetch(serve([{ ...notice, linkUrl: 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova', linkLabel: 'Naruči dostavu' }]));
+    renderMenu();
+    const dialog = await screen.findByRole('dialog', { name: 'Radno vreme' }, { timeout: 3000 });
+    const link = within(dialog).getByRole('link', { name: 'Naruči dostavu' });
+    expect(link).toHaveAttribute('href', 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    await userEvent.setup().keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Without a label the guest-locale default is used; without a link there is no button at all.
+    mockFetch(serve([{ ...notice, id: 'eeeeeeee-eeee-4eee-8eee-000000000001', linkUrl: 'https://example.com/x' }]));
+    renderMenu('/t/7?lang=en');
+    const second = await screen.findByRole('dialog', { name: 'Radno vreme' }, { timeout: 3000 });
+    expect(within(second).getByRole('link', { name: 'Learn more' })).toHaveAttribute('href', 'https://example.com/x');
+    expect(within(second).getByTestId('promotion-link')).toBeInTheDocument();
   });
 
   it('does not show a dismissed modal again, but does after the owner edited it', async () => {

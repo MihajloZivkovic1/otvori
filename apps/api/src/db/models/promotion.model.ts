@@ -68,6 +68,15 @@ export class Promotion extends Model<InferAttributes<Promotion>, InferCreationAt
   @Column(DataType.JSONB)
   style!: CreationOptional<PromotionStyle | null>;
 
+  /** Optional outbound link (delivery page, reservations …) and its button label (null = default copy). */
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  linkUrl!: CreationOptional<string | null>;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  linkLabel!: CreationOptional<string | null>;
+
   @AllowNull(true)
   @Column(DataType.TEXT)
   imageUrl!: CreationOptional<string | null>;

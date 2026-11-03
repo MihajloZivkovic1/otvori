@@ -161,6 +161,29 @@ describe('promotions (admin)', () => {
     expect(actions).toEqual(['promotion.create', 'promotion.update', 'promotion.update', 'promotion.toggle', 'promotion.toggle', 'promotion.delete']);
   });
 
+  it('stores an outbound link with its button label, clears it and refuses non-http links', async () => {
+    const owner = await registerUser();
+    const linked = await create(owner, deal({ linkUrl: 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova', linkLabel: 'Naruči dostavu' }));
+    expect(linked.linkUrl).toBe('https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova');
+    expect(linked.linkLabel).toBe('Naruči dostavu');
+    const plain = await create(owner, deal({ title: 'Plain' }));
+    expect(plain.linkUrl).toBeNull();
+    expect(plain.linkLabel).toBeNull();
+
+    const path = `/api/admin/restaurants/${owner.restaurantId}/promotions/${linked.id}`;
+    const cleared = await api.patch(path).set(bearer(owner.accessToken)).send({ linkUrl: null, linkLabel: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.linkUrl).toBeNull();
+    expect(cleared.body.linkLabel).toBeNull();
+
+    for (const linkUrl of ['javascript:alert(1)', 'ftp://x.y/z', 'www.alideda.rs', 'not a link']) {
+      const bad = await api.patch(path).set(bearer(owner.accessToken)).send({ linkUrl });
+      expect(bad.status, linkUrl).toBe(400);
+    }
+    const tooLong = await api.patch(path).set(bearer(owner.accessToken)).send({ linkUrl: `https://x.y/${'a'.repeat(500)}` });
+    expect(tooLong.status).toBe(400);
+  });
+
   it('is owner-level for every change and service-level for reading', async () => {
     const owner = await registerUser();
     const staff = await addStaff(owner);
@@ -232,7 +255,15 @@ describe('promotions (public)', () => {
       content: { columns: 2, variant: 'simple', icons: 'none', entries: [{ name: 'Negroni', lines: ['Gin'], menuItemId: negroni.id }, { name: 'Gone', lines: [], menuItemId: gone.id }] },
     });
     const lowModal = await create(owner, { title: 'Low modal', template: 'notice', display: 'modal', priority: 1, content: { headline: 'a', body: 'b' } });
-    const highModal = await create(owner, { title: 'High modal', template: 'notice', display: 'modal', priority: 2, content: { headline: 'a', body: 'b' } });
+    const highModal = await create(owner, {
+      title: 'High modal',
+      template: 'notice',
+      display: 'modal',
+      priority: 2,
+      linkUrl: 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova',
+      linkLabel: 'Naruči dostavu',
+      content: { headline: 'a', body: 'b' },
+    });
     await create(owner, deal({ title: 'Off', isActive: false }));
     await create(owner, deal({ title: 'Tomorrow', startsAt: new Date(Date.now() + 86_400_000).toISOString() }));
     await create(owner, deal({ title: 'Yesterday', endsAt: new Date(Date.now() - 86_400_000).toISOString() }));
@@ -248,6 +279,9 @@ describe('promotions (public)', () => {
     expect(promos[0]!.style).toEqual({ backgroundColor: '#FFF4E6' });
     expect(promos[0]!.content).toMatchObject({ variant: 'simple', icons: 'none' });
     expect(promos[1]!.id).toBe(highModal.id);
+    expect(promos[1]!.linkUrl).toBe('https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova');
+    expect(promos[1]!.linkLabel).toBe('Naruči dostavu');
+    expect(promos[0]!.linkUrl).toBeNull();
     expect(promos[0]!.items).toEqual([
       { id: negroni.id, name: 'Negroni', description: 'Gin, Campari', priceCents: 90000, imageUrl: null, thumbnailUrl: null, isAvailable: true },
       { id: gone.id, name: 'Gone', description: null, priceCents: 100, imageUrl: null, thumbnailUrl: null, isAvailable: false },

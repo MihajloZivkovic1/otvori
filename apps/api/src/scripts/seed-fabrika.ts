@@ -60,6 +60,8 @@ async function upsertPromotions(restaurantId: string, promotions: SeedPromotion[
       display: promo.display,
       accentColor: promo.accentColor ?? null,
       priority: promo.priority ?? index,
+      linkUrl: promo.linkUrl ?? null,
+      linkLabel: promo.linkLabel ?? null,
     };
     const existing = await Promotion.findOne({ where: { restaurantId, title: promo.title }, transaction });
     if (existing) await existing.update(values, { transaction });

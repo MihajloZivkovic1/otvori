@@ -1,6 +1,9 @@
 import type { PromotionBody, PromotionDisplay } from '@qr-menu/shared';
 
-export type SeedPromotion = PromotionBody & { title: string; display: PromotionDisplay; accentColor?: string; priority?: number };
+export type SeedPromotion = PromotionBody & { title: string; display: PromotionDisplay; accentColor?: string; priority?: number; linkUrl?: string; linkLabel?: string };
+
+/** Fabrika's delivery partner page (Ali Deda, Stara Pazova). */
+export const FABRIKA_DELIVERY_URL = 'https://www.alideda.rs/fabrika-kafeterija-dostava-stara-pazova';
 
 /** Fabrika Kafeterija's printed cocktail card (design/cocktail-menu.pdf), rendered by the drink_list template. */
 export const FABRIKA_PROMOTIONS: SeedPromotion[] = [
@@ -27,6 +30,19 @@ export const FABRIKA_PROMOTIONS: SeedPromotion[] = [
         { name: 'Golden Passion', lines: ['Olmeca tequila', 'Monin liker Triple Sec', 'Limunov sok', 'Monin pire marakuja', 'Sok od pomorandže', 'Soda voda'] },
         { name: 'Pink Panther', lines: ['Olmeca tequila', 'Limunov sok', 'Monin pire jagoda', 'Sok od ananasa'] },
       ],
+    },
+  },
+  /** The owner's own notice on the live venue (upserted by this exact title): takeaway + delivery through Ali Deda. */
+  {
+    title: 'Sva pića mogu za poneti i dostava preko Alidede',
+    template: 'notice',
+    display: 'modal',
+    priority: 5,
+    linkUrl: FABRIKA_DELIVERY_URL,
+    linkLabel: 'Naruči dostavu',
+    content: {
+      headline: 'Sva pića mogu da se uzmu za poneti i takodje naručiti za dostavu preko Alidede',
+      body: 'Naručiti i preuzeti za šankom, dostava na kućnu adresu preko alidede.',
     },
   },
 ];
