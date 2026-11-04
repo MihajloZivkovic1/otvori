@@ -111,25 +111,31 @@ export const FABRIKA_COFFEE: CatalogCategory = {
       priceCents: rsd(290),
       allergens: ['M'],
     },
+    // The three iced drinks and "fejk mleko" carry the owner's own live wording (2026-11-04): no flavour variants on the
+    // flavoured latte (the syrups are listed in the text, plant milk +50 there), no plant-milk line on the plain latte.
     {
-      name: t('Hladan kafe late', 'Iced caffè latte'),
-      description: withMilk(t('200 ml / 10 g kafe i mikropena od hladnog mleka', '200 ml / 10 g of coffee and cold milk microfoam')),
+      name: t('Hladan Kafe Late', 'Iced caffè latte'),
+      description: t('200ml / 10g Kafe i mikropena od hladnog mleka', '200 ml / 10 g of coffee and cold milk microfoam'),
       priceCents: rsd(220),
       allergens: ['M'],
     },
     {
-      name: t('Hladni kafe late sa ukusom', 'Iced flavoured latte'),
-      description: withMilk(t('200 ml / 10 g kafe, hladno mleko i sirup po izboru', '200 ml / 10 g of coffee, cold milk and the syrup of your choice')),
+      name: t('Hladni Kafe Late sa ukusom', 'Iced flavoured latte'),
+      description: t(
+        '200 ml / 10g Kafe. Lešnik,karamela,bela čokolada, choco cookie, vanila(sezonski pumpkin spice)\nBiljno mleko +50 RSD: sojino, bademovo, kokosovo, ovseno ili bez laktoze',
+        '200 ml / 10 g of coffee. Hazelnut, caramel, white chocolate, choco cookie, vanilla (seasonal pumpkin spice)\nPlant milk +50 RSD: soy, almond, coconut, oat or lactose-free',
+      ),
       priceCents: rsd(290),
       allergens: ['M', 'N'],
-      ...flavoured(290),
     },
     {
-      name: t('Hladna moka', 'Iced mocha'),
-      description: withMilk(t('200 ml / 10 g kafe, crna čokolada, hladno mleko i mikropena', '200 ml / 10 g of coffee, dark chocolate, cold milk and microfoam')),
+      name: t('Hladna Moka', 'Iced mocha'),
+      description: withMilk(t('200 ml / 10g Kafe, crna čokolada, mleko i mikropena', '200 ml / 10 g of coffee, dark chocolate, milk and microfoam')),
       priceCents: rsd(280),
       allergens: ['M'],
     },
+    { name: t('Hladni matcha late', 'Iced matcha latte'), priceCents: rsd(400), allergens: ['M'] },
+    { name: t('Hladni matcha late sa jagodom', 'Iced strawberry matcha latte'), priceCents: rsd(450), allergens: ['M'] },
     coffee(
       t('Amerikano', 'Americano'),
       t('250 ml / 18 g kafe, espreso produžen vrelom vodom · „domaća kafa od espresa“', '250 ml / 18 g of coffee, espresso lengthened with hot water · our "Serbian coffee made of espresso"'),
@@ -161,12 +167,12 @@ export const FABRIKA_COFFEE: CatalogCategory = {
     },
     { name: t('Mača late', 'Matcha latte'), description: withMilk(t('Japanski zeleni čaj u prahu sa penastim mlekom', 'Japanese powdered green tea with frothed milk')), priceCents: rsd(400), allergens: ['M'] },
     {
-      name: t('Biljno mleko', 'Plant milk'),
+      name: t('fejk mleko', 'Plant milk'),
       description: t('Sojino, bademovo, kokosovo, ovseno ili bez laktoze · dodatak uz bilo koju kafu', 'Soy, almond, coconut, oat or lactose-free · added to any coffee'),
-      priceCents: rsd(PLANT_MILK_RSD),
+      priceCents: rsd(50),
       allergens: ['S', 'N'],
     },
-    { name: t('Sveže mlevena domaća kafa 200 g', 'Freshly ground Serbian coffee, 200 g'), description: t('Za kuću, mlevena pred vama', 'To take home, ground in front of you'), priceCents: rsd(390) },
+    { name: t('Sveže mlevena domaća kafa 200 g', 'Freshly ground Serbian coffee, 200 g'), description: t('Za kuću, mlevena pred vama', 'To take home, ground in front of you'), priceCents: rsd(450) },
     {
       name: t('Espreso kafa 250 g', 'Espresso beans, 250 g'),
       description: t(
@@ -206,34 +212,37 @@ export const FABRIKA_TEA: CatalogCategory = {
 
 export const FABRIKA_GRANOLA: CatalogCategory = {
   name: t('Granole', 'Granola'),
-  items: [
-    {
-      name: t('Kućna granola', 'House granola'),
-      description: t(
-        [
-          'Hrskava, zapečena u rerni, sa svežom bananom. Dve vrste:',
-          'Brusnica – brusnica, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
-          'Čokolada – čokolada, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
-          `Biljno mleko: sojino, bademovo, kokosovo, ovseno ili bez laktoze`,
-        ].join('\n'),
-        [
-          'Crunchy, oven-baked, with fresh banana. Two kinds:',
-          'Cranberry – cranberry, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
-          'Chocolate – chocolate, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
-          'Plant milk: soy, almond, coconut, oat or lactose-free',
-        ].join('\n'),
-      ),
-      priceCents: rsd(400),
-      allergens: ['G', 'M', 'N'],
-      variantLabel: t('Uz', 'Served with'),
-      variants: [
-        { name: 'Mleko', priceCents: rsd(400) },
-        { name: 'Jogurt', priceCents: rsd(400) },
-        { name: 'Biljno mleko', priceCents: rsd(400) },
-      ],
-    },
-  ],
+  // The owner split the granola into one row per kind (2026-11-04); both keep his shared description.
+  items: [granola('Kućna granola čokolada', 'House granola, chocolate'), granola('Kućna granola brusnica', 'House granola, cranberry')],
 };
+
+function granola(sr: string, en: string): CatalogItem {
+  return {
+    name: t(sr, en),
+    description: t(
+      [
+        'Hrskava, zapečena u rerni, sa svežom bananom. Dve vrste:',
+        'Brusnica – brusnica, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
+        'Čokolada – čokolada, badem, mekinje, lan, suncokret, riža golice, med, semenke vanile, ovsene pahuljice',
+        'Biljno mleko: sojino, bademovo, kokosovo, ovseno ili bez laktoze',
+      ].join('\n'),
+      [
+        'Crunchy, oven-baked, with fresh banana. Two kinds:',
+        'Cranberry – cranberry, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
+        'Chocolate – chocolate, almond, bran, flax, sunflower, puffed rice, honey, vanilla seeds, oats',
+        'Plant milk: soy, almond, coconut, oat or lactose-free',
+      ].join('\n'),
+    ),
+    priceCents: rsd(400),
+    allergens: ['G', 'M', 'N'],
+    variantLabel: t('Uz', 'Served with'),
+    variants: [
+      { name: 'Mleko', priceCents: rsd(400) },
+      { name: 'Jogurt', priceCents: rsd(400) },
+      { name: 'Biljno mleko', priceCents: rsd(400) },
+    ],
+  };
+}
 
 export const FABRIKA_SANDWICHES: CatalogCategory = {
   name: t('Sendviči', 'Sandwiches'),
@@ -400,10 +409,37 @@ export const FABRIKA_SAUCES: CatalogCategory = {
 export const FABRIKA_CAKES: CatalogCategory = {
   name: t('Kolači', 'Cakes & desserts'),
   items: [
-    { name: t('Tart nutela', 'Nutella tart'), description: t('Hrskavo testo sa nutelom', 'Crisp pastry with Nutella'), priceCents: rsd(400), allergens: ['G', 'M', 'E', 'N'] },
-    { name: t('Čokoladni mafin', 'Chocolate muffin'), priceCents: rsd(250), allergens: ['G', 'M', 'E'] },
-    { name: t('Tart čokolada malina', 'Chocolate raspberry tart'), description: t('Tamna čokolada i sveže maline', 'Dark chocolate and fresh raspberries'), priceCents: rsd(400), allergens: ['G', 'M', 'E'] },
+    // Ingredient lists are the owner's own live wording (2026-11-04); he removed "Tart nutela".
+    { name: t('Čokoladni mafin', 'Chocolate muffin'), description: t('Čokolada,jaja,puter,brašno', 'Chocolate, eggs, butter, flour'), priceCents: rsd(250), allergens: ['G', 'M', 'E'] },
+    {
+      name: t('Tart čokolada malina', 'Chocolate raspberry tart'),
+      description: t('KORA/jaja,brašno,šećer,mleko,puter\nFIL/malina,puter,šećer\nGLAZURA/čokolada,puter', 'CRUST/eggs, flour, sugar, milk, butter\nFILLING/raspberry, butter, sugar\nGLAZE/chocolate, butter'),
+      priceCents: rsd(400),
+      allergens: ['G', 'M', 'E'],
+    },
     { name: t('Mafin sa sladoledom', 'Muffin with ice cream'), description: t('Čokoladni mafin sa kuglom sladoleda', 'Chocolate muffin with a scoop of ice cream'), priceCents: rsd(400), allergens: ['G', 'M', 'E'] },
+    {
+      name: t('Sladoled', 'Ice cream'),
+      description: t('Kugla, po želji sa prelivom', 'A scoop, with a topping if you like'),
+      priceCents: rsd(100),
+      allergens: ['M'],
+      variants: [
+        { name: 'Kugla', priceCents: rsd(100) },
+        { name: 'Kugla sa prelivom', priceCents: rsd(150) },
+      ],
+    },
+    {
+      name: t('Tart malina bela cokolada', 'White chocolate raspberry tart'),
+      description: t('KORA/plazma,puter,mleko\nFIL/malina,šećer,puter\nGLAZURA/bela čokolada,slatka pavlaka', 'CRUST/Plazma biscuits, butter, milk\nFILLING/raspberry, sugar, butter\nGLAZE/white chocolate, cream'),
+      priceCents: rsd(400),
+      allergens: ['G', 'M'],
+    },
+    {
+      name: t('San Sebastian cheesecake', 'San Sebastian cheesecake'),
+      description: t('KORA/jaja,brašno,šećer,mleko,puter\nFIL/španski sir,šećer,vanila,slatka pavlaka,jaja\nPRELIV/malina', 'CRUST/eggs, flour, sugar, milk, butter\nFILLING/Spanish cheese, sugar, vanilla, cream, eggs\nTOPPING/raspberry'),
+      priceCents: rsd(400),
+      allergens: ['G', 'M', 'E'],
+    },
   ],
 };
 
@@ -426,7 +462,19 @@ export const FABRIKA_FRESH_JUICES: CatalogCategory = {
     },
     { name: t('Limunada jagoda', 'Strawberry lemonade'), description: t('0,4 l, jagoda', '0.4 l, strawberry'), priceCents: rsd(250), tags: ['vegan'] },
     { name: t('Đumbirlada', 'Ginger lemonade'), description: t('0,4 l, limunada sa svežim đumbirom', '0.4 l, lemonade with fresh ginger'), priceCents: rsd(250), tags: ['vegan'] },
+    {
+      name: t('Voćna limunada', 'Fruit lemonade'),
+      description: t('0,4 l, jagoda ili breskva', '0.4 l, strawberry or peach'),
+      priceCents: rsd(250),
+      tags: ['vegan'],
+      variantLabel: t('Ukus', 'Flavour'),
+      variants: [
+        { name: 'Jagoda', priceCents: rsd(250) },
+        { name: 'Breskva', priceCents: rsd(250) },
+      ],
+    },
     { name: t('F1', 'F1'), description: t('0,25 l, malina, jabuka, med', '0.25 l, raspberry, apple, honey'), priceCents: rsd(400) },
+    { name: t('F2', 'F2'), description: t('Šargarepa, jabuka, narandža, đumbir', 'Carrot, apple, orange, ginger'), priceCents: rsd(350), tags: ['vegan'] },
     { name: t('F3', 'F3'), description: t('Ananas, jabuka, narandža, limun, med', 'Pineapple, apple, orange, lemon, honey'), priceCents: rsd(350) },
     { name: t('F4', 'F4'), description: t('Ceđena narandža', 'Freshly squeezed orange'), priceCents: rsd(350), tags: ['vegan'] },
     { name: t('F5', 'F5'), description: t('Kupina, jabuka, med', 'Blackberry, apple, honey'), priceCents: rsd(450) },
@@ -444,6 +492,7 @@ export const FABRIKA_SOFT_DRINKS: CatalogCategory = {
     { name: t('Sok od narandže', 'Orange juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
     { name: t('Sok od borovnice', 'Blueberry juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
     { name: t('Next sok od breskve', 'Peach juice'), description: t('Next, gusti sok, 0,33 l', 'Next, thick juice, 0.33 l'), priceCents: rsd(240) },
+    { name: t('Sok od jabuke', 'Apple juice'), description: t('0,33 l', '0.33 l'), priceCents: rsd(240) },
     { name: t('Rosa', 'Rosa still water'), description: t('Negazirana voda', 'Still water'), priceCents: rsd(190), variants: [{ name: '0,33 l', priceCents: rsd(190) }, { name: '0,75 l', priceCents: rsd(310) }] },
     { name: t('Knjaz Miloš', 'Knjaz Miloš sparkling water'), description: t('Gazirana voda', 'Sparkling water'), priceCents: rsd(190), variants: [{ name: '0,33 l', priceCents: rsd(190) }, { name: '0,75 l', priceCents: rsd(310) }] },
     { name: t('Red Bull', 'Red Bull'), description: t('0,33 l', '0.33 l'), priceCents: rsd(350) },
