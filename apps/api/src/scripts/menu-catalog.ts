@@ -446,14 +446,20 @@ export async function attachPhotos(restaurantId: string, created: CreatedItem[])
  * Serbian name (in its category first, then anywhere in the menu, so an item the owner moved keeps its place) and gets
  * the seed's description, price, variants, variant label, allergens and tags. Ids, photos, availability, the order of
  * existing items and anything the owner added (items, categories) stay as they are; items and categories missing from
- * the venue are created at the end. Nothing is deleted.
+ * the venue are created at the end. Nothing is deleted unless `prune` is set: then every item of a synced category
+ * that the seed does not list is removed (the stored photo URLs come back for `deleteStoredUrl()` after commit).
  */
 /** Names compare case-insensitively and ignore spacing/dash differences ("Mafin Sa Sladoledom" = "Mafin sa sladoledom", "Kapreze sendvič - Losos" = "Kapreze sendvič – losos"). */
 export const sameName = (a: string | undefined, b: string | undefined): boolean =>
   (a ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim() === (b ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim();
 
-export async function syncMenu(restaurantId: string, categories: CatalogCategory[], transaction: Transaction): Promise<{ updated: number; created: number; categoriesCreated: number }> {
-  const result = { updated: 0, created: 0, categoriesCreated: 0 };
+export async function syncMenu(
+  restaurantId: string,
+  categories: CatalogCategory[],
+  transaction: Transaction,
+  { prune = false }: { prune?: boolean } = {},
+): Promise<{ updated: number; created: number; categoriesCreated: number; pruned: string[]; staleUrls: string[] }> {
+  const result = { updated: 0, created: 0, categoriesCreated: 0, pruned: [] as string[], staleUrls: [] as string[] };
   const existingCategories = await Category.findAll({ where: { restaurantId }, order: [['sortOrder', 'ASC']], transaction });
   const existingItems = await MenuItem.findAll({ where: { restaurantId }, transaction });
   let nextCategoryOrder = existingCategories.reduce((max, category) => Math.max(max, category.sortOrder + 1), 0);
@@ -466,6 +472,7 @@ export async function syncMenu(restaurantId: string, categories: CatalogCategory
     }
     const categoryId = category.id;
     let nextItemOrder = existingItems.filter((item) => item.categoryId === categoryId).reduce((max, item) => Math.max(max, item.sortOrder + 1), 0);
+    const seen = new Set<string>();
     for (const entry of seedCategory.items) {
       const values = {
         name: entry.name,
@@ -487,11 +494,19 @@ export async function syncMenu(restaurantId: string, categories: CatalogCategory
         existingItems.push(item);
         result.created++;
       }
+      seen.add(item.id);
       if (entry.variants?.length) {
         await ItemVariant.bulkCreate(
           entry.variants.map((variant, index) => ({ menuItemId: item.id, name: variant.name, priceCents: variant.priceCents, sortOrder: index })),
           { transaction },
         );
+      }
+    }
+    if (prune) {
+      for (const stale of existingItems.filter((item) => item.categoryId === categoryId && !seen.has(item.id))) {
+        result.pruned.push(stale.name.sr ?? stale.id);
+        result.staleUrls.push(...[stale.imageUrl, stale.thumbnailUrl].filter((url): url is string => Boolean(url)));
+        await stale.destroy({ transaction });
       }
     }
   }

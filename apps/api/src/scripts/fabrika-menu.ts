@@ -104,7 +104,7 @@ export const FABRIKA_COFFEE: CatalogCategory = {
     milkCoffee(t('Moka espreso', 'Mocha'), t('200 ml / 10 g kafe, crna čokolada, mleko i mikropena', '200 ml / 10 g of coffee, dark chocolate, milk and microfoam'), { b1: 280, b7: 280, k: 290, km: 290 }),
     coffee(t('Kafa afogato', 'Affogato'), t('30 ml / 10 g kafe preko kugle gelato sladoleda', '30 ml / 10 g of coffee poured over a scoop of gelato'), { b1: 270, b7: 270, k: 280, km: 280 }, { allergens: ['M'] }),
     coffee(t('Fredo hladni espreso', 'Freddo espresso'), t('350 ml / 18 g kafe, dupli espreso umućen sa ledom', '350 ml / 18 g of coffee, double espresso shaken over ice'), { b1: 280, b7: 280 }),
-    milkCoffee(t('Fredo kapućino', 'Freddo cappuccino'), t('350 ml / 18 g kafe sa hladnom mlečnom penom', '350 ml / 18 g of coffee topped with cold milk foam'), { b1: 310, b7: 310 }),
+    milkCoffee(t('Fredo kapućino', 'Freddo cappuccino'), t('350 ml / 18 g kafe, dupli espreso umućen u ledu pre mlečne pene', '350 ml / 18 g of coffee, double espresso shaken over ice under cold milk foam'), { b1: 310, b7: 310 }),
     {
       name: t('Ledena kafa', 'Iced coffee'),
       description: withMilk(t('300 ml, nes kafa sa kuglom sladoleda i hladnim mlekom', '300 ml, instant coffee with a scoop of ice cream and cold milk')),
@@ -465,12 +465,37 @@ export const FABRIKA_BEER: CatalogCategory = {
   ],
 };
 
+/** The two Grumen wines (Vinarija Grumen, Fruška gora) with the winery's own descriptions from grumen.rs/vina.htm. */
+const GRUMEN = {
+  sauvignon: t(
+    'Sveže vino izuzetne strukture, umereno punog tela, delikatne mineralnosti i veoma voćnog karaktera. Miris izrazito voćan, slojevit: prvo se javljaju note tropskog voća (papaje, manga, limete), a zatim herbalni tonovi vreže paradajza i bosiljka koji mirisu daju posebnu svežinu. U ustima se nastavlja razigranost koju najavljuje miris — suvo, vibrantnih kiselina, sa notama sočnih bresaka u završnici. Belo vino, Fruškogorsko vinogorje, 13,5 %.',
+    'A fresh wine of remarkable structure, medium-full body, delicate minerality and a very fruity character. The nose is intensely fruity and layered: tropical fruit first (papaya, mango, lime), then herbal tones of tomato vine and basil that give it a special freshness. The palate keeps the playfulness the nose promises — dry, with vibrant acidity and juicy peach on the finish. White wine, Fruška gora, 13.5 %.',
+  ),
+  petitVerdot: t(
+    'Vino punog tela, izraženih tanina i prijatnih kiselina, sa potencijalom za odležavanje. Intenzivne, tamnocrvene boje sa ljubičastim odsjajem na obodu. Na mirisu su dominantne note kakaa i crnog voća; vremenom se izdvajaju suve šljive i kupine, sa začinskim biljem u pozadini. Sjajno se slaže uz odležale sireve, jagnjetinu sa biljnim začinima, pečena svinjska rebra i burgere od čiste junetine sa dimljenim sirevima. Crveno vino, Fruškogorsko vinogorje, 14,5 %.',
+    'A full-bodied wine with pronounced tannins and pleasant acidity, built to age. Deep dark red with a violet rim. Cocoa and black fruit lead on the nose; prunes and blackberries follow, with herbs in the background. Pairs beautifully with aged cheeses, herb-rubbed lamb, roast pork ribs and pure-beef burgers with smoked cheese. Red wine, Fruška gora, 14.5 %.',
+  ),
+  prosecco: t('Penušavo vino', 'Sparkling wine'),
+};
+
+/** The owner wants a glass and a bottle as separate rows, not variants. */
+const GLASS = t('Čaša 0,15 l', 'Glass 0.15 l');
+const BOTTLE = t('Flaša 0,75 l', 'Bottle 0.75 l');
+const PROSECCO_BOTTLE = t('Flaša 0,7 l', 'Bottle 0.7 l');
+
+function wine(name: string, serving: TranslatedText, note: TranslatedText, price: number): CatalogItem {
+  return { name: t(name, name), description: t(`${serving.sr}. ${note.sr}`, `${serving.en}. ${note.en}`), priceCents: rsd(price) };
+}
+
 export const FABRIKA_WINE: CatalogCategory = {
   name: t('Vino', 'Wine'),
   items: [
-    { name: t('Grumen Sauvignon Blanc', 'Grumen Sauvignon Blanc'), description: t('Belo vino', 'White wine'), priceCents: rsd(480), variants: [{ name: '0,15 l', priceCents: rsd(480) }, { name: '0,7 l', priceCents: rsd(2600) }] },
-    { name: t('Grumen Petit Verdot', 'Grumen Petit Verdot'), description: t('Crno vino', 'Red wine'), priceCents: rsd(480), variants: [{ name: '0,15 l', priceCents: rsd(480) }, { name: '0,7 l', priceCents: rsd(2600) }] },
-    { name: t('Prosecco', 'Prosecco'), description: t('Penušavo vino', 'Sparkling wine'), priceCents: rsd(400), variants: [{ name: '0,15 l', priceCents: rsd(400) }, { name: '0,7 l', priceCents: rsd(1850) }] },
+    wine('Grumen Sauvignon Blanc · čaša', GLASS, GRUMEN.sauvignon, 480),
+    wine('Grumen Sauvignon Blanc · flaša', BOTTLE, GRUMEN.sauvignon, 2600),
+    wine('Grumen Petit Verdot · čaša', GLASS, GRUMEN.petitVerdot, 480),
+    wine('Grumen Petit Verdot · flaša', BOTTLE, GRUMEN.petitVerdot, 2600),
+    wine('Prosecco · čaša', GLASS, GRUMEN.prosecco, 400),
+    wine('Prosecco · flaša', PROSECCO_BOTTLE, GRUMEN.prosecco, 1850),
   ],
 };
 

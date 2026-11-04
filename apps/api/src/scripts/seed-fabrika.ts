@@ -24,8 +24,9 @@ import { insertMenu, syncMenu } from './menu-catalog.js';
  *   … seed-fabrika.js --promo-only   (keeps the live venue and its menu untouched; only upserts the promotions by title)
  *   … seed-fabrika.js --photos-only  (keeps the live venue; gives the items in `fabrika-photos.ts` that have no photo yet theirs)
  *   … seed-fabrika.js --photos-only --replace-category Kafa   (re-syncs that one category with the list, over existing photos)
- *   … seed-fabrika.js --sync-menu [--category Kafa]   (keeps the live venue; writes the seed's text, prices, variants,
- *                     allergens and tags into the items with the same Serbian name, creates the missing ones, deletes nothing)
+ *   … seed-fabrika.js --sync-menu [--category Kafa] [--prune]   (keeps the live venue; writes the seed's text, prices, variants,
+ *                     allergens and tags into the items with the same Serbian name, creates the missing ones, deletes nothing —
+ *                     with --prune it also removes the items of the synced categories that the seed no longer lists)
  *
  * The owner account is created when missing; an existing one keeps its other venues and only gets the password reset.
  * The previous venue's owner (`fabrika@otvori.menu`, from the pilot seed) is removed when no other venue is left to it.
@@ -165,11 +166,16 @@ async function syncMenuOnly(): Promise<void> {
     process.stderr.write(`No category "${only}" in the seed (${FABRIKA_MENU.map((c) => c.name.sr).join(', ')}).\n`);
     process.exit(2);
   }
-  const { updated, created, categoriesCreated } = await sequelize.transaction((transaction) => syncMenu(restaurant.id, categories, transaction));
+  const prune = process.argv.includes('--prune');
+  const { updated, created, categoriesCreated, pruned, staleUrls } = await sequelize.transaction((transaction) =>
+    syncMenu(restaurant.id, categories, transaction, { prune }),
+  );
+  for (const url of staleUrls) await deleteStoredUrl(url);
   const photos = await attachFabrikaPhotos(restaurant.id);
   process.stdout.write(
     `${VENUE.name}: ${updated} item(s) updated, ${created} created, ${categoriesCreated} categor${categoriesCreated === 1 ? 'y' : 'ies'} created` +
-      `${only ? ` (category "${only}")` : ''}, ${photos.attached} photo(s) attached to items that had none\n`,
+      `${only ? ` (category "${only}")` : ''}, ${photos.attached} photo(s) attached to items that had none` +
+      `${prune ? `, ${pruned.length} removed${pruned.length ? ` (${pruned.join(', ')})` : ''}` : ''}\n`,
   );
   await sequelize.close();
 }
