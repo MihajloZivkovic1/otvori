@@ -1,6 +1,7 @@
 import type { Transaction } from 'sequelize';
 import type { TranslatedText } from '@qr-menu/shared';
 import { Category, ItemVariant, MenuItem } from '../db/models/index.js';
+import { touchRestaurant } from '../modules/shared/touch-restaurant.js';
 import { processItemImage, processItemThumbnail } from '../utils/images.js';
 import { logger } from '../utils/logger.js';
 import { storage } from '../utils/storage.js';
@@ -438,4 +439,62 @@ export async function attachPhotos(restaurantId: string, created: CreatedItem[])
     }),
   );
   return { done, failed };
+}
+
+/**
+ * Syncs the content of the given catalog into the live venue without replacing it: every seeded item is matched by its
+ * Serbian name (in its category first, then anywhere in the menu, so an item the owner moved keeps its place) and gets
+ * the seed's description, price, variants, variant label, allergens and tags. Ids, photos, availability, the order of
+ * existing items and anything the owner added (items, categories) stay as they are; items and categories missing from
+ * the venue are created at the end. Nothing is deleted.
+ */
+/** Names compare case-insensitively and ignore spacing/dash differences ("Mafin Sa Sladoledom" = "Mafin sa sladoledom", "Kapreze sendvič - Losos" = "Kapreze sendvič – losos"). */
+export const sameName = (a: string | undefined, b: string | undefined): boolean =>
+  (a ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim() === (b ?? '').toLowerCase().replace(/[\s–-]+/g, ' ').trim();
+
+export async function syncMenu(restaurantId: string, categories: CatalogCategory[], transaction: Transaction): Promise<{ updated: number; created: number; categoriesCreated: number }> {
+  const result = { updated: 0, created: 0, categoriesCreated: 0 };
+  const existingCategories = await Category.findAll({ where: { restaurantId }, order: [['sortOrder', 'ASC']], transaction });
+  const existingItems = await MenuItem.findAll({ where: { restaurantId }, transaction });
+  let nextCategoryOrder = existingCategories.reduce((max, category) => Math.max(max, category.sortOrder + 1), 0);
+  for (const seedCategory of categories) {
+    let category = existingCategories.find((candidate) => sameName(candidate.name.sr, seedCategory.name.sr));
+    if (!category) {
+      category = await Category.create({ restaurantId, name: seedCategory.name, sortOrder: nextCategoryOrder++, isHidden: false }, { transaction });
+      existingCategories.push(category);
+      result.categoriesCreated++;
+    }
+    const categoryId = category.id;
+    let nextItemOrder = existingItems.filter((item) => item.categoryId === categoryId).reduce((max, item) => Math.max(max, item.sortOrder + 1), 0);
+    for (const entry of seedCategory.items) {
+      const values = {
+        name: entry.name,
+        description: entry.description ?? null,
+        variantLabel: entry.variantLabel ?? null,
+        priceCents: entry.priceCents,
+        allergens: entry.allergens ?? [],
+        tags: entry.tags ?? [],
+      };
+      let item =
+        existingItems.find((candidate) => candidate.categoryId === categoryId && sameName(candidate.name.sr, entry.name.sr)) ??
+        existingItems.find((candidate) => sameName(candidate.name.sr, entry.name.sr));
+      if (item) {
+        await item.update(values, { transaction });
+        await ItemVariant.destroy({ where: { menuItemId: item.id }, transaction });
+        result.updated++;
+      } else {
+        item = await MenuItem.create({ restaurantId, categoryId, isAvailable: true, sortOrder: nextItemOrder++, ...values }, { transaction });
+        existingItems.push(item);
+        result.created++;
+      }
+      if (entry.variants?.length) {
+        await ItemVariant.bulkCreate(
+          entry.variants.map((variant, index) => ({ menuItemId: item.id, name: variant.name, priceCents: variant.priceCents, sortOrder: index })),
+          { transaction },
+        );
+      }
+    }
+  }
+  await touchRestaurant(restaurantId, transaction);
+  return result;
 }

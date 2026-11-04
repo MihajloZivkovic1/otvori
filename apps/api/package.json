@@ -15,6 +15,7 @@
     "seed:drinks": "tsx src/scripts/seed-drinks.ts",
     "seed:venues": "tsx src/scripts/seed-venues.ts",
     "seed:fabrika": "tsx src/scripts/seed-fabrika.ts",
+    "seed:living-room": "tsx src/scripts/seed-living-room.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
